@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -52,6 +53,7 @@ import com.olamkatan.data.models.BilingualText
 import com.olamkatan.data.models.Gender
 import com.olamkatan.data.models.Language
 import com.olamkatan.ui.settings.SettingsViewModel
+import com.olamkatan.ui.settings.rememberPairingScanner
 
 private val Ink = Color(0xFF5D4037)
 private val Cream = Color(0xFFFFF8E1)
@@ -137,6 +139,25 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                 Switch(checked = settings.companionEnabled, onCheckedChange = { viewModel.setCompanionEnabled(it) })
             }
             if (settings.companionEnabled) {
+                // Scan the QR code on the brain's dashboard instead of typing address and code
+                var scanned by remember { mutableStateOf<Boolean?>(null) }  // null until a scan
+                val scan = rememberPairingScanner(t("כוונו אל קוד ה-QR שבמחשב", "Point at the QR code on the PC")) { link ->
+                    scanned = link != null
+                    if (link != null) {
+                        address = link.host
+                        code = link.code
+                        viewModel.setCompanionAddress(link.host)
+                        viewModel.setCompanionCode(link.code)
+                    }
+                }
+                OutlinedButton(onClick = scan, modifier = Modifier.widthIn(min = 320.dp)) {
+                    Text(t("📷 סריקת קוד ה-QR שבמחשב", "📷 Scan the QR code on the PC"), style = MaterialTheme.typography.titleMedium, color = Ink)
+                }
+                if (scanned == false) {
+                    Text(t("זה לא קוד ה-QR של פוקי, נסו שוב", "That isn't Puki's QR code, try again"), color = Ink)
+                } else if (scanned == true) {
+                    Text(t("✓ המחשב נקלט", "✓ Got the PC"), color = Color(0xFF2E7D32))
+                }
                 OutlinedTextField(
                     value = address,
                     onValueChange = { address = it },

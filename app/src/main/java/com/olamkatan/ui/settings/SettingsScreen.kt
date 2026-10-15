@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -171,6 +172,31 @@ fun SettingsScreen(
                     onToggle = { settingsViewModel.toggleCompanion(settings.companionEnabled) }
                 )
                 if (settings.companionEnabled) {
+                    // Scan the QR code on the brain's dashboard instead of typing address and code
+                    var scanFailed by remember { mutableStateOf(false) }
+                    val scan = rememberPairingScanner(
+                        BilingualText("כוונו אל קוד ה-QR שבמחשב", "Point at the QR code on the PC").resolve(language)
+                    ) { link ->
+                        scanFailed = link == null
+                        if (link != null) {
+                            settingsViewModel.setCompanionAddress(link.host)
+                            settingsViewModel.setCompanionCode(link.code)
+                        }
+                    }
+                    OutlinedButton(onClick = scan, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            BilingualText("📷 סריקת קוד ה-QR שבמחשב", "📷 Scan the QR code on the PC").resolve(language),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = EarthBrown
+                        )
+                    }
+                    if (scanFailed) {
+                        Text(
+                            BilingualText("זה לא קוד ה-QR של פוקי, נסו שוב", "That isn't Puki's QR code, try again").resolve(language),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = EarthBrown
+                        )
+                    }
                     // Address of the PC running brain/doorbell.py (saved when editing finishes)
                     var address by remember(settings.companionAddress) { mutableStateOf(settings.companionAddress) }
                     OutlinedTextField(
