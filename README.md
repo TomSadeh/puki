@@ -123,7 +123,9 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 
 - Music ("Puki main theme", "Puki nights") by the project's author: piano, produced with Suno
 - [BlueTTS](https://github.com/maxmelichov/BlueTTS) by Max Melichov: Hebrew/English text-to-speech
-- [ivrit.ai](https://huggingface.co/ivrit-ai): Hebrew fine-tuned Whisper; OpenAI's Whisper large-v3-turbo for English
+- [ivrit.ai](https://huggingface.co/ivrit-ai): Hebrew fine-tuned Whisper
+- [Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) by NVIDIA (CC-BY-4.0), hears English;
+  ONNX export by [istupakov](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v2-onnx)
 - [Gemma](https://ai.google.dev/gemma) by Google, subject to the
   [Gemma terms of use](https://ai.google.dev/gemma/terms); GGUF builds by [Unsloth](https://huggingface.co/unsloth)
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) and

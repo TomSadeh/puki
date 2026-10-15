@@ -58,7 +58,7 @@ def load_config():
         with open(local, encoding="utf-8") as f:
             cfg.update(json.load(f))
     # "~" in paths means the user's home folder
-    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "whisper_model_en", "bluetts_dir"):
+    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "parakeet_model", "bluetts_dir"):
         cfg[key] = os.path.expanduser(cfg[key])
     return cfg
 

@@ -347,7 +347,7 @@ def speak(text, lang, speed=0.92):
     return buf.getvalue()
 
 
-# ---------- Speech to text (ivrit.ai Whisper for Hebrew, a standard Whisper for English) ----------
+# ---------- Speech to text (ivrit.ai Whisper for Hebrew, Parakeet for English) ----------
 
 def _add_cuda_dlls():
     """Let CTranslate2 find the cuBLAS / cuDNN DLLs installed as nvidia-* pip packages."""
@@ -361,53 +361,44 @@ def _add_cuda_dlls():
             os.environ["PATH"] = bin_dir + os.pathsep + os.environ["PATH"]
 
 
-def _load_whisper(path):
+def _load_whisper():
     from faster_whisper import WhisperModel
     # GPU when there's room next to Gemma (and the training runs), CPU otherwise
     from doorbell import free_vram_mb
     if free_vram_mb() >= CFG["whisper_min_free_vram_mb"]:
         try:
             _add_cuda_dlls()
-            model = WhisperModel(path, device="cuda", compute_type="float16")
+            model = WhisperModel(CFG["whisper_model"], device="cuda", compute_type="float16")
             log("whisper on GPU")
             return model
         except Exception as e:
             log(f"whisper GPU failed ({e}), using CPU")
     log("whisper on CPU")
-    return WhisperModel(path, device="cpu", compute_type="int8")
+    return WhisperModel(CFG["whisper_model"], device="cpu", compute_type="int8")
 
 
-def _whisper_path(lang):
-    if lang == "he":
-        return CFG["whisper_model"]
-    path = CFG.get("whisper_model_en") or ""
-    if not os.path.isdir(path):
-        # The Hebrew model still understands some English, so Puki keeps answering
-        log(f"no English Whisper at {path!r} (whisper_model_en), using the Hebrew one for English")
-        return CFG["whisper_model"]
-    return path
+log("loading Whisper")
+WHISPER = _load_whisper()
+
+# English: NVIDIA's Parakeet (int8 ONNX) on the CPU, so it needs no VRAM next to Gemma.
+# Loaded in the background on the first English request.
+from parakeet import ParakeetOnnxEngine  # noqa: E402
+
+PARAKEET = ParakeetOnnxEngine(CFG.get("parakeet_model") or "")
 
 
-WHISPERS = {}
-WHISPER_LOCK = threading.Lock()
+def has_parakeet():
+    return os.path.isfile(os.path.join(PARAKEET.model_dir, "encoder-model.int8.onnx"))
 
 
-def whisper(lang):
-    """The Whisper for [lang], loaded the first time it's needed (Hebrew at startup)."""
-    with WHISPER_LOCK:
-        if lang not in WHISPERS:
-            log(f"loading Whisper ({lang})")
-            WHISPERS[lang] = _load_whisper(_whisper_path(lang))
-        return WHISPERS[lang]
+def preload_parakeet():
+    if PARAKEET.loaded:
+        return
+    if not has_parakeet():
+        log(f"no Parakeet at {CFG.get('parakeet_model')!r} (parakeet_model): English uses the Hebrew Whisper")
+        return
+    threading.Thread(target=PARAKEET.warmup, daemon=True).start()
 
-
-def preload_whisper(lang):
-    """Loads [lang]'s Whisper in the background, so the first time the child talks isn't slow."""
-    if lang not in WHISPERS:
-        threading.Thread(target=whisper, args=(lang,), daemon=True).start()
-
-
-whisper("he")
 
 # Whisper "hears" these in silence or noise; treat them as nothing heard
 HALLUCINATIONS = ("כתוביות", "תודה רבה", "תודה שצפיתם", "subtitles", "thank you for watching",
@@ -417,13 +408,7 @@ HALLUCINATIONS_ALONE = ("you", "thank you", "thanks", "bye")
 
 # Words Whisper should expect: the parrot's and child's names and things from the games
 _plain = lambda s: re.sub(r"[֑-ׇ]", "", s)  # noqa: E731 (strip nikud)
-def hotwords(lang):
-    if lang == "en":
-        return " ".join(filter(None, [
-            COMPANION_EN, _plain(NAME) if not HEBREW_LETTER.search(NAME) else "", "hi", "hello", "cow", "dog",
-            "cat", "horse", "elephant", "lion", "duck", "chicken", "monkey", "red", "blue", "yellow", "green",
-            "circle", "triangle", "square",
-        ]))
+def hotwords():
     return " ".join(filter(None, [
         _plain(COMPANION), _plain(NAME), "היי", "שלום", "פרה", "כלב", "חתול", "סוס", "פיל", "אריה",
         "ברווז", "תרנגולת", "קוף", "אדום", "כחול", "צהוב", "ירוק", "עיגול", "משולש", "ריבוע",
@@ -437,16 +422,29 @@ def transcribe(wav_bytes, lang):
     if sr != 16000:
         import librosa
         audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
-    segments, _ = whisper(lang).transcribe(
-        audio, language=lang, beam_size=1, vad_filter=True, hotwords=hotwords(lang),
-        condition_on_previous_text=False,
-    )
-    heard = " ".join(seg.text.strip() for seg in segments).strip()
+    if lang == "en" and has_parakeet():
+        heard = parakeet_transcribe(audio)
+    else:
+        segments, _ = WHISPER.transcribe(
+            audio, language=lang, beam_size=1, vad_filter=True, hotwords=hotwords() if lang == "he" else None,
+            condition_on_previous_text=False,
+        )
+        heard = " ".join(seg.text.strip() for seg in segments).strip()
     if any(h in heard.lower() for h in HALLUCINATIONS):
         return ""
     if lang == "en" and heard.lower().strip(" .!?,") in HALLUCINATIONS_ALONE:
         return ""
     return heard
+
+
+def parakeet_transcribe(audio):
+    """Parakeet has no voice detection of its own, so cut the recording to where someone talks."""
+    from faster_whisper.vad import get_speech_timestamps
+    speech = get_speech_timestamps(audio)
+    if not speech:
+        return ""
+    pad = 16000 // 5
+    return PARAKEET.transcribe(audio[max(0, speech[0]["start"] - pad):speech[-1]["end"] + pad], 16000).strip()
 
 
 def listen_situation(heard, lang):
@@ -534,7 +532,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return self._fail(400)
         if lang == "en" and url.path != "/speak":  # /speak en also comes from Hebrew tablets (name lines)
-            preload_whisper("en")
+            preload_parakeet()
 
         if url.path == "/say":
             situation = str(req.get("situation", ""))[:300]

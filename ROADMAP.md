@@ -125,9 +125,8 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
   pairing code); scanning it in the app is still open.
 
 **English as a first-class language (small to medium). Status: done, except the voice comparison.**
-- Speech recognition: load a standard English Whisper (for example `large-v3-turbo` or
-  `distil-large-v3` in CTranslate2 format) when the app is in English. The ivrit.ai model
-  stays for Hebrew.
+- Speech recognition: NVIDIA's Parakeet (int8 ONNX, on the CPU) when the app is in English.
+  The ivrit.ai model stays for Hebrew.
 - Game situations sent to the brain become bilingual (about 20 strings), instead of always
   Hebrew.
 - Voice: compare BlueTTS's English with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M),
