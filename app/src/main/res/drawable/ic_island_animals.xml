@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Barn body -->
+    <path android:fillColor="#E53935"
+        android:pathData="M15,40 L15,85 L85,85 L85,40Z"/>
+    <!-- Barn roof -->
+    <path android:fillColor="#C62828"
+        android:pathData="M10,42 L50,10 L90,42Z"/>
+    <!-- Barn door -->
+    <path android:fillColor="#795548"
+        android:pathData="M35,50 L35,85 L65,85 L65,50 Q65,42 50,42 Q35,42 35,50Z"/>
+    <!-- Door cross beam -->
+    <path android:fillColor="#5D4037"
+        android:pathData="M35,65 L65,65 L65,67 L35,67Z"/>
+    <!-- Hay loft window -->
+    <path android:fillColor="#FFE082"
+        android:pathData="M42,25 L50,18 L58,25 L58,32 L42,32Z"/>
+    <!-- Animal peeking - head -->
+    <path android:fillColor="#FFCC80"
+        android:pathData="M42,70 Q42,60 50,58 Q58,60 58,70Z"/>
+    <!-- Animal eyes -->
+    <path android:fillColor="#4E342E"
+        android:pathData="M44,65 A2,2 0 1,1 48,65 A2,2 0 1,1 44,65Z"/>
+    <path android:fillColor="#4E342E"
+        android:pathData="M52,65 A2,2 0 1,1 56,65 A2,2 0 1,1 52,65Z"/>
+    <!-- Animal ears -->
+    <path android:fillColor="#FFCC80"
+        android:pathData="M42,62 L38,55 L44,60Z"/>
+    <path android:fillColor="#FFCC80"
+        android:pathData="M58,62 L62,55 L56,60Z"/>
+</vector>

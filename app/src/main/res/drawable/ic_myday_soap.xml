@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Bubbles -->
+    <path android:fillColor="#FFFFFF" android:strokeColor="#4FC3F7" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M57,26 A13,13 0 1,1 83,26 A13,13 0 1,1 57,26 Z"/>
+    <path android:fillColor="#FFFFFF" android:strokeColor="#4FC3F7" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M37,22 A9,9 0 1,1 55,22 A9,9 0 1,1 37,22 Z"/>
+    <path android:fillColor="#FFFFFF" android:strokeColor="#4FC3F7" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M80,48 A6,6 0 1,1 92,48 A6,6 0 1,1 80,48 Z"/>
+    <path android:fillColor="#B3E5FC"
+        android:pathData="M62.5,21 A3.5,3.5 0 1,1 69.5,21 A3.5,3.5 0 1,1 62.5,21 Z"/>
+    <path android:fillColor="#B3E5FC"
+        android:pathData="M40.5,19 A2.5,2.5 0 1,1 45.5,19 A2.5,2.5 0 1,1 40.5,19 Z"/>
+    <group android:rotation="-8" android:pivotX="46" android:pivotY="64">
+    <!-- Soap bar -->
+    <path android:fillColor="#EC407A"
+        android:pathData="M24,44 L68,44 A14,14 0 0,1 82,58 L82,70 A14,14 0 0,1 68,84 L24,84 A14,14 0 0,1 10,70 L10,58 A14,14 0 0,1 24,44 Z"/>
+    <path android:fillColor="#F48FB1"
+        android:pathData="M24,42 L68,42 A14,14 0 0,1 82,56 L82,62 A14,14 0 0,1 68,76 L24,76 A14,14 0 0,1 10,62 L10,56 A14,14 0 0,1 24,42 Z"/>
+    <path android:fillColor="#F8BBD0"
+        android:pathData="M26,59 A20,9 0 1,1 66,59 A20,9 0 1,1 26,59 Z"/>
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.5"
+        android:pathData="M20,47 L40,47 A2,2 0 0,1 42,49 L42,49 A2,2 0 0,1 40,51 L20,51 A2,2 0 0,1 18,49 L18,49 A2,2 0 0,1 20,47 Z"/>
+    </group>
+</vector>

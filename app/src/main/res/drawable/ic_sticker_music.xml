@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two beamed music notes -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path android:fillColor="#7E57C2"
+        android:pathData="M38,24 L84,12 L84,24 L38,36 Z"/>
+    <path android:strokeColor="#7E57C2"
+        android:strokeWidth="6"
+        android:strokeLineCap="butt"
+        android:strokeLineJoin="round"
+        android:pathData="M37,24 L37,74 M83,13 L83,64"/>
+    <group android:rotation="-22" android:pivotX="27" android:pivotY="76">
+        <path android:fillColor="#7E57C2"
+        android:pathData="M14,76 A13,9.5 0 1,1 40,76 A13,9.5 0 1,1 14,76 Z"/>
+    </group>
+    <group android:rotation="-22" android:pivotX="73" android:pivotY="66">
+        <path android:fillColor="#7E57C2"
+        android:pathData="M60,66 A13,9.5 0 1,1 86,66 A13,9.5 0 1,1 60,66 Z"/>
+    </group>
+    <group android:rotation="-22" android:pivotX="24" android:pivotY="73">
+        <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"
+        android:pathData="M19,73 A5,2.6 0 1,1 29,73 A5,2.6 0 1,1 19,73 Z"/>
+    </group>
+    <group android:rotation="-22" android:pivotX="70" android:pivotY="63">
+        <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"
+        android:pathData="M65,63 A5,2.6 0 1,1 75,63 A5,2.6 0 1,1 65,63 Z"/>
+    </group>
+</vector>

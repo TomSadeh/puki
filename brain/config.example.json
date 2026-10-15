@@ -1,0 +1,21 @@
+{
+  "_comment": "Copy to config.json (git-ignored) and override what you need, e.g. child_name.",
+  "bind": "0.0.0.0",
+  "port": 8790,
+  "brain_port": 8791,
+  "llama_port": 8792,
+  "idle_minutes": 10,
+  "startup_timeout_s": 90,
+  "min_free_vram_mb": 4500,
+  "context": 2048,
+  "llama_dir": "~/puki-brain/llama",
+  "model": "~/puki-brain/models/gemma-4-E4B-it-Q4_0.gguf",
+  "brain_python": "~/puki-brain/.venv/Scripts/python.exe",
+  "whisper_model": "~/puki-brain/models/whisper-ivrit-turbo",
+  "whisper_min_free_vram_mb": 2000,
+  "bluetts_dir": "~/puki-brain/BlueTTS",
+  "voice": "noa",
+  "companion_name": "פּוּקִי",
+  "child_name": "",
+  "child_gender": "girl"
+}

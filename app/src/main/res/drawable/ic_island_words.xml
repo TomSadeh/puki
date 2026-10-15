@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Book body -->
+    <path android:fillColor="#42A5F5"
+        android:pathData="M15,20 L15,80 L85,80 L85,20Z"/>
+    <!-- Book spine -->
+    <path android:fillColor="#1E88E5"
+        android:pathData="M15,20 L15,80 L20,80 L20,20Z"/>
+    <!-- Left page -->
+    <path android:fillColor="#FAFAFA"
+        android:pathData="M20,22 L20,78 L48,78 L48,22Z"/>
+    <!-- Right page -->
+    <path android:fillColor="#FAFAFA"
+        android:pathData="M52,22 L52,78 L80,78 L80,22Z"/>
+    <!-- Center fold -->
+    <path android:fillColor="#E0E0E0"
+        android:pathData="M48,22 L48,78 L52,78 L52,22Z"/>
+    <!-- Hebrew letter Alef on the right page (read first) -->
+    <path android:strokeColor="#F44336" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M58,36 L73,58 M70,36 Q71,45 65,47 M61,58 Q59,50 64,49"/>
+    <!-- Hebrew letter Bet on the left page -->
+    <path android:strokeColor="#4CAF50" android:strokeWidth="4.5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M26,37 L38,37 Q41,37 41,40 L41,57 M25,57 L44,57"/>
+    <!-- Sparkle stars -->
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M75,15 L77,20 L82,18 L78,22 L82,26 L77,24 L75,28 L73,24 L68,26 L72,22 L68,18 L73,20Z"/>
+</vector>

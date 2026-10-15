@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Purple heart -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path android:fillColor="#AB47BC"
+        android:strokeColor="#7B1FA2"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M50,88 C22,68 8,52 8,34 C8,20 18,12 30,12 C39,12 46,17 50,25 C54,17 61,12 70,12 C82,12 92,20 92,34 C92,52 78,68 50,88 Z"/>
+    <path android:fillColor="#7B1FA2"
+        android:fillAlpha="0.5"
+        android:pathData="M50,88 C70,74 86,58 90,40 C84,56 70,70 50,80 C30,70 16,56 10,40 C14,58 30,74 50,88 Z"/>
+    <group android:rotation="-35" android:pivotX="26" android:pivotY="30">
+        <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"
+        android:pathData="M17,30 A9,6 0 1,1 35,30 A9,6 0 1,1 17,30 Z"/>
+    </group>
+</vector>

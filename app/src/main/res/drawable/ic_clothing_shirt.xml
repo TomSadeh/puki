@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- T-shirt -->
+    <path android:fillColor="#42A5F5"
+        android:pathData="M35,14 Q50,26 65,14 L90,27 L82,46 L72,41 L72,88 L28,88 L28,41 L18,46 L10,27 Z"/>
+    <path android:fillColor="#1E88E5"
+        android:pathData="M28,74 L72,74 L72,88 L28,88 Z"/>
+    <path android:fillColor="#1E88E5"
+        android:pathData="M10,27 L18,46 L24,43 L16,24 Z"/>
+    <path android:fillColor="#1E88E5"
+        android:pathData="M90,27 L82,46 L76,43 L84,24 Z"/>
+    <path android:strokeColor="#1565C0" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M35,14 Q50,26 65,14"/>
+    <!-- Star -->
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M50,40 L53.17,47.63 L61.41,48.29 L55.14,53.67 L57.05,61.71 L50,57.4 L42.95,61.71 L44.86,53.67 L38.59,48.29 L46.83,47.63 Z"/>
+    <!-- Shine -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M32,30 Q34,26 40,24"/>
+</vector>

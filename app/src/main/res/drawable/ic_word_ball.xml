@@ -1,0 +1,40 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Shadow -->
+    <path android:fillColor="#000000"
+        android:fillAlpha="0.12"
+        android:pathData="M24,94 A26,3.5 0 1,1 76,94 A26,3.5 0 1,1 24,94 Z"/>
+    <!-- Ball (red slice) -->
+    <path android:fillColor="#E53935"
+        android:pathData="M10,52 A40,40 0 1,1 90,52 A40,40 0 1,1 10,52 Z"/>
+    <path android:fillColor="#FFCA28"
+        android:pathData="M50,12 Q14,52 50,92 Q36,52 50,12Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M50,12 Q36,52 50,92 Q64,52 50,12Z"/>
+    <path android:fillColor="#1E88E5"
+        android:pathData="M50,12 Q64,52 50,92 Q86,52 50,12Z"/>
+    <path android:fillColor="#43A047"
+        android:pathData="M50,12 Q86,52 50,92 A40,40 0 0,0 50,12Z"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#22000000"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M10,52 A40,40 0 1,1 90,52 A40,40 0 1,1 10,52 Z"/>
+    <!-- Valve cap -->
+    <path android:fillColor="#FFFFFF"
+        android:strokeColor="#22000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M45.5,16 A4.5,4.5 0 1,1 54.5,16 A4.5,4.5 0 1,1 45.5,16 Z"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#AAFFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22,40 Q26,26 38,20"/>
+</vector>

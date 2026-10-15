@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Plate rim -->
+    <path android:fillColor="#4FC3F7"
+        android:pathData="M8,50 A42,42 0 1,1 92,50 A42,42 0 1,1 8,50 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M14,50 A36,36 0 1,1 86,50 A36,36 0 1,1 14,50 Z"/>
+    <path android:fillColor="#E1F5FE"
+        android:pathData="M25,50 A25,25 0 1,1 75,50 A25,25 0 1,1 25,50 Z"/>
+    <path android:strokeColor="#B3E5FC" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M25,50 A25,25 0 1,1 75,50 A25,25 0 1,1 25,50 Z"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M24,36 Q30,22 44,17"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M47.5,11 A2.5,2.5 0 1,1 52.5,11 A2.5,2.5 0 1,1 47.5,11 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M86.5,50 A2.5,2.5 0 1,1 91.5,50 A2.5,2.5 0 1,1 86.5,50 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M47.5,89 A2.5,2.5 0 1,1 52.5,89 A2.5,2.5 0 1,1 47.5,89 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M8.5,50 A2.5,2.5 0 1,1 13.5,50 A2.5,2.5 0 1,1 8.5,50 Z"/>
+</vector>

@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Stem -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#43A047"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M50,54 Q47,74 50,95"/>
+    <!-- Leaves -->
+    <path android:fillColor="#66BB6A"
+        android:pathData="M49,74 Q34,60 24,70 Q36,82 49,74Z"/>
+    <path android:fillColor="#4CAF50"
+        android:pathData="M50,82 Q64,68 76,76 Q64,88 50,82Z"/>
+    <!-- Back petals -->
+    <path android:fillColor="#E53935"
+        android:pathData="M29,32 A21,21 0 1,1 71,32 A21,21 0 1,1 29,32 Z"/>
+    <!-- Front cup -->
+    <path android:fillColor="#C62828"
+        android:pathData="M27,30 Q28,58 50,58 Q72,58 73,30 Q63,42 50,38 Q37,42 27,30Z"/>
+    <!-- Inner bud -->
+    <path android:fillColor="#B71C1C"
+        android:pathData="M37,33 Q36,15 50,15 Q64,15 63,33 Q57,25 50,27 Q43,25 37,33Z"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#E53935"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M50,27 Q47,20 52,16"/>
+    <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.4"
+        android:pathData="M33,26 Q36,16 46,14 Q38,20 37,28Z"/>
+</vector>

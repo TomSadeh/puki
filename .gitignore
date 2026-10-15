@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+/app/build
+
+# Personal voice lines with the child's name (scripts/generate_voices.py --child-name)
+/app/src/main/res/raw/voice_*_name*
+
+# Companion server: local settings (child name etc.)
+/brain/config.json
+__pycache__/

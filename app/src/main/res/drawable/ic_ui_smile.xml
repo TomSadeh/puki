@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Face -->
+    <path android:fillColor="#FFCA28"
+        android:strokeColor="#F9A825"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M4,24 A20,20 0 1,1 44,24 A20,20 0 1,1 4,24 Z"/>
+    <!-- Happy eyes -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#5D4037"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M14,20 Q17,15.5 20,20"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#5D4037"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M28,20 Q31,15.5 34,20"/>
+    <!-- Cheeks -->
+    <path android:fillColor="#FF8A80"
+        android:fillAlpha="0.7"
+        android:pathData="M8,27 A3,3 0 1,1 14,27 A3,3 0 1,1 8,27 Z"/>
+    <path android:fillColor="#FF8A80"
+        android:fillAlpha="0.7"
+        android:pathData="M34,27 A3,3 0 1,1 40,27 A3,3 0 1,1 34,27 Z"/>
+    <!-- Smile -->
+    <path android:fillColor="#6D4C41"
+        android:strokeColor="#6D4C41"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M15,27 Q24,40 33,27 Q24,31 15,27Z"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,14 Q16,8 23,7"/>
+</vector>

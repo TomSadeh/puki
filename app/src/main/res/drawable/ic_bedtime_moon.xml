@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Stars -->
+    <path android:fillColor="#FFF59D"
+        android:pathData="M80,17 L82.38,22.72 L88.56,23.22 L83.85,27.25 L85.29,33.28 L80,30.05 L74.71,33.28 L76.15,27.25 L71.44,23.22 L77.62,22.72 Z"/>
+    <path android:fillColor="#FFF59D"
+        android:pathData="M82,60 L83.59,63.82 L87.71,64.15 L84.57,66.83 L85.53,70.85 L82,68.7 L78.47,70.85 L79.43,66.83 L76.29,64.15 L80.41,63.82 Z"/>
+    <!-- Crescent moon -->
+    <path android:fillColor="#FFD54F"
+        android:pathData="M66,8 A42,42 0 1,0 66,92 A50,50 0 0,1 66,8 Z"/>
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.35"
+        android:pathData="M66,8 A42,42 0 0,0 30,22 A50,50 0 0,1 66,8 Z"/>
+    <!-- Sleepy face -->
+    <path android:strokeColor="#4E342E" android:strokeWidth="2.5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M33,44 Q37,48 41,44"/>
+    <path android:strokeColor="#4E342E" android:strokeWidth="2.5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M34,60 Q39,64 44,60"/>
+    <path android:fillColor="#FF8A80" android:fillAlpha="0.6"
+        android:pathData="M30,52 A4,2.5 0 1,1 38,52 A4,2.5 0 1,1 30,52 Z"/>
+</vector>

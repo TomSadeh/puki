@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="80"
+    android:viewportHeight="80">
+    <!-- Drawn on a 100x100 grid, scaled to the 80 viewport. Ground line y=92. -->
+    <group android:scaleX="0.8" android:scaleY="0.8">
+    <!-- Top -->
+    <path android:fillColor="#FFDC7A"
+        android:pathData="M14,42 L30,26 L90,26 L74,42 Z"/>
+    <!-- Side -->
+    <path android:fillColor="#D9A030"
+        android:pathData="M74,42 L90,26 L90,72 L74,88 Z"/>
+    <!-- Front -->
+    <path android:fillColor="#F2C14E"
+        android:pathData="M16,40 L72,40 Q76,40 76,44 L76,85 Q76,89 72,89 L16,89 Q12,89 12,85 L12,44 Q12,40 16,40 Z"/>
+    <!-- Straw texture -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#D9A030"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22,44 L24,86 M29,44 L31,86 M36,44 L38,86 M43,44 L45,86 M50,44 L52,86 M57,44 L59,86 M64,44 L66,86 M71,44 L73,86 M78,44 L80,86 "/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#E0AC3A"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M20,30 L32,30 M44,32 L60,32 M66,29 L80,29 M78,34 L84,30"/>
+    <!-- Twine -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#B5442E"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M30,41 L30,88 M58,41 L58,88"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#C9583F"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M30,41 L46,26 M58,41 L74,26"/>
+    <!-- Loose straws -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#E0AC3A"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M34,26 L30,16 M48,26 L50,14 M62,26 L68,17 M80,26 L86,18 M90,40 L96,36 M90,58 L97,58"/>
+    </group>
+</vector>

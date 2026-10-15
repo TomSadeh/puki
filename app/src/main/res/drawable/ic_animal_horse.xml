@@ -1,0 +1,72 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <!-- Drawn on a 100x100 grid, scaled to the 120 viewport. Ground line y=92. -->
+    <group android:scaleX="1.2" android:scaleY="1.2">
+    <!-- Far legs -->
+    <path android:fillColor="#94603A"
+        android:pathData="M57,66 L57,87 Q57,91 61,91 L61,91 Q65,91 65,87 L65,66 Z M75,66 L75,87 Q75,91 79,91 L79,91 Q83,91 83,87 L83,66 Z"/>
+    <path android:fillColor="#3A281C"
+        android:pathData="M57,87 L57,87 Q57,91 61,91 L61,91 Q65,91 65,87 L65,87 Z M75,87 L75,87 Q75,91 79,91 L79,91 Q83,91 83,87 L83,87 Z"/>
+    <!-- Tail -->
+    <path android:fillColor="#5B3B25"
+        android:pathData="M82,56 C83,54.67 88,55.67 90,58 C92,60.33 93.67,66 94,70 C94.33,74 93,81 92,82 C91,83 89.33,78.67 88,76 C86.67,73.33 85,69.33 84,66 C83,62.67 81,57.33 82,56 Z"/>
+    <!-- Body -->
+    <path android:fillColor="#B97D4B"
+        android:pathData="M44,63 A21,13 0 1,1 86,63 A21,13 0 1,1 44,63 Z"/>
+    <path android:fillColor="#94603A"
+        android:fillAlpha="0.5"
+        android:pathData="M44,63 A21,13 0 0,0 86,63 A21,6.5 0 0,1 44,63 Z"/>
+    <!-- Near legs -->
+    <path android:fillColor="#B97D4B"
+        android:pathData="M48,66 L48,87.75 Q48,92 52.25,92 L52.25,92 Q56.5,92 56.5,87.75 L56.5,66 Z M68,66 L68,87.75 Q68,92 72.25,92 L72.25,92 Q76.5,92 76.5,87.75 L76.5,66 Z"/>
+    <!-- Hooves -->
+    <path android:fillColor="#4A3426"
+        android:pathData="M48,87.5 L48,87.75 Q48,92 52.25,92 L52.25,92 Q56.5,92 56.5,87.75 L56.5,87.5 Z M68,87.5 L68,87.75 Q68,92 72.25,92 L72.25,92 Q76.5,92 76.5,87.75 L76.5,87.5 Z"/>
+    <!-- Neck -->
+    <path android:fillColor="#B97D4B"
+        android:pathData="M46,64 Q40,48 33,34 L47,26 Q52,46 60,54 Z"/>
+    <!-- Mane -->
+    <path android:fillColor="#5B3B25"
+        android:pathData="M42,16 C42.83,14.67 47,19 49,22 C51,25 52.17,30 54,34 C55.83,38 58.67,42.67 60,46 C61.33,49.33 62.67,52.5 62,54 C61.33,55.5 58,57 56,55 C54,53 52,46.17 50,42 C48,37.83 45.33,34.33 44,30 C42.67,25.67 41.17,17.33 42,16 Z"/>
+    <!-- Ears -->
+    <path android:fillColor="#94603A"
+        android:pathData="M43,18 Q44,7 47,5 Q49,9 48,19 Z"/>
+    <path android:fillColor="#B97D4B"
+        android:pathData="M37,18 Q38,6 42,4 Q44,9 43,18 Z"/>
+    <!-- Head -->
+    <path android:fillColor="#B97D4B"
+        android:pathData="M26,27 A13,13 0 1,1 52,27 A13,13 0 1,1 26,27 Z M14,38.5 A11,9 0 1,1 36,38.5 A11,9 0 1,1 14,38.5 Z M29,29 L43,21 L46,37 L26,47 Z"/>
+    <!-- Muzzle -->
+    <path android:fillColor="#E3BC92"
+        android:pathData="M13.5,39.5 A9,7.5 0 1,1 31.5,39.5 A9,7.5 0 1,1 13.5,39.5 Z"/>
+    <!-- Forelock -->
+    <path android:fillColor="#5B3B25"
+        android:pathData="M34,15 Q29,19 32,25 Q36,21 41,16 Z"/>
+    <!-- Nostril -->
+    <path android:fillColor="#4A3426"
+        android:pathData="M16,37.5 A1.5,2.1 0 1,1 19,37.5 A1.5,2.1 0 1,1 16,37.5 Z"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#4A3426"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M17.5,43 Q21,45.1 24.5,43"/>
+    <!-- Eye -->
+    <path android:fillColor="#3A2A24"
+        android:pathData="M30.56,27 A4.44,5.4 0 1,1 39.44,27 A4.44,5.4 0 1,1 30.56,27 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M34.58,25.08 A1.86,1.86 0 1,1 38.3,25.08 A1.86,1.86 0 1,1 34.58,25.08 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"
+        android:pathData="M32.6,29.04 A0.84,0.84 0 1,1 34.28,29.04 A0.84,0.84 0 1,1 32.6,29.04 Z"/>
+    <path android:fillColor="#FF7F8F"
+        android:fillAlpha="0.4"
+        android:pathData="M33.4,35 A3.6,2.4 0 1,1 40.6,35 A3.6,2.4 0 1,1 33.4,35 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.35"
+        android:pathData="M40.54,23 A4,2 -30 1,1 47.46,19 A4,2 -30 1,1 40.54,23 Z"/>
+    </group>
+</vector>

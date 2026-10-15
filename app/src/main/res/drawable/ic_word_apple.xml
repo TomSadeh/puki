@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Stem -->
+    <path android:fillColor="#00000000"
+        android:strokeColor="#6D4C41"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M50,30 Q50,18 56,9"/>
+    <!-- Leaf -->
+    <path android:fillColor="#66BB6A"
+        android:pathData="M54,20 Q64,6 78,12 Q68,26 54,20Z"/>
+    <!-- Apple -->
+    <path android:fillColor="#E53935"
+        android:pathData="M50,30 Q34,20 22,32 Q11,48 20,70 Q30,92 50,86 Q70,92 80,70 Q89,48 78,32 Q66,20 50,30Z"/>
+    <path android:fillColor="#C62828"
+        android:pathData="M80,70 Q89,48 78,32 Q84,52 74,72 Q64,86 50,86 Q70,92 80,70Z"/>
+    <group android:rotation="20" android:pivotX="33" android:pivotY="48">
+    <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"
+        android:pathData="M28,48 A5,10 0 1,1 38,48 A5,10 0 1,1 28,48 Z"/>
+    </group>
+</vector>

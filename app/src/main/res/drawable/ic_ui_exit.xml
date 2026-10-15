@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Frame -->
+    <path android:fillColor="#5D4037"
+        android:pathData="M10,4 L38,4 L38,45 L10,45Z"/>
+    <!-- Door -->
+    <path android:fillColor="#A1887F"
+        android:pathData="M13,7 L35,7 L35,45 L13,45Z"/>
+    <!-- Panels -->
+    <path android:fillColor="#8D6E63"
+        android:pathData="M16,10 L32,10 L32,23 L16,23Z M16,27 L32,27 L32,41 L16,41Z"/>
+    <!-- Knob -->
+    <path android:fillColor="#FFC107"
+        android:pathData="M29.5,25 A2,2 0 1,1 29.49,25Z"/>
+</vector>

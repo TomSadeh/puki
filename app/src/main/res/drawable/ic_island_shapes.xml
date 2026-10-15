@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Blue square -->
+    <path android:fillColor="#42A5F5"
+        android:pathData="M10,45 L10,85 L50,85 L50,45Z"/>
+    <!-- Red triangle -->
+    <path android:fillColor="#EF5350"
+        android:pathData="M30,10 L10,45 L50,45Z"/>
+    <!-- Yellow circle -->
+    <path android:fillColor="#FFEE58"
+        android:pathData="M52,35 A20,20 0 1,1 92,35 A20,20 0 1,1 52,35Z"/>
+    <!-- Green rectangle -->
+    <path android:fillColor="#66BB6A"
+        android:pathData="M55,60 L55,85 L90,85 L90,60Z"/>
+    <!-- Small orange diamond -->
+    <path android:fillColor="#FFA726"
+        android:pathData="M75,58 L85,48 L95,58 L85,68Z"/>
+</vector>

@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Shoe -->
+    <path android:fillColor="#E53935"
+        android:pathData="M12,74 L12,40 Q12,28 26,28 L42,28 Q48,46 62,50 L80,55 Q92,59 92,72 L92,74 Z"/>
+    <path android:fillColor="#C62828"
+        android:pathData="M12,40 Q12,28 26,28 L30,28 L30,74 L12,74 Z"/>
+    <!-- Toe cap -->
+    <path android:fillColor="#C62828"
+        android:pathData="M72,53 L80,55 Q92,59 92,72 L92,74 L70,74 Q76,62 72,53 Z"/>
+    <!-- Laces -->
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M40,40 L50,36 M44,46 L54,42 M50,51 L59,47"/>
+    <!-- Sole -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M15,70 L89,70 A7,7 0 0,1 96,77 L96,77 A7,7 0 0,1 89,84 L15,84 A7,7 0 0,1 8,77 L8,77 A7,7 0 0,1 15,70 Z"/>
+    <path android:strokeColor="#9E9E9E" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M15,70 L89,70 A7,7 0 0,1 96,77 L96,77 A7,7 0 0,1 89,84 L15,84 A7,7 0 0,1 8,77 L8,77 A7,7 0 0,1 15,70 Z"/>
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.85"
+        android:pathData="M21,54 A7,7 0 1,1 35,54 A7,7 0 1,1 21,54 Z"/>
+    <path android:fillColor="#FFD54F"
+        android:pathData="M28,49 L29.32,52.18 L32.76,52.45 L30.14,54.7 L30.94,58.05 L28,56.25 L25.06,58.05 L25.86,54.7 L23.24,52.45 L26.68,52.18 Z"/>
+</vector>

@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Palette body -->
+    <path android:fillColor="#EFEBE9"
+        android:pathData="M15,50 Q10,20 50,12 Q90,20 88,55 Q85,85 50,90 Q15,85 15,50Z"/>
+    <!-- Thumb hole -->
+    <path android:fillColor="#D7CCC8"
+        android:pathData="M22,60 A8,8 0 1,1 38,60 A8,8 0 1,1 22,60Z"/>
+    <!-- Red blob -->
+    <path android:fillColor="#F44336"
+        android:pathData="M27,28 A8,8 0 1,1 43,28 A8,8 0 1,1 27,28Z"/>
+    <!-- Yellow blob -->
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M47,22 A8,8 0 1,1 63,22 A8,8 0 1,1 47,22Z"/>
+    <!-- Blue blob -->
+    <path android:fillColor="#2196F3"
+        android:pathData="M64,30 A8,8 0 1,1 80,30 A8,8 0 1,1 64,30Z"/>
+    <!-- Green blob -->
+    <path android:fillColor="#4CAF50"
+        android:pathData="M68,52 A7,7 0 1,1 82,52 A7,7 0 1,1 68,52Z"/>
+    <!-- Purple blob -->
+    <path android:fillColor="#9C27B0"
+        android:pathData="M58,72 A7,7 0 1,1 72,72 A7,7 0 1,1 58,72Z"/>
+    <!-- Orange blob -->
+    <path android:fillColor="#FF9800"
+        android:pathData="M38,75 A7,7 0 1,1 52,75 A7,7 0 1,1 38,75Z"/>
+</vector>

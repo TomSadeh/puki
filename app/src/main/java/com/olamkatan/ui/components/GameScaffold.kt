@@ -1,0 +1,184 @@
+package com.olamkatan.ui.components
+
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.olamkatan.R
+import com.olamkatan.theme.EarthBrown
+
+@Composable
+fun GameBackground(
+    colors: List<Color>,
+    modifier: Modifier = Modifier,
+    withBubbles: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
+    val bubbleOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(8000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bubble_float"
+    )
+
+    Box(modifier = modifier.fillMaxSize()) {
+        // Gradient background
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(colors))
+        )
+
+        // Floating decorative circles
+        if (withBubbles) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val bubbleColor = Color.White.copy(alpha = 0.08f)
+
+                // Slow-moving decorative circles at different depths
+                listOf(
+                    Triple(0.15f, 0.3f, 60f),
+                    Triple(0.75f, 0.2f, 40f),
+                    Triple(0.4f, 0.7f, 50f),
+                    Triple(0.85f, 0.6f, 35f),
+                    Triple(0.25f, 0.85f, 45f),
+                ).forEach { (fx, fy, radius) ->
+                    val yShift = ((bubbleOffset + fy) % 1f) * h * 0.1f
+                    drawCircle(
+                        color = bubbleColor,
+                        radius = radius,
+                        center = Offset(w * fx, h * fy - yShift)
+                    )
+                }
+
+                // Soft wavy ground line
+                val wavePath = Path().apply {
+                    moveTo(0f, h * 0.92f)
+                    for (x in 0..w.toInt() step 40) {
+                        val yOff = kotlin.math.sin((x.toFloat() / w) * Math.PI * 4 + bubbleOffset * Math.PI * 2).toFloat() * 8f
+                        lineTo(x.toFloat(), h * 0.92f + yOff)
+                    }
+                    lineTo(w, h)
+                    lineTo(0f, h)
+                    close()
+                }
+                drawPath(wavePath, colors.last().copy(alpha = 0.3f))
+            }
+        }
+
+        content()
+
+        // פּוּקִי the parrot, when the companion server is reachable
+        CompanionParrot(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
+    }
+}
+
+@Composable
+fun GameTopBar(
+    onBack: () -> Unit,
+    roundIndex: Int,
+    totalRounds: Int,
+    starsEarned: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+
+        // Back button with soft circle
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.25f))
+                .clickable { onBack() },
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_ui_back),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(28.dp)
+                    .graphicsLayer(scaleX = if (isRtl) -1f else 1f)
+            )
+        }
+
+        // Round dots
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(totalRounds) { i ->
+                Box(
+                    modifier = Modifier
+                        .size(if (i == roundIndex) 18.dp else 14.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when {
+                                i < roundIndex -> Color(0xFFFFD700)
+                                i == roundIndex -> Color.White
+                                else -> Color.White.copy(alpha = 0.35f)
+                            }
+                        )
+                )
+            }
+        }
+
+        // Stars
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.2f))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_ui_star),
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp)
+                )
+                Text("$starsEarned", fontSize = 20.sp, color = Color.White)
+            }
+        }
+    }
+}

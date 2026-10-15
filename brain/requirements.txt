@@ -1,0 +1,8 @@
+# Python packages for brain.py (in its own virtualenv, see README.md)
+# BlueTTS itself: pip install ~/puki-brain/BlueTTS  (a clone of github.com/maxmelichov/BlueTTS)
+faster-whisper==1.2.1
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*
+# Must match the BlueTTS model files: newer renikud-plus expects files the model repo lacks
+renikud-plus==0.3.0
+huggingface_hub==1.10.1

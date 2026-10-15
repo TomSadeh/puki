@@ -1,0 +1,40 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- House body -->
+    <path android:fillColor="#FFCC80"
+        android:pathData="M18,45 L18,85 L82,85 L82,45Z"/>
+    <!-- Roof -->
+    <path android:fillColor="#E53935"
+        android:pathData="M10,48 L50,12 L90,48Z"/>
+    <!-- Door -->
+    <path android:fillColor="#795548"
+        android:pathData="M40,55 L40,85 L60,85 L60,55 Q60,48 50,48 Q40,48 40,55Z"/>
+    <!-- Door knob -->
+    <path android:fillColor="#FFD54F"
+        android:pathData="M53,70 A3,3 0 1,1 59,70 A3,3 0 1,1 53,70Z"/>
+    <!-- Window left -->
+    <path android:fillColor="#81D4FA"
+        android:pathData="M22,52 L22,68 L36,68 L36,52Z"/>
+    <!-- Window left cross -->
+    <path android:fillColor="#EFEBE9"
+        android:pathData="M22,59 L36,59 L36,61 L22,61Z"/>
+    <path android:fillColor="#EFEBE9"
+        android:pathData="M28,52 L30,52 L30,68 L28,68Z"/>
+    <!-- Window right -->
+    <path android:fillColor="#81D4FA"
+        android:pathData="M64,52 L64,68 L78,68 L78,52Z"/>
+    <!-- Window right cross -->
+    <path android:fillColor="#EFEBE9"
+        android:pathData="M64,59 L78,59 L78,61 L64,61Z"/>
+    <path android:fillColor="#EFEBE9"
+        android:pathData="M70,52 L72,52 L72,68 L70,68Z"/>
+    <!-- Chimney -->
+    <path android:fillColor="#8D6E63"
+        android:pathData="M70,18 L70,35 L80,28 L80,18Z"/>
+    <!-- Sun -->
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M7,15 A8,8 0 1,1 23,15 A8,8 0 1,1 7,15Z"/>
+</vector>

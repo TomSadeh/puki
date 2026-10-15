@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Smiling yellow star -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path android:fillColor="#FFCA28"
+        android:strokeColor="#F9A825"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M50,8 L61.8,36.8 L92.8,39.1 L69,59.2 L76.5,89.4 L50,73 L23.5,89.4 L31,59.2 L7.2,39.1 L38.2,36.8 Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45"
+        android:pathData="M50,16 L55,33 L41,34 Z"/>
+    <path android:fillColor="#5D4037"
+        android:pathData="M40.2,53.4 A2.6,2.6 0 1,1 45.4,53.4 A2.6,2.6 0 1,1 40.2,53.4 Z"/>
+    <path android:fillColor="#5D4037"
+        android:pathData="M54.6,53.4 A2.6,2.6 0 1,1 59.8,53.4 A2.6,2.6 0 1,1 54.6,53.4 Z"/>
+    <path android:strokeColor="#5D4037"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M45.2,59 Q50,63.8 54.8,59"/>
+    <path android:fillColor="#FF8A80"
+        android:fillAlpha="0.7"
+        android:pathData="M35.2,59 A2.8,2.8 0 1,1 40.8,59 A2.8,2.8 0 1,1 35.2,59 Z"/>
+    <path android:fillColor="#FF8A80"
+        android:fillAlpha="0.7"
+        android:pathData="M59.2,59 A2.8,2.8 0 1,1 64.8,59 A2.8,2.8 0 1,1 59.2,59 Z"/>
+</vector>

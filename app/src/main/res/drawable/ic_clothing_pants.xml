@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Pants -->
+    <path android:fillColor="#1E88E5"
+        android:pathData="M26,12 L74,12 L82,90 L58,90 L50,40 L42,90 L18,90 Z"/>
+    <!-- Waistband -->
+    <path android:fillColor="#1565C0"
+        android:pathData="M28,10 L72,10 A3,3 0 0,1 75,13 L75,17 A3,3 0 0,1 72,20 L28,20 A3,3 0 0,1 25,17 L25,13 A3,3 0 0,1 28,10 Z"/>
+    <path android:strokeColor="#1565C0" android:strokeWidth="2.5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M50,20 L50,40"/>
+    <!-- Pockets -->
+    <path android:strokeColor="#1565C0" android:strokeWidth="2.5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M30,20 Q32,30 42,30"/>
+    <path android:strokeColor="#1565C0" android:strokeWidth="2.5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M70,20 Q68,30 58,30"/>
+    <path android:strokeColor="#64B5F6" android:strokeWidth="3" android:strokeLineCap="butt" android:strokeLineJoin="round"
+        android:pathData="M19,82 L41.3,82"/>
+    <path android:strokeColor="#64B5F6" android:strokeWidth="3" android:strokeLineCap="butt" android:strokeLineJoin="round"
+        android:pathData="M58.8,82 L81.2,82"/>
+    <path android:fillColor="#FFD54F"
+        android:pathData="M47.8,15 A2.2,2.2 0 1,1 52.2,15 A2.2,2.2 0 1,1 47.8,15 Z"/>
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M30,26 L24,80"/>
+</vector>

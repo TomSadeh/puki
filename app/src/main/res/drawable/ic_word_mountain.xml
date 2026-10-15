@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Sun -->
+    <path android:fillColor="#FFCA28"
+        android:pathData="M11,26 A9,9 0 1,1 29,26 A9,9 0 1,1 11,26 Z"/>
+    <!-- Back mountain -->
+    <path android:fillColor="#90A4AE"
+        android:pathData="M48,88 L72,38 L96,88Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M72,38 L80,55 L75,52 L71,57 L66,51Z"/>
+    <!-- Main mountain -->
+    <path android:fillColor="#78909C"
+        android:pathData="M4,88 L42,16 L82,88Z"/>
+    <path android:fillColor="#607D8B"
+        android:pathData="M42,16 L82,88 L54,88Z"/>
+    <!-- Snow -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M42,16 L53,37 L47,33 L42,40 L37,33 L31,37Z"/>
+    <!-- Grass -->
+    <path android:fillColor="#66BB6A"
+        android:pathData="M2,86 Q50,79 98,86 L98,94 L2,94Z"/>
+</vector>

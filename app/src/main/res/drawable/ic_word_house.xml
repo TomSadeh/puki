@@ -1,0 +1,51 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Grass -->
+    <path android:fillColor="#66BB6A"
+        android:pathData="M8,88 L92,88 L92,93 Q50,98 8,93Z"/>
+    <!-- Chimney -->
+    <path android:fillColor="#8D6E63"
+        android:pathData="M63,18 L75,18 L75,42 L63,34Z"/>
+    <!-- Walls -->
+    <path android:fillColor="#FFCA28"
+        android:pathData="M22,46 L78,46 L78,88 L22,88Z"/>
+    <path android:fillColor="#FFB300"
+        android:pathData="M66,46 L78,46 L78,88 L66,88Z"/>
+    <!-- Roof -->
+    <path android:fillColor="#E53935"
+        android:strokeColor="#C62828"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M12,50 L50,15 L88,50Z"/>
+    <path android:fillColor="#FFFFFF"
+        android:fillAlpha="0.35"
+        android:pathData="M22,44 L50,19 L54,23 L28,46Z"/>
+    <!-- Door -->
+    <path android:fillColor="#6D4C41"
+        android:pathData="M41,66 Q41,57 50,57 Q59,57 59,66 L59,88 L41,88Z"/>
+    <path android:fillColor="#FFD54F"
+        android:pathData="M52.7,74 A1.8,1.8 0 1,1 56.3,74 A1.8,1.8 0 1,1 52.7,74 Z"/>
+    <!-- Windows -->
+    <path android:fillColor="#81D4FA"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M27,57 L37,57 L37,68 L27,68Z"/>
+    <path android:fillColor="#81D4FA"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M63,57 L73,57 L73,68 L63,68Z"/>
+    <path android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M32,57 L32,68 M27,62.5 L37,62.5 M68,57 L68,68 M63,62.5 L73,62.5"/>
+</vector>

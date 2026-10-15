@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#FFC107"
+        android:strokeColor="#F57F17"
+        android:strokeWidth="2"
+        android:strokeLineJoin="round"
+        android:pathData="M24.0,3.0 L29.6,17.3 L44.9,18.2 L33.0,27.9 L36.9,42.8 L24.0,34.5 L11.1,42.8 L15.0,27.9 L3.1,18.2 L18.4,17.3Z"/>
+    <!-- Shine -->
+    <path android:fillColor="#FFF59D"
+        android:pathData="M24,10 L27,18.5 L20.5,19.5Z"/>
+</vector>

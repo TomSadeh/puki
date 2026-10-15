@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Large note -->
+    <path android:fillColor="#7B1FA2"
+        android:pathData="M25,70 A10,8 0 1,1 45,70 A10,8 0 1,1 25,70Z"/>
+    <path android:fillColor="#7B1FA2"
+        android:pathData="M43,70 L43,20 L47,20 L47,70Z"/>
+    <!-- Note flag -->
+    <path android:fillColor="#AB47BC"
+        android:pathData="M47,20 Q65,22 65,35 Q60,30 47,30Z"/>
+    <!-- Small note -->
+    <path android:fillColor="#FF7043"
+        android:pathData="M57,55 A8,6 0 1,1 73,55 A8,6 0 1,1 57,55Z"/>
+    <path android:fillColor="#FF7043"
+        android:pathData="M71,55 L71,25 L74,25 L74,55Z"/>
+    <!-- Small note flag -->
+    <path android:fillColor="#FF8A65"
+        android:pathData="M74,25 Q85,27 85,36 Q82,32 74,32Z"/>
+    <!-- Sparkle dots -->
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M17,30 A3,3 0 1,1 23,30 A3,3 0 1,1 17,30Z"/>
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M77,50 A3,3 0 1,1 83,50 A3,3 0 1,1 77,50Z"/>
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M23,55 A2,2 0 1,1 27,55 A2,2 0 1,1 23,55Z"/>
+    <path android:fillColor="#FFEB3B"
+        android:pathData="M80,25 A2,2 0 1,1 84,25 A2,2 0 1,1 80,25Z"/>
+</vector>

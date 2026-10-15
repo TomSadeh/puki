@@ -1,0 +1,60 @@
+package com.olamkatan.ui.components
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+
+@Composable
+fun DropZone(
+    zoneId: String,
+    modifier: Modifier = Modifier,
+    highlightColor: Color = Color(0xFF4CAF50),
+    content: @Composable () -> Unit
+) {
+    val dragDropState = LocalDragDropState.current
+    val isHovered = dragDropState.isDragging && dragDropState.getHoveredDropZone() == zoneId
+
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (isHovered) 0.5f else 0f,
+        animationSpec = tween(200),
+        label = "glow"
+    )
+
+    DisposableEffect(zoneId) {
+        onDispose {
+            dragDropState.unregisterDropZone(zoneId)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { coords ->
+                dragDropState.registerDropZone(zoneId, coords.boundsInRoot())
+            }
+            .drawBehind {
+                if (glowAlpha > 0f) {
+                    drawRoundRect(
+                        color = highlightColor.copy(alpha = glowAlpha),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f),
+                        style = Stroke(width = 6f)
+                    )
+                    drawRoundRect(
+                        color = highlightColor.copy(alpha = glowAlpha * 0.3f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f)
+                    )
+                }
+            }
+    ) {
+        content()
+    }
+}

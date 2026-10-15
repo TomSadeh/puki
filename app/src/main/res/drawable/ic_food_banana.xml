@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="80"
+    android:viewportHeight="80">
+    <!-- Drawn on a 100x100 grid, scaled to the 80 viewport. Ground line y=92. -->
+    <group android:scaleX="0.8" android:scaleY="0.8">
+    <!-- Banana -->
+    <path android:fillColor="#F9C623"
+        android:pathData="M74,16 Q80,40 66,62 Q50,84 22,86 Q16,85 18,80 Q38,70 51,54 Q61,40 59,18 Z"/>
+    <path android:fillColor="#E8A915"
+        android:pathData="M74,16 Q80,40 66,62 Q50,84 22,86 Q40,78 54,62 Q70,44 70,18 Z"/>
+    <path android:fillColor="#FFE27A"
+        android:fillAlpha="0.9"
+        android:pathData="M64,24 Q64,44 52,58 Q42,70 26,78 Q44,66 52,54 Q60,42 62,24 Z"/>
+    <!-- Stem -->
+    <path android:fillColor="#7A5A2C"
+        android:pathData="M67,8 L68.5,8 Q71,8 71,10.5 L71,17.5 Q71,20 68.5,20 L67,20 Q64.5,20 64.5,17.5 L64.5,10.5 Q64.5,8 67,8 Z"/>
+    <!-- Tip -->
+    <path android:fillColor="#5E4320"
+        android:pathData="M16.49,84.09 A3.2,2.6 -20 1,1 22.51,81.91 A3.2,2.6 -20 1,1 16.49,84.09 Z"/>
+    </group>
+</vector>
