@@ -101,10 +101,61 @@ New categories (vehicles, food, family, weather), each with words, prompts and v
 - Illustrations are vector drawables in the existing style.
 - `scripts/check_voices.py` confirms nothing is silent.
 
+## 6. Making it easy for other families 🏡
+
+Today, setting up Puki takes Android Studio and eight manual steps on the PC. The goal is
+"install the app, run one program on the PC, type your child's name".
+
+**First-run setup in the app (small).**
+- A short welcome on first launch: language, the child's name, girl/boy, and "set up Puki?".
+  Everything stays editable in parent settings.
+- The app sends the child's name and gender with each request, so the PC needs no
+  `config.json` and one brain can serve siblings on different tablets.
+- The first time the PC is reachable, the app asks the brain to record the lines with the
+  child's name ("כל הכבוד, ___!") and saves them on the tablet. They then work offline too,
+  with no generator script.
+
+**The app finds the PC by itself (small to medium).**
+- The brain announces itself on the home network (mDNS / DNS-SD as `_puki._tcp`), and the
+  app lists what it finds. No IP addresses.
+- Fallback: the PC shows a QR code with its address, and the parent scans it in settings.
+
+**English as a first-class language (small to medium).**
+- Speech recognition: load a standard English Whisper (for example `large-v3-turbo` or
+  `distil-large-v3` in CTranslate2 format) when the app is in English. The ivrit.ai model
+  stays for Hebrew.
+- Game situations sent to the brain become bilingual (about 20 strings), instead of always
+  Hebrew.
+- Voice: compare BlueTTS's English with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M),
+  a small and very natural English voice, and use whichever sounds better for English.
+
+**One program for the PC instead of a setup guide (medium).**
+- **A single brain binary:** doorbell, brain, a Python runtime, onnxruntime, CTranslate2
+  and llama.cpp, bundled with Nuitka or PyInstaller into one Windows app with a tray icon.
+  The icon shows whether Puki is asleep, awake or busy, and offers pause and settings.
+- **Models download on first run** with a progress bar (Gemma, its vision part, Whisper,
+  BlueTTS; about 8 GB), and resume if interrupted. Models aren't bundled, so the download
+  stays small, each model keeps its own license, and models update independently.
+- **GPU or CPU:** detect an NVIDIA GPU and fetch the CUDA build of llama.cpp and the cuBLAS/
+  cuDNN libraries only when there is one. Everyone else gets the CPU build.
+- **Firewall and autostart:** one admin prompt adds the home-network firewall rule, and an
+  "open at login" option replaces the startup shortcut.
+- **Trust:** unsigned executables trigger Windows SmartScreen warnings and the occasional
+  antivirus false positive. A code-signing certificate fixes this; until then, publish
+  checksums and the build script so people can build it themselves.
+- **Later:** a macOS build (Apple Silicon makes a great brain: llama.cpp uses Metal, and
+  Whisper and BlueTTS run on the CPU) and a Linux build or Docker image.
+- **Testing:** test on a clean PC every time. Installers mostly fail on machines that
+  aren't the developer's.
+
+**Getting the app onto tablets (medium).**
+- Signed APKs on GitHub Releases: enough for tech-savvy parents.
+- Google Play: its "Designed for Families" rules for kids' apps, plus microphone and
+  local-network permissions, mean real paperwork. Worth it once the rest is solid.
+
 ## Ongoing
 
 - **Run the whole stack on a high-end tablet:** Gemma E2B/E4B through LiteRT-LM on device,
   BlueTTS through ONNX Runtime Mobile, and a smaller Hebrew speech model. This would make
   Puki work away from home.
-- **Linux setup notes** for the brain server.
 - **Tuning the persona** from real logs: which lines delight, which fall flat.
