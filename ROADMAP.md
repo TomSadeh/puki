@@ -124,7 +124,7 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
   **Status:** the dashboard shows the QR code (`puki://pair?host=…&code=…`, address plus
   pairing code); scanning it in the app is still open.
 
-**English as a first-class language (small to medium).**
+**English as a first-class language (small to medium). Status: done, except the voice comparison.**
 - Speech recognition: load a standard English Whisper (for example `large-v3-turbo` or
   `distil-large-v3` in CTranslate2 format) when the app is in English. The ivrit.ai model
   stays for Hebrew.

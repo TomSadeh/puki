@@ -67,7 +67,7 @@ fun AnimalGardenScreen(
     if (state.isLoading) return
 
     LaunchedEffect(state.roundIndex) {
-        companion?.scene = "במשחק החיות: ${state.currentAnimal.name.he} מחכה לאוכל."
+        companion?.setScene("במשחק החיות: ${state.currentAnimal.name.he} מחכה לאוכל.", "In the animal game: the ${state.currentAnimal.name.en.lowercase()} is waiting for food.")
         delay(500)
         voicePlayer.playSequence(
             listOf("voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"),
@@ -124,7 +124,7 @@ fun AnimalGardenScreen(
                                         val correct = animalViewModel.onFoodDropped(food.id)
                                         if (correct) {
                                             sfxPlayer.play(Sfx.SUCCESS)
-                                            if (companion != null) companion.react("נתנו ל${state.currentAnimal.name.he} ${food.name.he}. זה האוכל הנכון!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+                                            if (companion != null) companion.react("נתנו ל${state.currentAnimal.name.he} ${food.name.he}. זה האוכל הנכון!", "The child fed the ${state.currentAnimal.name.en.lowercase()} ${food.name.en.lowercase()}. That's the right food!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
                                             showRoundSuccess = true
                                             scope.launch {
                                                 // Munch the food, then a happy hop
@@ -140,7 +140,7 @@ fun AnimalGardenScreen(
                                                     val says = if (animal.id in FEMININE_ANIMALS) "אומרת" else "אומר"
                                                     val question = if (language == Language.ENGLISH) "What does the ${animal.name.en.lowercase()} say?"
                                                         else "מה ה${animal.name.he} $says?"
-                                                    companion.askAndListen(question, "שאלת מה ה${animal.name.he} $says, וזו התשובה.") {
+                                                    companion.askAndListen(question, if (language == Language.ENGLISH) "You asked what the ${animal.name.en.lowercase()} says, and this is the answer." else "שאלת מה ה${animal.name.he} $says, וזו התשובה.") {
                                                         voicePlayer.play("voice_sound_${animal.id}", language)
                                                         scope.launch { animalReaction.celebrate() }
                                                     }
@@ -149,7 +149,7 @@ fun AnimalGardenScreen(
                                             }
                                         } else {
                                             sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                            if (companion != null) companion.react("ניסו לתת ל${state.currentAnimal.name.he} ${food.name.he}, אבל זה לא האוכל שלו.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
+                                            if (companion != null) companion.react("ניסו לתת ל${state.currentAnimal.name.he} ${food.name.he}, אבל זה לא האוכל שלו.", "The child tried to give the ${state.currentAnimal.name.en.lowercase()} ${food.name.en.lowercase()}, but that's not its food.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
                                             scope.launch { animalReaction.shake() }
                                         }
                                     } else {

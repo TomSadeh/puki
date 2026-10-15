@@ -74,7 +74,7 @@ fun ShapePlaygroundScreen(
     if (state.isLoading) return
 
     LaunchedEffect(state.roundIndex) {
-        companion?.scene = "במשחק הצורות: מחפשים ${state.targetShape.name.he}."
+        companion?.setScene("במשחק הצורות: מחפשים ${state.targetShape.name.he}.", "In the shape game: we're looking for the ${state.targetShape.name.en.lowercase()}.")
         delay(500)
         voicePlayer.playSequence(
             listOf("voice_prompt_drag_it", "voice_shape_${state.targetShape.id}"),
@@ -137,7 +137,7 @@ fun ShapePlaygroundScreen(
                                         val correct = viewModel.onShapeDropped(shape.id)
                                         if (correct) {
                                             sfxPlayer.play(Sfx.SUCCESS)
-                                            if (companion != null) companion.react("במשחק הצורות שמו את ה${shape.name.he} במקום הנכון!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+                                            if (companion != null) companion.react("במשחק הצורות שמו את ה${shape.name.he} במקום הנכון!", "In the shape game the child put the ${shape.name.en.lowercase()} in the right place!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
                                             showRoundSuccess = true
                                             scope.launch { targetReaction.celebrate() }
                                             scope.launch {
@@ -147,7 +147,7 @@ fun ShapePlaygroundScreen(
                                             }
                                         } else {
                                             sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                            if (companion != null) companion.react("במשחק הצורות ניסו לשים ${shape.name.he} במקום של ${state.targetShape.name.he}.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
+                                            if (companion != null) companion.react("במשחק הצורות ניסו לשים ${shape.name.he} במקום של ${state.targetShape.name.he}.", "In the shape game the child tried to put the ${shape.name.en.lowercase()} where the ${state.targetShape.name.en.lowercase()} goes.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
                                             scope.launch { shapeReaction.shake() }
                                         }
                                     }

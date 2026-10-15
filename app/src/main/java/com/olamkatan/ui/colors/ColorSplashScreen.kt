@@ -71,7 +71,7 @@ fun ColorSplashScreen(
     if (state.isLoading) return
 
     LaunchedEffect(state.roundIndex) {
-        companion?.scene = "במשחק הצבעים: מחפשים את הצבע ${state.targetColor.name.he}."
+        companion?.setScene("במשחק הצבעים: מחפשים את הצבע ${state.targetColor.name.he}.", "In the color game: we're looking for ${state.targetColor.name.en.lowercase()}.")
         delay(500)
         voicePlayer.playSequence(
             listOf("voice_prompt_tap_the", "voice_color_${state.targetColor.id}"),
@@ -123,7 +123,7 @@ fun ColorSplashScreen(
                             val correct = viewModel.onColorTapped(color.id)
                             if (correct) {
                                 sfxPlayer.play(Sfx.SUCCESS)
-                                if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}. זה נכון!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+                                if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}. זה נכון!", "In the color game the child picked ${color.name.en.lowercase()}. That's right!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
                                 showRoundSuccess = true
                                 scope.launch { blobReaction.celebrate() }
                                 scope.launch {
@@ -133,7 +133,7 @@ fun ColorSplashScreen(
                                 }
                             } else {
                                 sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}, אבל חיפשנו ${state.targetColor.name.he}.") { voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language)
+                                if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}, אבל חיפשנו ${state.targetColor.name.he}.", "In the color game the child picked ${color.name.en.lowercase()}, but we were looking for ${state.targetColor.name.en.lowercase()}.") { voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language)
                                 scope.launch { blobReaction.shake() }
                             }
                         }

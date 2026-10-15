@@ -3,8 +3,8 @@
 The parrot in the games gets its words from a PC at home. Gemma 4 E4B writes a short
 line about what just happened, and [BlueTTS](https://github.com/maxmelichov/BlueTTS)
 speaks it in Hebrew or English. Holding the parrot records the child, and
-[ivrit.ai](https://huggingface.co/ivrit-ai)'s Hebrew-tuned Whisper transcribes the
-recording on the PC so the parrot can answer.
+[ivrit.ai](https://huggingface.co/ivrit-ai)'s Hebrew-tuned Whisper (or a standard Whisper, when the
+app is in English) transcribes the recording on the PC so the parrot can answer.
 
 The tablet only talks to the PC over the home network. Nothing goes to the internet.
 When the PC can't be reached (it's off, you're away, or a reply is too slow), the
@@ -41,7 +41,10 @@ Everything goes in `~/puki-brain` by default. You can change any path in the con
    Gemma is subject to Google's [Gemma terms of use](https://ai.google.dev/gemma/terms).
 3. **Whisper:** download all files of
    [ivrit-ai/whisper-large-v3-turbo-ct2](https://huggingface.co/ivrit-ai/whisper-large-v3-turbo-ct2)
-   into `~/puki-brain/models/whisper-ivrit-turbo`.
+   into `~/puki-brain/models/whisper-ivrit-turbo`. For English, also download all files of
+   [mobiuslabsgmbh/faster-whisper-large-v3-turbo](https://huggingface.co/mobiuslabsgmbh/faster-whisper-large-v3-turbo)
+   into `~/puki-brain/models/whisper-large-v3-turbo` (without it, English uses the Hebrew model,
+   which understands English poorly). It's loaded the first time the app talks to Puki in English.
 4. **BlueTTS:** clone [BlueTTS](https://github.com/maxmelichov/BlueTTS) into
    `~/puki-brain/BlueTTS` and download its ONNX models as its README describes.
 5. **Python environment** for brain.py:

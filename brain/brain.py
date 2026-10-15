@@ -32,6 +32,8 @@ from doorbell import CFG, LLAMA_URL, log  # noqa: E402
 NAME = re.sub(r"[\u0591-\u05C7]", "", CFG.get("child_name") or "")
 GIRL = CFG.get("child_gender", "girl") == "girl"
 COMPANION = re.sub(r"[\u0591-\u05C7]", "", CFG.get("companion_name", "פוקי"))
+COMPANION_EN = CFG.get("companion_name_en", "Puki")
+HEBREW_LETTER = re.compile(r"[\u05D0-\u05EA]")
 CHILD = NAME or ("הילדה" if GIRL else "הילד")
 _CONFIG_CHILD = (NAME, GIRL)
 # One request at a time: Gemma, Whisper and BlueTTS run one job at a time anyway, and the
@@ -47,14 +49,32 @@ def set_child(name, gender):
     CHILD = NAME or ("הילדה" if GIRL else "הילד")
 
 
+def child(lang):
+    """The child's name, or "the girl"/"the boy", for prompts in [lang]."""
+    if lang == "en":
+        return NAME or ("the little girl" if GIRL else "the little boy")
+    return CHILD
+
+
+def capital(s):
+    return s[:1].upper() + s[1:]
+
+
 def system_prompt(lang):
     if lang == "en":
+        # The name is often typed in Hebrew letters; the line may keep it that way (speak() reads it in Hebrew)
+        name_note = (f" If you say {'her' if GIRL else 'his'} name, write it exactly like this: {NAME}."
+                     if HEBREW_LETTER.search(NAME) else "")
         return (
-            f"You are {COMPANION_EN}, a happy, colorful parrot who plays games with {CHILD}, a 2-year-old "
-            f"{'girl' if GIRL else 'boy'} who can't read yet. Say ONE or TWO very short, simple sentences "
-            "(at most 10 words total). Always warm and encouraging; never say 'no' or 'wrong' - if they "
-            "made a mistake, gently cheer them on to try again. Add a fun sound now and then (yum!, hop!, "
-            "wow!). No emoji, no questions they must answer. Reply with only what the parrot says."
+            f"You are {COMPANION_EN}, a happy, colorful parrot who plays games with {child(lang)}, a 2-year-old "
+            f"{'girl' if GIRL else 'boy'} who can't read yet. You speak very simple English: ONE or TWO very "
+            "short sentences (at most 10 words total). Always warm and encouraging; never say 'no' or "
+            "'wrong' - if there was a mistake, gently cheer them on to try again. Now and then add a fun "
+            "sound that fits: 'Yum!' or 'Mmm!' only when someone eats, otherwise 'Hop!', 'Wow!' or 'Yay!'. "
+            "Don't repeat a word twice, and end on something about what happened. Don't compliment the "
+            "child (no 'you're so smart', 'you're amazing'); talk about the thing itself: the animal, the "
+            "color, the food. No emoji, no other languages, no questions they must answer."
+            f"{name_note} Reply with only what the parrot says."
         )
     you = "בלשון נקבה" if GIRL else "בלשון זכר"
     return (
@@ -75,13 +95,15 @@ def system_prompt(lang):
 
 # A few examples so the model copies the style (short, warm, playful)
 def examples(lang):
+    n = f" {NAME}" if NAME else ""
     if lang == "en":
         return [
             ("The child fed the cow grass. That's right.", "Yum! The cow loves grass! She's so happy!"),
-            ("The child tapped blue, but the target was red.", "Ooh, blue! Let's find red!"),
-            ('The child said to you: "hi Puki".', "Hi! I'm so happy you came!"),
+            ("The child tapped blue, but we were looking for red.", "Ooh, blue! Let's find red!"),
+            ("The child counted three butterflies.", "One, two, three! Three butterflies flying!"),
+            ("The child tapped green. That's right.", "Yay! Green like the grass!"),
+            ('The child said to you: "hi Puki".', f"Hi{n}! I'm so happy you came!"),
         ]
-    n = f" {NAME}" if NAME else ""
     if GIRL:
         return [
             ("הילדה האכילה את הפרה בעשב. זה נכון.", "מממ! הפרה אוהבת עשב! היא ממש שמחה!"),
@@ -101,14 +123,16 @@ def examples(lang):
 
 HEBREW_OK = re.compile(r"^[֐-׿\s,.!?'\"׳״\-–]+$")
 ENGLISH_OK = re.compile(r"^[A-Za-z\s,.!?'\-]+$")
-BANNED = ["טעות", "רע", "טיפש", "לא נכון", "wrong", "bad", "stupid"]
+BANNED = ["טעות", "רע", "טיפש", "טיפשה", "מכוער", "מכוערת", "לא נכון",
+          "wrong", "bad", "stupid", "dumb", "ugly", "idiot", "hate", "not right", "mistake"]
 
 
 # Compliments about the child herself ("את מקסימה!") sound odd tacked onto every line
 COMPLIMENT = re.compile(
     r"^(את|אתה|you'?re|you are)\s+(כל כך |ממש |כזאת |כזה |מאוד |so |really |such an? )*"
     r"(מקסימה|מקסים|מתוקה|מתוק|חכמה|חכם|מדהימה|מדהים|מיוחדת|מיוחד|טובה|טוב|יפה|נהדרת|נהדר|"
-    r"עושה (יופי|טוב|כל כך טוב)|sweet|smart|amazing|special|great|lovely|clever)\b",
+    r"עושה (יופי|טוב|כל כך טוב)|sweet|smart|amazing|special|great|lovely|clever|wonderful|awesome|"
+    r"brilliant|beautiful|the best|doing (great|so well|amazing))\b",
     re.IGNORECASE,
 )
 
@@ -122,12 +146,16 @@ def drop_compliments(text):
 def clean(text, lang):
     """Return a safe line or None."""
     text = re.sub(r"<[^>]+>", "", text)          # stray tags
+    text = text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    text = re.sub(r"\s*[—–]\s*", ", " if lang == "en" else " – ", text)
     text = text.strip().strip('"').strip()
     text = text.splitlines()[0].strip() if text else ""
     text = drop_compliments(text)
     if not text or len(text) > 90 or len(text.split()) > 14:
         return None
-    if not (ENGLISH_OK if lang == "en" else HEBREW_OK).match(text):
+    # In English the child's name may stay in Hebrew letters (speak() reads it in Hebrew)
+    check = text.replace(NAME, "Name") if lang == "en" and NAME else text
+    if not (ENGLISH_OK if lang == "en" else HEBREW_OK).match(check):
         return None
     # Whole words only ("רע" is bad, "רעבה" — hungry — is fine); allow Hebrew prefixes like ו/ה
     words = re.findall(r"[\w']+", text.lower())
@@ -140,7 +168,7 @@ def clean(text, lang):
 
 # Small models repeat themselves, so each request suggests a different opening
 # sound and lists the last few lines to avoid.
-FOOD_WORDS = ("האכיל", "אוכל", "fed", "eat")
+FOOD_WORDS = ("האכיל", "אוכל", "fed ", "food")
 OPENERS = {
     "he": {"food": ["יאמי", "מממ", "אמממ"], "other": ["הופ", "יש", "אוהו", "יופי", "טה-דה", "הידד", ""]},
     "en": {"food": ["Yum", "Mmm", "Munch munch"], "other": ["Hooray", "Yay", "Ooh", "Ta-da", "Woohoo", ""]},
@@ -190,8 +218,8 @@ def chat(messages, max_tokens=48, temperature=0.9, response_format=None, timeout
 def look_line(png_bytes, lang):
     """A warm one-liner about a toddler's drawing, or None."""
     if lang == "en":
-        ask = (f"{CHILD} just drew this picture (a 2-year-old's drawing, probably scribbles). "
-               "In one or two short sentences, say what you see: colors, lines, shapes, maybe a playful "
+        ask = (f"{capital(child(lang))} just drew this picture (a 2-year-old's drawing, probably scribbles). "
+               "In one or two short English sentences, say what you see: colors, lines, shapes, maybe a playful "
                "guess at what it is. Be delighted. Never say it doesn't look like something.")
     else:
         ask = (f"{CHILD} {'ציירה' if GIRL else 'צייר'} עכשיו את הציור הזה (ציור של פעוטה בת שנתיים, כנראה קשקושים). "
@@ -228,9 +256,10 @@ def story(played, icons, lang):
     """A short calm bedtime story: [{"text", "icon"}], each icon one of [icons] (name -> label)."""
     names = "\n".join(f"- {k}: {v}" for k, v in icons.items())
     if lang == "en":
-        ask = (f"Tell {CHILD} a very short, calm bedtime story (5-6 sentences, each at most 10 simple words). "
-               f"{CHILD} is the hero. Today {CHILD} played with: {played}. Use one or two of those things. "
-               "Slow, warm and sleepy, ending with everyone falling asleep. No questions. "
+        c = child(lang)
+        ask = (f"Tell {c} a very short, calm bedtime story in simple English (5-6 sentences, each at most "
+               f"10 simple words). {capital(c)} is the hero. Today {c} played with: {played}. Use one or two "
+               "of those things. Slow, warm and sleepy, ending with everyone falling asleep. No questions. "
                "For each sentence, choose the picture (icon) that fits it best from this list:\n" + names +
                "\nAnswer as JSON.")
         closing = f"Good night{', ' + NAME if NAME else ''}."
@@ -296,11 +325,21 @@ def tag_english(text):
     return ENGLISH_RUN.sub(lambda m: f"<en>{m.group(0)}</en>", text)
 
 
+# A run of Hebrew words, e.g. the child's name typed in Hebrew inside an English line
+HEBREW_RUN = re.compile(r"[\u05D0-\u05EA]+(?:[\s'\-]+[\u05D0-\u05EA]+)*")
+
+
+def tag_hebrew(text):
+    """The same the other way round: Hebrew inside an English line goes in <he>…</he>."""
+    if "<he>" in text:
+        return text
+    return HEBREW_RUN.sub(lambda m: f"<he>{m.group(0)}</he>", text)
+
+
 def speak(text, lang, speed=0.92):
     # BlueTTS mispronounces text that already has nikud (e.g. a name with nikud came out garbled)
     text = re.sub(r"[\u0591-\u05C7]", "", text)
-    if lang == "he":
-        text = tag_english(text)
+    text = tag_english(text) if lang == "he" else tag_hebrew(text)
     samples, sr = TTS.synthesize(text, lang=lang, total_step=8, speed=speed)
     samples = np.concatenate([samples, np.zeros(int(sr * 0.15), dtype=np.float32)])
     buf = io.BytesIO()
@@ -308,7 +347,7 @@ def speak(text, lang, speed=0.92):
     return buf.getvalue()
 
 
-# ---------- Speech to text (ivrit.ai Whisper, fine-tuned for Hebrew) ----------
+# ---------- Speech to text (ivrit.ai Whisper for Hebrew, a standard Whisper for English) ----------
 
 def _add_cuda_dlls():
     """Let CTranslate2 find the cuBLAS / cuDNN DLLs installed as nvidia-* pip packages."""
@@ -322,31 +361,69 @@ def _add_cuda_dlls():
             os.environ["PATH"] = bin_dir + os.pathsep + os.environ["PATH"]
 
 
-def _load_whisper():
+def _load_whisper(path):
     from faster_whisper import WhisperModel
     # GPU when there's room next to Gemma (and the training runs), CPU otherwise
     from doorbell import free_vram_mb
     if free_vram_mb() >= CFG["whisper_min_free_vram_mb"]:
         try:
             _add_cuda_dlls()
-            model = WhisperModel(CFG["whisper_model"], device="cuda", compute_type="float16")
+            model = WhisperModel(path, device="cuda", compute_type="float16")
             log("whisper on GPU")
             return model
         except Exception as e:
             log(f"whisper GPU failed ({e}), using CPU")
     log("whisper on CPU")
-    return WhisperModel(CFG["whisper_model"], device="cpu", compute_type="int8")
+    return WhisperModel(path, device="cpu", compute_type="int8")
 
 
-log("loading Whisper")
-WHISPER = _load_whisper()
+def _whisper_path(lang):
+    if lang == "he":
+        return CFG["whisper_model"]
+    path = CFG.get("whisper_model_en") or ""
+    if not os.path.isdir(path):
+        # The Hebrew model still understands some English, so Puki keeps answering
+        log(f"no English Whisper at {path!r} (whisper_model_en), using the Hebrew one for English")
+        return CFG["whisper_model"]
+    return path
+
+
+WHISPERS = {}
+WHISPER_LOCK = threading.Lock()
+
+
+def whisper(lang):
+    """The Whisper for [lang], loaded the first time it's needed (Hebrew at startup)."""
+    with WHISPER_LOCK:
+        if lang not in WHISPERS:
+            log(f"loading Whisper ({lang})")
+            WHISPERS[lang] = _load_whisper(_whisper_path(lang))
+        return WHISPERS[lang]
+
+
+def preload_whisper(lang):
+    """Loads [lang]'s Whisper in the background, so the first time the child talks isn't slow."""
+    if lang not in WHISPERS:
+        threading.Thread(target=whisper, args=(lang,), daemon=True).start()
+
+
+whisper("he")
 
 # Whisper "hears" these in silence or noise; treat them as nothing heard
-HALLUCINATIONS = ("כתוביות", "תודה רבה", "תודה שצפיתם", "subtitles", "thank you for watching")
+HALLUCINATIONS = ("כתוביות", "תודה רבה", "תודה שצפיתם", "subtitles", "thank you for watching",
+                  "thanks for watching", "please subscribe", "amara.org")
+# ...and, in English, these when they're all it heard
+HALLUCINATIONS_ALONE = ("you", "thank you", "thanks", "bye")
 
 # Words Whisper should expect: the parrot's and child's names and things from the games
 _plain = lambda s: re.sub(r"[֑-ׇ]", "", s)  # noqa: E731 (strip nikud)
-def hotwords():
+def hotwords(lang):
+    if lang == "en":
+        return " ".join(filter(None, [
+            COMPANION_EN, _plain(NAME) if not HEBREW_LETTER.search(NAME) else "", "hi", "hello", "cow", "dog",
+            "cat", "horse", "elephant", "lion", "duck", "chicken", "monkey", "red", "blue", "yellow", "green",
+            "circle", "triangle", "square",
+        ]))
     return " ".join(filter(None, [
         _plain(COMPANION), _plain(NAME), "היי", "שלום", "פרה", "כלב", "חתול", "סוס", "פיל", "אריה",
         "ברווז", "תרנגולת", "קוף", "אדום", "כחול", "צהוב", "ירוק", "עיגול", "משולש", "ריבוע",
@@ -360,21 +437,30 @@ def transcribe(wav_bytes, lang):
     if sr != 16000:
         import librosa
         audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
-    segments, _ = WHISPER.transcribe(
-        audio, language=lang, beam_size=1, vad_filter=True, hotwords=hotwords(),
+    segments, _ = whisper(lang).transcribe(
+        audio, language=lang, beam_size=1, vad_filter=True, hotwords=hotwords(lang),
         condition_on_previous_text=False,
     )
     heard = " ".join(seg.text.strip() for seg in segments).strip()
     if any(h in heard.lower() for h in HALLUCINATIONS):
+        return ""
+    if lang == "en" and heard.lower().strip(" .!?,") in HALLUCINATIONS_ALONE:
         return ""
     return heard
 
 
 def listen_situation(heard, lang):
     if lang == "en":
+        c = capital(child(lang))
+        they, them = ("she", "her") if GIRL else ("he", "him")
         if not heard:
-            return f"{CHILD} talked to the parrot, but the words weren't clear. Say something sweet back."
-        return f'{CHILD} said to the parrot: "{heard}". Answer warmly about what was said; if it does not make sense, just say something sweet.'
+            return f"{c} talked to you, but the words weren't clear. Say something sweet back."
+        return (
+            f'{c} said to you: "{heard}". (A toddler is talking, so it may sound a bit off; for example '
+            f"something like '{COMPANION_EN}' is probably your name.) Answer what {they} said directly: if "
+            f"{they} said hello or called you, say hello back to {them}; if something was mentioned (an animal, "
+            "a color, a shape), say something about it. If it doesn't make sense, say something sweet."
+        )
     if not heard:
         return f"{CHILD} {'דיברה' if GIRL else 'דיבר'} אל התוכי, אבל לא שמענו מילים ברורות. תגיד משהו מתוק בחזרה."
     return (
@@ -447,6 +533,8 @@ class Handler(BaseHTTPRequestHandler):
                 lang = "en" if query.get("lang") == ["en"] else "he"
         except ValueError:
             return self._fail(400)
+        if lang == "en" and url.path != "/speak":  # /speak en also comes from Hebrew tablets (name lines)
+            preload_whisper("en")
 
         if url.path == "/say":
             situation = str(req.get("situation", ""))[:300]

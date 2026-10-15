@@ -157,7 +157,7 @@ fun StickerAlbumScreen(onBack: () -> Unit, viewModel: StickerAlbumViewModel = vi
                                     sfxPlayer.play(Sfx.POP)
                                     val fallback = { voicePlayer.play("voice_sticker_${sticker.id}", language) }
                                     if (companion != null) {
-                                        companion.react("באלבום המדבקות לחצו על המדבקה של ${sticker.name.he}. תגיד עליה משהו קטן ומצחיק.", fallback)
+                                        companion.react("באלבום המדבקות לחצו על המדבקה של ${sticker.name.he}. תגיד עליה משהו קטן ומצחיק.", "In the sticker album the child tapped the ${sticker.name.en.lowercase()} sticker. Say something small and funny about it.", fallback)
                                     } else fallback()
                                 }
                             },

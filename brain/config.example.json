@@ -14,10 +14,12 @@
   "mmproj": "~/puki-brain/models/mmproj-gemma-4-E4B-F16.gguf",
   "brain_python": "~/puki-brain/.venv/Scripts/python.exe",
   "whisper_model": "~/puki-brain/models/whisper-ivrit-turbo",
+  "whisper_model_en": "~/puki-brain/models/whisper-large-v3-turbo",
   "whisper_min_free_vram_mb": 2000,
   "bluetts_dir": "~/puki-brain/BlueTTS",
   "voice": "noa",
   "companion_name": "פוקי",
+  "companion_name_en": "Puki",
   "child_name": "",
   "child_gender": "girl"
 }

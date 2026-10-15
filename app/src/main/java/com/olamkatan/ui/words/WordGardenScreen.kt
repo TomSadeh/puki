@@ -143,7 +143,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
     }
 
     LaunchedEffect(state.roundIndex) {
-        companion?.scene = "במשחק האותיות: מחפשים את האות ${state.targetLetter.hebrewLetter}, כמו ${state.targetLetter.exampleWord.he}."
+        companion?.setScene("במשחק האותיות: מחפשים את האות ${state.targetLetter.hebrewLetter}, כמו ${state.targetLetter.exampleWord.he}.", "In the letter game: we're looking for the letter ${state.targetLetter.englishLetter}, like ${state.targetLetter.exampleWord.en.lowercase()}.")
         if (state.letterChoices.isNotEmpty()) {
             delay(500)
             voicePlayer.play("voice_letter_${state.targetLetter.id}", language)
@@ -178,7 +178,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                                 val letter = state.targetLetter
                                 val fallback = { voicePlayer.play("voice_letter_${letter.id}", language) }
                                 if (companion != null) {
-                                    companion.react("במשחק האותיות לחצו על התמונה של ${letter.exampleWord.he}, שמתחילה באות ${letter.hebrewLetter}.", fallback)
+                                    companion.react("במשחק האותיות לחצו על התמונה של ${letter.exampleWord.he}, שמתחילה באות ${letter.hebrewLetter}.", "In the letter game the child tapped the picture of ${letter.exampleWord.en.lowercase()}, which starts with ${letter.englishLetter}.", fallback)
                                 } else fallback()
                             }
                     )
@@ -226,7 +226,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                                 val correct = viewModel.onLetterTapped(letter.id)
                                 if (correct) {
                                     sfxPlayer.play(Sfx.SUCCESS)
-                                    if (companion != null) companion.react("מצאו את האות ${letter.hebrewLetter}, כמו ${state.targetLetter.exampleWord.he}!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+                                    if (companion != null) companion.react("מצאו את האות ${letter.hebrewLetter}, כמו ${state.targetLetter.exampleWord.he}!", "The child found the letter ${letter.englishLetter}, like ${state.targetLetter.exampleWord.en.lowercase()}!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
                                     showRoundSuccess = true
                                     scope.launch { letterReaction.celebrate() }
                                     scope.launch {
@@ -236,7 +236,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                                     }
                                 } else {
                                     sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                    if (companion != null) companion.react("בחרו את האות ${letter.hebrewLetter}, אבל חיפשנו את ${state.targetLetter.hebrewLetter}.") { voicePlayer.playSequence(listOf("voice_letter_${letter.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_letter_${letter.id}", "voice_prompt_try_again"), language)
+                                    if (companion != null) companion.react("בחרו את האות ${letter.hebrewLetter}, אבל חיפשנו את ${state.targetLetter.hebrewLetter}.", "The child picked the letter ${letter.englishLetter}, but we were looking for ${state.targetLetter.englishLetter}.") { voicePlayer.playSequence(listOf("voice_letter_${letter.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_letter_${letter.id}", "voice_prompt_try_again"), language)
                                     scope.launch { letterReaction.shake() }
                                 }
                             },

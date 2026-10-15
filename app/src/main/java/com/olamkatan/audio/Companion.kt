@@ -61,7 +61,11 @@ class Companion(
     var language = Language.HEBREW
 
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
-    var scene = ""
+    private var scene = ""
+
+    fun setScene(he: String, en: String) {
+        scene = pick(he, en)
+    }
 
     private var childName = ""
     private var childGirl = true
@@ -107,10 +111,12 @@ class Companion(
     }
 
     /**
-     * Has the parrot say something about [situation]; runs [fallback] instead if it's
-     * not available or doesn't answer in time.
+     * Has the parrot say something about what happened ([he] or [en], in the app's language);
+     * runs [fallback] instead if it's not available or doesn't answer in time.
      */
-    fun react(situation: String, fallback: () -> Unit = {}) {
+    fun react(he: String, en: String, fallback: () -> Unit = {}) = react(pick(he, en), fallback)
+
+    private fun react(situation: String, fallback: () -> Unit) {
         remember(situation)
         if (!isReady) {
             fallback()
@@ -120,7 +126,10 @@ class Companion(
     }
 
     /** The child tapped the parrot. */
-    fun chat() = react("לחצו על התוכי כדי שידבר. $scene תגיד משהו חמוד וקצר על זה.")
+    fun chat() = react(
+        "לחצו על התוכי כדי שידבר. $scene תגיד משהו חמוד וקצר על זה.",
+        "The child tapped you so you'd talk. $scene Say something short and cute about it."
+    )
 
     /** The child held the parrot and talked; [wav] is the recording. Whisper on the PC listens. */
     fun listen(wav: ByteArray, context: String = "") {
@@ -131,7 +140,7 @@ class Companion(
     /** The parrot looks at the child's drawing ([png]) and reacts. Returns false if it couldn't. */
     suspend fun look(png: ByteArray): Boolean {
         if (!isReady) return false
-        remember("ציירה ציור")
+        remember(pick("ציירה ציור", "drew a picture"))
         val audio = withContext(Dispatchers.IO) {
             request("POST", "/look?lang=${lang()}", body = png, contentType = "image/png", timeoutMs = 20000)
         }
@@ -312,6 +321,8 @@ class Companion(
     }
 
     private fun lang() = if (language == Language.ENGLISH) "en" else "he"
+
+    private fun pick(he: String, en: String) = if (language == Language.ENGLISH) en else he
 
     private fun baseUrl(address: String = this.address): String {
         // The Android emulator reaches the PC it runs on at 10.0.2.2

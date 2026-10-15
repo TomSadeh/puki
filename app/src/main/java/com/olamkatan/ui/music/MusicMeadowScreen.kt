@@ -140,7 +140,7 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        companion?.scene = "במשחק המוזיקה: יש תוף, קסילופון, תוף מרים ומרקסים."
+        companion?.setScene("במשחק המוזיקה: יש תוף, קסילופון, תוף מרים ומרקסים.", "In the music game: there's a drum, a xylophone, a tambourine and maracas.")
         delay(500)
         voicePlayer.play("voice_music_free", language)
     }
@@ -149,7 +149,7 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
     LaunchedEffect(state.phase) {
         if (state.phase == MusicPhase.PLAYER_TURN) voicePlayer.play("voice_music_your_turn", language)
         if (state.phase == MusicPhase.SUCCESS) {
-            if (companion != null) companion.react("ניגנו את המנגינה בדיוק נכון!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+            if (companion != null) companion.react("ניגנו את המנגינה בדיוק נכון!", "The child played the tune back just right!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
         }
         if (state.phase == MusicPhase.SHOW_PATTERN) {
             // "Listen and remember!" first, then the pattern

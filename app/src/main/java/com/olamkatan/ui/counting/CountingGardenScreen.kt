@@ -83,7 +83,7 @@ fun CountingGardenScreen(
     if (state.isLoading) return
 
     LaunchedEffect(state.roundIndex) {
-        companion?.scene = "במשחק הספירה: סופרים ${state.currentRound.itemName.he}."
+        companion?.setScene("במשחק הספירה: סופרים ${state.currentRound.itemName.he}.", "In the counting game: we're counting ${state.currentRound.itemName.en.lowercase()}.")
         delay(500)
         voicePlayer.play("voice_prompt_count_along", language)
     }
@@ -192,8 +192,9 @@ fun CountingGardenScreen(
                             } else {
                                 // Round complete
                                 val counted = "ספרו ${state.currentRound.targetNumber} ${state.currentRound.itemName.he}!"
+                                val countedEn = "The child counted ${state.currentRound.targetNumber} ${state.currentRound.itemName.en.lowercase()}!"
                                 voicePlayer.play("voice_number_${state.currentRound.targetNumber}", language) {
-                                    if (companion != null) companion.react(counted) { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+                                    if (companion != null) companion.react(counted, countedEn) { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
                                 }
                                 sfxPlayer.play(Sfx.SUCCESS)
                                 showRoundSuccess = true
