@@ -97,6 +97,11 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 
 Models are downloaded separately and are not part of this repository.
 
+## What's next
+
+Puki seeing the child's drawings, bedtime stories, talking games, and a memory that
+stays in your home. See [ROADMAP.md](ROADMAP.md).
+
 ## License
 
 [MIT](LICENSE). Built with lots of help from [Claude Code](https://claude.com/claude-code).
