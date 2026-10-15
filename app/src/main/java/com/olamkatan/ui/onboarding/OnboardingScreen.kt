@@ -77,19 +77,19 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
         Column(
             modifier = Modifier
                 .widthIn(max = 640.dp)
-                .padding(24.dp)
+                .padding(12.dp)
                 .shadow(8.dp, RoundedCornerShape(28.dp))
                 .clip(RoundedCornerShape(28.dp))
                 .background(Cream)
                 .border(BorderStroke(3.dp, Wood), RoundedCornerShape(28.dp))
                 .verticalScroll(rememberScrollState())
-                .padding(28.dp),
+                .padding(horizontal = 28.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Image(painterResource(R.drawable.ic_companion_parrot), contentDescription = null, modifier = Modifier.size(110.dp))
+            Image(painterResource(R.drawable.ic_companion_parrot), contentDescription = null, modifier = Modifier.size(80.dp))
             Text(
-                t("ברוכים הבאים לעולם קטן!", "Welcome to Olam Katan!"),
+                t("ברוכים הבאים לפוקי!", "Welcome to Puki!"),
                 style = MaterialTheme.typography.headlineMedium.copy(shadow = null),
                 color = Ink
             )
@@ -99,10 +99,17 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                 color = Ink
             )
 
-            // Language
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            // Language, and girl/boy (for Hebrew grammar: "תלחצי" / "תלחץ"), on one row
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Choice("עברית", selected = lang == Language.HEBREW) { viewModel.setLanguage(Language.HEBREW) }
                 Choice("English", selected = lang == Language.ENGLISH) { viewModel.setLanguage(Language.ENGLISH) }
+                Spacer(Modifier.width(16.dp))
+                Choice(t("בת", "Girl"), R.drawable.ic_ui_girl, selected = settings.gender == Gender.GIRL) {
+                    viewModel.setGender(Gender.GIRL)
+                }
+                Choice(t("בן", "Boy"), R.drawable.ic_ui_boy, selected = settings.gender == Gender.BOY) {
+                    viewModel.setGender(Gender.BOY)
+                }
             }
 
             // Child's name
@@ -116,16 +123,6 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                 colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Ink, unfocusedTextColor = Ink),
                 modifier = Modifier.widthIn(min = 320.dp)
             )
-
-            // Girl / boy, for Hebrew grammar ("תלחצי" / "תלחץ")
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Choice(t("בת", "Girl"), R.drawable.ic_ui_girl, selected = settings.gender == Gender.GIRL) {
-                    viewModel.setGender(Gender.GIRL)
-                }
-                Choice(t("בן", "Boy"), R.drawable.ic_ui_boy, selected = settings.gender == Gender.BOY) {
-                    viewModel.setGender(Gender.BOY)
-                }
-            }
 
             // The parrot companion
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -151,7 +148,6 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                 )
             }
 
-            Spacer(Modifier.height(4.dp))
             Box(
                 modifier = Modifier
                     .shadow(6.dp, RoundedCornerShape(32.dp))
