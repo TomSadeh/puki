@@ -1,5 +1,6 @@
 package com.olamkatan.ui.animals
 
+import com.olamkatan.data.models.Language
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.rememberReactionState
 import androidx.compose.animation.AnimatedVisibility
@@ -43,6 +44,9 @@ import com.olamkatan.ui.components.LocalDragDropState
 import com.olamkatan.ui.components.RoundCompleteSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Animals whose Hebrew name is feminine ("מה הפרה אומרת?"). */
+private val FEMININE_ANIMALS = setOf("cow", "chicken", "sheep", "goat", "giraffe")
 
 @Composable
 fun AnimalGardenScreen(
@@ -130,6 +134,17 @@ fun AnimalGardenScreen(
                                             scope.launch {
                                                 delay(if (companion?.isReady == true) 3600 else 2400)
                                                 showRoundSuccess = false
+                                                // Every other round, Puki asks what the animal says and listens for an answer
+                                                val animal = state.currentAnimal
+                                                if (companion?.isReady == true && state.roundIndex % 2 == 0) {
+                                                    val says = if (animal.id in FEMININE_ANIMALS) "אומרת" else "אומר"
+                                                    val question = if (language == Language.ENGLISH) "What does the ${animal.name.en.lowercase()} say?"
+                                                        else "מה ה${animal.name.he} $says?"
+                                                    companion.askAndListen(question, "שאלת מה ה${animal.name.he} $says, וזו התשובה.") {
+                                                        voicePlayer.play("voice_sound_${animal.id}", language)
+                                                        scope.launch { animalReaction.celebrate() }
+                                                    }
+                                                }
                                                 animalViewModel.nextRound()
                                             }
                                         } else {

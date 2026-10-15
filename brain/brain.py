@@ -10,6 +10,7 @@ Needs the BlueTTS virtualenv (blue_onnx, numpy, soundfile) and a running
 llama-server with Gemma (the doorbell starts both).
 """
 
+import base64
 import io
 import json
 import os
@@ -152,17 +153,101 @@ def ask_gemma(situation, lang):
     for user, reply in examples(lang):
         messages += [{"role": "user", "content": user}, {"role": "assistant", "content": reply}]
     messages.append({"role": "user", "content": hint})
-    body = json.dumps({
+    return chat(messages)
+
+
+def chat(messages, max_tokens=48, temperature=0.9, response_format=None, timeout=45):
+    payload = {
         "messages": messages,
-        "max_tokens": 48,
-        "temperature": 0.9,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
         "top_p": 0.95,
         "chat_template_kwargs": {"enable_thinking": False},
-    }).encode()
-    req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", data=body,
+    }
+    if response_format:
+        payload["response_format"] = response_format
+    req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", data=json.dumps(payload).encode(),
                                  headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=45) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.load(r)["choices"][0]["message"]["content"]
+
+
+# ---------- Looking at the child's drawing (Gemma vision) ----------
+
+def look_line(png_bytes, lang):
+    """A warm one-liner about a toddler's drawing, or None."""
+    if lang == "en":
+        ask = (f"{CHILD} just drew this picture (a 2-year-old's drawing, probably scribbles). "
+               "In one or two short sentences, say what you see: colors, lines, shapes, maybe a playful "
+               "guess at what it is. Be delighted. Never say it doesn't look like something.")
+    else:
+        ask = (f"{CHILD} {'ציירה' if GIRL else 'צייר'} עכשיו את הציור הזה (ציור של פעוטה בת שנתיים, כנראה קשקושים). "
+               "תגיב במשפט אחד או שניים קצרים: תגיד מה אתה רואה (צבעים, קווים, צורות, אולי ניחוש שובב מה זה) "
+               "בהתלהבות. לעולם אל תגיד שזה לא דומה למשהו.")
+    image = "data:image/png;base64," + base64.b64encode(png_bytes).decode()
+    messages = [
+        {"role": "system", "content": system_prompt(lang)},
+        {"role": "user", "content": [{"type": "text", "text": ask}, {"type": "image_url", "image_url": {"url": image}}]},
+    ]
+    for _ in range(3):
+        raw = chat(messages, max_tokens=60, temperature=0.8, timeout=60)
+        text = clean(raw, lang)
+        if text:
+            return text
+        log(f"rejected look: {raw!r}")
+    return None
+
+
+# ---------- Bedtime story ----------
+
+STORY_SCHEMA = {
+    "type": "object",
+    "properties": {"sentences": {"type": "array", "minItems": 4, "maxItems": 7, "items": {
+        "type": "object",
+        "properties": {"text": {"type": "string"}, "icon": {"type": "string"}},
+        "required": ["text", "icon"],
+    }}},
+    "required": ["sentences"],
+}
+
+
+def story(played, icons, lang):
+    """A short calm bedtime story: [{"text", "icon"}], each icon one of [icons] (name -> label)."""
+    names = "\n".join(f"- {k}: {v}" for k, v in icons.items())
+    if lang == "en":
+        ask = (f"Tell {CHILD} a very short, calm bedtime story (5-6 sentences, each at most 10 simple words). "
+               f"{CHILD} is the hero. Today {CHILD} played with: {played}. Use one or two of those things. "
+               "Slow, warm and sleepy, ending with everyone falling asleep. No questions. "
+               "For each sentence, choose the picture (icon) that fits it best from this list:\n" + names +
+               "\nAnswer as JSON.")
+        closing = f"Good night{', ' + NAME if NAME else ''}."
+    else:
+        ask = (f"ספר ל{CHILD} סיפור לפני השינה קצר ורגוע מאוד (5-6 משפטים, כל משפט עד 10 מילים פשוטות). "
+               f"{CHILD} {'היא הגיבורה' if GIRL else 'הוא הגיבור'}. היום {CHILD} {'שיחקה' if GIRL else 'שיחק'} עם: {played}. "
+               "תשתמש בדבר אחד או שניים מהם. איטי, חם ומנומנם, ובסוף כולם נרדמים. בלי שאלות. "
+               "לכל משפט בחר את התמונה (icon) שהכי מתאימה לו מהרשימה הזאת:\n" + names + "\nתענה ב-JSON.")
+        closing = f"לילה טוב{', ' + NAME if NAME else ''}."
+    schema = json.loads(json.dumps(STORY_SCHEMA))
+    schema["properties"]["sentences"]["items"]["properties"]["icon"]["enum"] = list(icons)
+    messages = [{"role": "system", "content": system_prompt(lang)}, {"role": "user", "content": ask}]
+    for _ in range(2):
+        raw = chat(messages, max_tokens=400, temperature=0.8, timeout=90,
+                   response_format={"type": "json_schema", "json_schema": {"schema": schema}})
+        try:
+            items = json.loads(raw)["sentences"]
+        except (ValueError, KeyError, TypeError):
+            log(f"story not JSON: {raw[:120]!r}")
+            continue
+        out = []
+        for it in items:
+            text = clean(str(it.get("text", "")), lang)
+            if text and it.get("icon") in icons:
+                out.append({"text": text, "icon": it["icon"]})
+        if len(out) >= 3:
+            out.append({"text": closing, "icon": "ic_bedtime_moon" if "ic_bedtime_moon" in icons else out[-1]["icon"]})
+            return out
+        log(f"story rejected: {raw[:160]!r}")
+    return None
 
 
 def line_for(situation, lang):
@@ -187,9 +272,9 @@ TTS = BlueTTS(
 )
 
 
-def speak(text, lang):
+def speak(text, lang, speed=0.92):
     # BlueTTS mispronounces text that already has nikud (e.g. a name with nikud came out garbled)
-    samples, sr = TTS.synthesize(re.sub(r"[\u0591-\u05C7]", "", text), lang=lang, total_step=8, speed=0.92)
+    samples, sr = TTS.synthesize(re.sub(r"[\u0591-\u05C7]", "", text), lang=lang, total_step=8, speed=speed)
     samples = np.concatenate([samples, np.zeros(int(sr * 0.15), dtype=np.float32)])
     buf = io.BytesIO()
     sf.write(buf, samples, sr, format="OGG", subtype="VORBIS")
@@ -281,12 +366,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200 if self.path == "/health" else 404)
         self.end_headers()
 
-    def _reply(self, text, lang, heard=None):
+    def _reply(self, text, lang, heard=None, speed=0.92):
         if not text:
             self.send_response(204)
             self.end_headers()
             return
-        audio = speak(text, lang)
+        audio = speak(text, lang, speed)
         self.send_response(200)
         self.send_header("Content-Type", "audio/ogg")
         self.send_header("X-Text", urllib.parse.quote(text))
@@ -303,37 +388,75 @@ class Handler(BaseHTTPRequestHandler):
             log(f"gemma failed: {e}")
             return None
 
+    def _json(self, obj):
+        body = json.dumps(obj, ensure_ascii=False).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _fail(self, code):
+        self.send_response(code)
+        self.end_headers()
+
     def do_POST(self):
         url = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(url.query)
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-        if url.path == "/say":
-            try:
+        try:
+            if url.path in ("/say", "/speak", "/story"):
                 req = json.loads(body or b"{}")
-            except ValueError:
-                self.send_response(400)
-                self.end_headers()
-                return
-            lang = "en" if req.get("lang") == "en" else "he"
+                lang = "en" if req.get("lang") == "en" else "he"
+            else:
+                lang = "en" if query.get("lang") == ["en"] else "he"
+        except ValueError:
+            return self._fail(400)
+
+        if url.path == "/say":
             situation = str(req.get("situation", ""))[:300]
             text = self._line(situation, lang)
             log(f"{situation} -> {text}")
             self._reply(text, lang)
+        elif url.path == "/speak":
+            # Fixed text from the app (a question, a story sentence): just say it
+            text = str(req.get("text", ""))[:200].strip()
+            self._reply(text, lang, speed=float(req.get("speed", 0.92))) if text else self._fail(204)
         elif url.path == "/listen":
-            # Body: a short WAV recording from the tablet
-            lang = "en" if urllib.parse.parse_qs(url.query).get("lang") == ["en"] else "he"
+            # Body: a short WAV recording of the child; optional context=what Puki just asked
             try:
                 heard = transcribe(body, lang)
             except Exception as e:
                 log(f"whisper failed: {e}")
-                self.send_response(400)
-                self.end_headers()
-                return
-            text = self._line(listen_situation(heard, lang), lang)
+                return self._fail(400)
+            situation = listen_situation(heard, lang)
+            context = query.get("context", [""])[0][:200]
+            if context:
+                situation = context + " " + situation
+            text = self._line(situation, lang)
             log(f"heard {heard!r} -> {text}")
             self._reply(text, lang, heard)
+        elif url.path == "/look":
+            # Body: PNG of the child's drawing
+            try:
+                text = look_line(body, lang)
+            except Exception as e:
+                log(f"look failed: {e}")
+                text = None
+            log(f"looked at a drawing -> {text}")
+            self._reply(text, lang)
+        elif url.path == "/story":
+            icons = {str(k): str(v) for k, v in dict(req.get("icons", {})).items()}
+            played = str(req.get("played", ""))[:300] or ("משחקים" if lang == "he" else "games")
+            try:
+                sentences = story(played, icons, lang) if icons else None
+            except Exception as e:
+                log(f"story failed: {e}")
+                sentences = None
+            log(f"story about {played!r} -> {sentences}")
+            self._json({"sentences": sentences}) if sentences else self._fail(204)
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._fail(404)
 
 
 if __name__ == "__main__":

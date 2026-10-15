@@ -62,6 +62,7 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val status by companion.status.collectAsStateWithLifecycle()
     val speaking by companion.speaking.collectAsStateWithLifecycle()
+    val autoListening by companion.listening.collectAsStateWithLifecycle()
 
     val recorder = remember { MicRecorder() }
     var listening by remember { mutableStateOf(false) }
@@ -98,7 +99,7 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Restart),
         label = "listen_pulse"
     )
-    val listenScale by animateFloatAsState(if (listening) 1.15f else 1f, spring(dampingRatio = 0.4f), label = "listen_scale")
+    val listenScale by animateFloatAsState(if (listening || autoListening) 1.15f else 1f, spring(dampingRatio = 0.4f), label = "listen_scale")
 
     AnimatedVisibility(
         visible = status == CompanionStatus.READY,
@@ -108,7 +109,7 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
     ) {
         Box(contentAlignment = Alignment.Center) {
             // Pulsing rings while it listens
-            if (listening) {
+            if (listening || autoListening) {
                 Canvas(modifier = Modifier.matchParentSize()) {
                     for (k in 0..1) {
                         val t = (pulse + k * 0.5f) % 1f

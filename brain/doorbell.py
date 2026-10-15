@@ -12,7 +12,10 @@ Endpoints (port from config, default 8790):
   POST /wake    -> start warming up in the background; returns /health
   POST /say     -> JSON {"situation": str, "lang": "he"|"en"}
                    200 audio/ogg (X-Text header = the line, URL-encoded), or 204 if no line
-  POST /listen?lang=he -> body: WAV recording of the child; Whisper transcribes it and the
+  POST /speak    -> JSON {"text", "lang", "speed"?}: just say this text (questions, story lines)
+  POST /look?lang=he -> body: PNG of a drawing; the parrot reacts to it (Gemma vision)
+  POST /story    -> JSON {"played", "icons": {name: label}, "lang"} -> JSON {"sentences": [{"text", "icon"}]}
+  POST /listen?lang=he[&context=...] -> body: WAV recording of the child; Whisper transcribes it and the
                    parrot answers. Same response, plus X-Heard (what Whisper heard).
 
 Standard library only, so it runs with any Python 3.
@@ -39,7 +42,7 @@ def load_config():
         with open(local, encoding="utf-8") as f:
             cfg.update(json.load(f))
     # "~" in paths means the user's home folder
-    for key in ("llama_dir", "model", "brain_python", "whisper_model", "bluetts_dir"):
+    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "bluetts_dir"):
         cfg[key] = os.path.expanduser(cfg[key])
     return cfg
 
@@ -100,7 +103,8 @@ class Brain:
         llama = subprocess.Popen(
             [os.path.join(CFG["llama_dir"], "llama-server"), "-m", CFG["model"],
              "--host", "127.0.0.1", "--port", str(CFG["llama_port"]),
-             "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"],
+             "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"]
+            + (["--mmproj", CFG["mmproj"]] if CFG.get("mmproj") and os.path.exists(CFG["mmproj"]) else []),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags,
         )
         brain = subprocess.Popen(
@@ -166,7 +170,7 @@ class Handler(BaseHTTPRequestHandler):
             BRAIN.wake()
             BRAIN.touch()
             self._json(200, {"brain": BRAIN.state})
-        elif self.path == "/say" or self.path.startswith("/listen"):
+        elif self.path.split("?")[0] in ("/say", "/listen", "/speak", "/look", "/story"):
             BRAIN.wake()
             BRAIN.touch()
             deadline = time.time() + CFG["startup_timeout_s"]
@@ -179,7 +183,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 ctype = self.headers.get("Content-Type", "application/json")
                 req = urllib.request.Request(f"{BRAIN_URL}{self.path}", data=body, headers={"Content-Type": ctype})
-                with urllib.request.urlopen(req, timeout=60) as r:
+                with urllib.request.urlopen(req, timeout=120) as r:
                     data = r.read()
                     self.send_response(r.status)
                     for h in ("Content-Type", "X-Text", "X-Heard"):

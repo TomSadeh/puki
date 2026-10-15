@@ -1,7 +1,10 @@
 package com.olamkatan.audio
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.olamkatan.data.models.Language
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,15 +14,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import kotlin.math.sqrt
 
 enum class CompanionStatus { OFF, WAKING, READY }
 
 /**
- * פּוּקִי the parrot, whose words come from the "brain" server on the family PC
+ * פּוּקִי the parrot, whose words come from the "brain" server on a PC at home
  * (brain/ in this repo): Gemma writes a short line about what just happened and
  * BlueTTS voices it. Only reachable on the home network; whenever it isn't
  * (PC off, away from home, slow reply) callers fall back to the recorded lines.
@@ -35,6 +43,10 @@ class Companion(
     private val _speaking = MutableStateFlow(false)
     val speaking: StateFlow<Boolean> = _speaking
 
+    /** True while the parrot listens on its own (after asking a question). */
+    private val _listening = MutableStateFlow(false)
+    val listening: StateFlow<Boolean> = _listening
+
     var enabled = true
         set(value) {
             field = value
@@ -46,9 +58,13 @@ class Companion(
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
     var scene = ""
 
+    /** What the child did this session, for the bedtime story. */
+    private val today = ArrayDeque<String>()
+
     val isReady get() = _status.value == CompanionStatus.READY
 
     private var wakeJob: Job? = null
+    private val recorder = MicRecorder()
 
     /** Checks for the server and wakes the brain if needed. Cheap to call on every game screen. */
     fun wake() {
@@ -78,6 +94,7 @@ class Companion(
      * not available or doesn't answer in time.
      */
     fun react(situation: String, fallback: () -> Unit = {}) {
+        remember(situation)
         if (!isReady) {
             fallback()
             return
@@ -89,23 +106,117 @@ class Companion(
     fun chat() = react("לחצו על התוכי כדי שידבר. $scene תגיד משהו חמוד וקצר על זה.")
 
     /** The child held the parrot and talked; [wav] is the recording. Whisper on the PC listens. */
-    fun listen(wav: ByteArray) {
+    fun listen(wav: ByteArray, context: String = "") {
         if (!isReady || wav.size < 16000) return  // under half a second: nothing to send
-        scope.launch {
-            val lang = if (language == Language.ENGLISH) "en" else "he"
-            val audio = withContext(Dispatchers.IO) {
-                request("POST", "/listen?lang=$lang", body = wav, contentType = "audio/wav", timeoutMs = 15000)
-            }
-            play(audio)
+        scope.launch { play(postListen(wav, context)) }
+    }
+
+    /** The parrot looks at the child's drawing ([png]) and reacts. Returns false if it couldn't. */
+    suspend fun look(png: ByteArray): Boolean {
+        if (!isReady) return false
+        remember("ציירה ציור")
+        val audio = withContext(Dispatchers.IO) {
+            request("POST", "/look?lang=${lang()}", body = png, contentType = "image/png", timeoutMs = 20000)
         }
+        return play(audio)
+    }
+
+    /** Says [text] in the parrot's voice and waits until it's done. False if it couldn't. */
+    suspend fun speakAndWait(text: String, speed: Double = 0.92): Boolean {
+        if (!isReady) return false
+        val audio = withContext(Dispatchers.IO) {
+            val body = JSONObject().put("text", text).put("lang", lang()).put("speed", speed).toString()
+            request("POST", "/speak", body.toByteArray(Charsets.UTF_8), timeoutMs = 8000)
+        }
+        if (!play(audio)) return false
+        awaitQuiet()
+        return true
+    }
+
+    /** Fetches the audio for [text] without playing it (to prefetch story sentences). */
+    suspend fun fetchSpeech(text: String, speed: Double = 0.85): ByteArray? = withContext(Dispatchers.IO) {
+        val body = JSONObject().put("text", text).put("lang", lang()).put("speed", speed).toString()
+        request("POST", "/speak", body.toByteArray(Charsets.UTF_8), timeoutMs = 8000)?.takeIf { it.isNotEmpty() }
+    }
+
+    /** Plays prefetched audio and waits until it's done. */
+    suspend fun playAndWait(audio: ByteArray) {
+        if (play(audio)) awaitQuiet()
+    }
+
+    /**
+     * A short bedtime story about today: a list of (sentence, drawable name), the drawable
+     * picked from [icons] (name to label). Null if the brain isn't available.
+     */
+    suspend fun story(icons: Map<String, String>): List<Pair<String, String>>? {
+        if (!isReady) return null
+        val played = today.joinToString(", ").ifEmpty { if (language == Language.ENGLISH) "games" else "משחקים" }
+        val bytes = withContext(Dispatchers.IO) {
+            val body = JSONObject()
+                .put("played", played)
+                .put("lang", lang())
+                .put("icons", JSONObject(icons as Map<*, *>))
+                .toString()
+            request("POST", "/story", body.toByteArray(Charsets.UTF_8), timeoutMs = 30000)
+        } ?: return null
+        if (bytes.isEmpty()) return null
+        return runCatching {
+            val arr = JSONObject(String(bytes, Charsets.UTF_8)).getJSONArray("sentences")
+            (0 until arr.length()).map { arr.getJSONObject(it).let { s -> s.getString("text") to s.getString("icon") } }
+        }.getOrNull()
+    }
+
+    /**
+     * Asks [question] out loud, then listens for a few seconds without any button.
+     * If the child made a sound, runs [onHeard] and lets the parrot answer what it heard,
+     * with [context] (what was asked) so the answer fits. Returns true if the child answered.
+     */
+    suspend fun askAndListen(question: String, context: String, onHeard: () -> Unit): Boolean {
+        if (!isReady || !hasMic()) return false
+        if (!speakAndWait(question)) return false
+        _listening.value = true
+        val wav = try {
+            if (!recorder.start()) return false
+            delay(LISTEN_MILLIS)
+            recorder.stop()
+        } finally {
+            _listening.value = false
+        }
+        if (!hasSpeech(wav)) return false
+        onHeard()
+        val reply = postListen(wav, context)
+        delay(900)  // let the animal's answer finish first
+        if (play(reply)) awaitQuiet()
+        return true
+    }
+
+    private fun hasMic() =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    /** Rough voice-activity check: a few 50 ms windows clearly louder than room noise. */
+    private fun hasSpeech(wav: ByteArray): Boolean {
+        if (wav.size <= 44) return false
+        val pcm = ByteBuffer.wrap(wav, 44, wav.size - 44).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+        val window = MicRecorder.RATE / 20
+        var loud = 0
+        var i = 0
+        while (i + window <= pcm.limit()) {
+            var sum = 0.0
+            for (j in i until i + window) sum += pcm.get(j).toDouble() * pcm.get(j)
+            if (sqrt(sum / window) > 1200) loud++
+            i += window
+        }
+        return loud >= 3
+    }
+
+    private suspend fun postListen(wav: ByteArray, context: String): ByteArray? = withContext(Dispatchers.IO) {
+        val ctx = if (context.isEmpty()) "" else "&context=" + URLEncoder.encode(context, "UTF-8")
+        request("POST", "/listen?lang=${lang()}$ctx", body = wav, contentType = "audio/wav", timeoutMs = 15000)
     }
 
     private suspend fun say(situation: String): Boolean {
         val audio = withContext(Dispatchers.IO) {
-            val body = JSONObject()
-                .put("situation", situation)
-                .put("lang", if (language == Language.ENGLISH) "en" else "he")
-                .toString()
+            val body = JSONObject().put("situation", situation).put("lang", lang()).toString()
             request("POST", "/say", body.toByteArray(Charsets.UTF_8), timeoutMs = 6000)
         }
         return play(audio)
@@ -119,9 +230,9 @@ class Companion(
             return false
         }
         if (audio.isEmpty()) return false  // no safe line this time
-        val file = File(context.cacheDir, "companion.ogg").apply { writeBytes(audio) }
+        val file = File(context.cacheDir, "companion_${System.nanoTime()}.ogg").apply { writeBytes(audio) }
         _speaking.value = true
-        voicePlayer.playFile(file)
+        voicePlayer.playFile(file) { file.delete() }
         // Done talking when the line ends or another voice line cuts in
         scope.launch {
             delay(200)
@@ -130,6 +241,18 @@ class Companion(
         }
         return true
     }
+
+    private suspend fun awaitQuiet() {
+        delay(250)
+        withTimeoutOrNull(30_000) { while (voicePlayer.isPlaying()) delay(100) }
+    }
+
+    private fun remember(situation: String) {
+        today.addLast(situation.take(80))
+        while (today.size > 12) today.removeFirst()
+    }
+
+    private fun lang() = if (language == Language.ENGLISH) "en" else "he"
 
     private fun baseUrl(): String {
         // The Android emulator reaches the PC it runs on at 10.0.2.2
@@ -172,4 +295,8 @@ class Companion(
                 conn.disconnect()
             }
         }.getOrNull()
+
+    private companion object {
+        const val LISTEN_MILLIS = 3500L
+    }
 }

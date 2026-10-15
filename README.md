@@ -29,6 +29,11 @@ can reach a PC at home running the [brain server](brain/README.md):
   by BlueTTS (about a second per reply);
 - holding the parrot lets the child talk to it, and a Hebrew-tuned **Whisper** from
   [ivrit.ai](https://huggingface.co/ivrit-ai) transcribes the recording on the PC;
+- it **looks at the child's drawings** and reacts to them, using Gemma's vision;
+- at the end of the bedtime routine it tells a short, calm **bedtime story** about the
+  child's day, one sentence at a time, each with a matching picture;
+- in Animal Garden it asks "**מה החתול אומר?**" and listens hands-free; any answer makes the
+  animal reply with its sound;
 - if the PC is off or out of reach, the parrot just doesn't show up and the game uses its
   recorded voices.
 

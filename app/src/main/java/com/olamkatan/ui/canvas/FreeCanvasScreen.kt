@@ -1,5 +1,31 @@
 package com.olamkatan.ui.canvas
 
+import java.io.ByteArrayOutputStream
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.olamkatan.ui.common.LocalCompanion
+import com.olamkatan.audio.CompanionStatus
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.olamkatan.ui.components.BackArrowIcon
 import androidx.annotation.DrawableRes
@@ -78,6 +104,13 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
     val stamps = remember { mutableStateListOf<Stamp>() }
     var currentPath by remember { mutableStateOf(listOf<Offset>()) }
     val stampPainters = stampIcons.associateWith { painterResource(it) }
+    val companion = LocalCompanion.current
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var looking by remember { mutableStateOf(false) }
+    var lastLooked by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { companion?.wake() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Canvas area
@@ -85,6 +118,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
+                .onSizeChanged { canvasSize = it }
                 .pointerInput(selectedColor, brushSize, selectedStamp) {
                     if (selectedStamp != null) {
                         // A tap places the selected stamp where the finger touched
@@ -110,37 +144,48 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                     }
                 }
         ) {
-            // Draw saved paths
-            paths.forEach { drawPath ->
-                if (drawPath.path.size > 1) {
-                    val path = Path().apply {
-                        moveTo(drawPath.path[0].x, drawPath.path[0].y)
-                        for (i in 1 until drawPath.path.size) {
-                            lineTo(drawPath.path[i].x, drawPath.path[i].y)
-                        }
-                    }
-                    drawPath(path, drawPath.color, style = Stroke(width = drawPath.strokeWidth, cap = StrokeCap.Round))
-                }
-            }
+            drawArtwork(paths, stamps, stampPainters)
+            // The stroke being drawn right now
+            drawStroke(DrawPath(currentPath, selectedColor, brushSize))
+        }
 
-            // Draw current path
-            if (currentPath.size > 1) {
-                val path = Path().apply {
-                    moveTo(currentPath[0].x, currentPath[0].y)
-                    for (i in 1 until currentPath.size) {
-                        lineTo(currentPath[i].x, currentPath[i].y)
-                    }
-                }
-                drawPath(path, selectedColor, style = Stroke(width = brushSize, cap = StrokeCap.Round))
+        // פּוּקִי looks at the drawing: on tap, or by itself after a pause in drawing
+        val drawn = paths.size + stamps.size
+        val companionStatus = companion?.status?.collectAsStateWithLifecycle()?.value
+        fun lookNow() {
+            if (companion == null || looking || canvasSize.width == 0) return
+            looking = true
+            lastLooked = drawn
+            scope.launch {
+                val png = snapshot(canvasSize, density, paths.toList(), stamps.toList(), stampPainters)
+                companion.look(png)
+                looking = false
             }
-
-            // Draw stamps centered on where they were placed
-            val stampSize = 88.dp.toPx()
-            stamps.forEach { stamp ->
-                val painter = stampPainters.getValue(stamp.icon)
-                translate(left = stamp.position.x - stampSize / 2, top = stamp.position.y - stampSize / 2) {
-                    with(painter) { draw(Size(stampSize, stampSize)) }
-                }
+        }
+        LaunchedEffect(drawn, companionStatus) {
+            if (drawn > 0 && drawn != lastLooked && companionStatus == CompanionStatus.READY) {
+                delay(7000)
+                lookNow()
+            }
+        }
+        if (companionStatus == CompanionStatus.READY && drawn > 0) {
+            val bob by rememberInfiniteTransition(label = "look_bob").animateFloat(
+                initialValue = 1f, targetValue = if (looking) 1.12f else 1.04f,
+                animationSpec = infiniteRepeatable(tween(if (looking) 300 else 1200), RepeatMode.Reverse), label = "bob"
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 12.dp)
+                    .graphicsLayer { scaleX = bob; scaleY = bob }
+                    .size(84.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFFF8E1))
+                    .clickable { lookNow() },
+                contentAlignment = Alignment.Center
+            ) {
+                Image(painter = painterResource(R.drawable.ic_companion_parrot), contentDescription = null, modifier = Modifier.size(70.dp))
             }
         }
 
@@ -243,4 +288,45 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
             }
         }
     }
+}
+
+private fun DrawScope.drawStroke(stroke: DrawPath) {
+    if (stroke.path.size < 2) return
+    val path = Path().apply {
+        moveTo(stroke.path[0].x, stroke.path[0].y)
+        for (i in 1 until stroke.path.size) lineTo(stroke.path[i].x, stroke.path[i].y)
+    }
+    drawPath(path, stroke.color, style = Stroke(width = stroke.strokeWidth, cap = StrokeCap.Round))
+}
+
+private fun DrawScope.drawArtwork(paths: List<DrawPath>, stamps: List<Stamp>, stampPainters: Map<Int, Painter>) {
+    paths.forEach { drawStroke(it) }
+    // Stamps centered on where they were placed
+    val stampSize = 88.dp.toPx()
+    stamps.forEach { stamp ->
+        val painter = stampPainters.getValue(stamp.icon)
+        translate(left = stamp.position.x - stampSize / 2, top = stamp.position.y - stampSize / 2) {
+            with(painter) { draw(Size(stampSize, stampSize)) }
+        }
+    }
+}
+
+/** The drawing as a PNG, scaled down to at most 640 px (plenty for Gemma to see it). */
+private fun snapshot(
+    size: IntSize,
+    density: Density,
+    paths: List<DrawPath>,
+    stamps: List<Stamp>,
+    stampPainters: Map<Int, Painter>
+): ByteArray {
+    val factor = 640f / maxOf(size.width, size.height)
+    val bitmap = ImageBitmap((size.width * factor).toInt(), (size.height * factor).toInt())
+    CanvasDrawScope().draw(density, LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(bitmap),
+        Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
+        drawRect(Color.White)
+        scale(factor, factor, pivot = Offset.Zero) { drawArtwork(paths, stamps, stampPainters) }
+    }
+    return ByteArrayOutputStream().also {
+        bitmap.asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+    }.toByteArray()
 }

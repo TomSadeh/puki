@@ -35,8 +35,10 @@ Everything goes in `~/puki-brain` by default. You can change any path in the con
    `~/puki-brain/llama`.
 2. **Gemma:** download `gemma-4-E4B-it-Q4_0.gguf` from
    [unsloth/gemma-4-E4B-it-GGUF](https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF) into
-   `~/puki-brain/models`. Gemma is subject to Google's
-   [Gemma terms of use](https://ai.google.dev/gemma/terms).
+   `~/puki-brain/models`. Also download `mmproj-F16.gguf` from the same repo and save it as
+   `~/puki-brain/models/mmproj-gemma-4-E4B-F16.gguf`. That's Gemma's vision part, which lets
+   Puki see drawings (about 1 GB of extra VRAM; leave it out and everything else still works).
+   Gemma is subject to Google's [Gemma terms of use](https://ai.google.dev/gemma/terms).
 3. **Whisper:** download all files of
    [ivrit-ai/whisper-large-v3-turbo-ct2](https://huggingface.co/ivrit-ai/whisper-large-v3-turbo-ct2)
    into `~/puki-brain/models/whisper-ivrit-turbo`.
@@ -76,9 +78,16 @@ curl -X POST localhost:8790/wake
 curl localhost:8790/health        # wait for "ready"
 ```
 
-`/say` takes `{"situation": "...", "lang": "he"}` and returns OGG audio, with the line
-itself in the `X-Text` header. `/listen?lang=he` takes a WAV recording and returns the
-same, plus `X-Heard` with what Whisper heard. The doorbell's console log shows every
+| Endpoint | Takes | Returns |
+|---|---|---|
+| `POST /say` | `{"situation": "...", "lang": "he"}` | a short spoken reaction: OGG audio, with the line in `X-Text` |
+| `POST /listen?lang=he[&context=...]` | a WAV recording of the child | the same, plus `X-Heard` with what Whisper heard |
+| `POST /look?lang=he` | a PNG of a drawing | a spoken reaction to the drawing (Gemma vision) |
+| `POST /story` | `{"played": "...", "icons": {"ic_animal_cow": "פרה", ...}, "lang": "he"}` | `{"sentences": [{"text", "icon"}]}`, a short bedtime story with one picture per sentence |
+| `POST /speak` | `{"text": "...", "lang": "he", "speed": 0.9}` | the text spoken in the parrot's voice |
+
+Every endpoint returns 204 (nothing) when no safe line came out, and the app falls back
+to its recorded voices. The doorbell's console log shows every
 situation, transcript and reply, which helps when tuning.
 
 To test over USB without the firewall rule, run `adb reverse tcp:8790 tcp:8790` and set

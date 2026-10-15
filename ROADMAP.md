@@ -8,6 +8,8 @@ Order is a suggestion. Real play-testing with a toddler decides what comes first
 
 ## 1. Puki sees her drawings 🎨
 
+**Status: drawings done. Show-and-tell with the camera is still open.**
+
 When the child finishes a drawing on the canvas, the parrot looks at it and reacts:
 "וואו, שמש צהובה גדולה!", or for scribbles, "איזה כחול חזק! זה ים?"
 
@@ -23,6 +25,8 @@ When the child finishes a drawing on the canvas, the parrot looks at it and reac
 
 ## 2. Bedtime story 📖
 
+**Status: done, using what the child did this session. A story that remembers earlier days needs §4.**
+
 At the end of the bedtime routine, Puki tells a 1–2 minute story starring the child, their
 favorite animals, and something they did today ("היום האכלת את הפיל, ובלילה הפיל חלם…").
 
@@ -35,6 +39,9 @@ favorite animals, and something they did today ("היום האכלת את הפי
 - Calm prompt: slow pace, sleepy ending, the same closing line every night as a ritual.
 
 ## 3. Talking games 🗣️
+
+**Status: questions and answers with hands-free listening are done in Animal Garden (every
+other round). The rest is open.**
 
 - **Say it with Puki:** a picture appears, Puki says the word, and the child repeats it.
   Reward attempts, not accuracy. Matching is lenient (first sound, syllable count, known

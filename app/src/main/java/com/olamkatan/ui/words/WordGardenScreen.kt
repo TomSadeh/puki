@@ -172,7 +172,15 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                     Image(
                         painter = painterResource(state.targetLetter.exampleIcon),
                         contentDescription = null,
-                        modifier = Modifier.size(96.dp)
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clickable {
+                                val letter = state.targetLetter
+                                val fallback = { voicePlayer.play("voice_letter_${letter.id}", language) }
+                                if (companion != null) {
+                                    companion.react("במשחק האותיות לחצו על התמונה של ${letter.exampleWord.he}, שמתחילה באות ${letter.hebrewLetter}.", fallback)
+                                } else fallback()
+                            }
                     )
                     Text(
                         state.targetLetter.exampleWord.resolve(language),

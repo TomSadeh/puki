@@ -1,5 +1,7 @@
 package com.olamkatan.ui.stickers
 
+import androidx.compose.runtime.LaunchedEffect
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.hub.components.StarCounter
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.aspectRatio
@@ -101,6 +103,8 @@ class StickerAlbumViewModel(application: Application) : AndroidViewModel(applica
 fun StickerAlbumScreen(onBack: () -> Unit, viewModel: StickerAlbumViewModel = viewModel()) {
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
+    val companion = LocalCompanion.current
+    LaunchedEffect(Unit) { companion?.wake() }
     val sfxPlayer = LocalSfxPlayer.current
     val progress by viewModel.appProgress.collectAsStateWithLifecycle(GameProgress())
 
@@ -151,7 +155,10 @@ fun StickerAlbumScreen(onBack: () -> Unit, viewModel: StickerAlbumViewModel = vi
                             .clickable(interactionSource = interactionSource, indication = null) {
                                 if (isUnlocked) {
                                     sfxPlayer.play(Sfx.POP)
-                                    voicePlayer.play("voice_sticker_${sticker.id}", language)
+                                    val fallback = { voicePlayer.play("voice_sticker_${sticker.id}", language) }
+                                    if (companion != null) {
+                                        companion.react("באלבום המדבקות לחצו על המדבקה של ${sticker.name.he}. תגיד עליה משהו קטן ומצחיק.", fallback)
+                                    } else fallback()
                                 }
                             },
                         contentAlignment = Alignment.Center

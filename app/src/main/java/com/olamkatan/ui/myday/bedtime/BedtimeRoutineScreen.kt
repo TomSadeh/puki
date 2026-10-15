@@ -1,5 +1,6 @@
 package com.olamkatan.ui.myday.bedtime
 
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.annotation.DrawableRes
@@ -101,6 +102,8 @@ fun BedtimeRoutineScreen(onBack: () -> Unit, viewModel: BedtimeRoutineViewModel 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
+    val companion = LocalCompanion.current
+    LaunchedEffect(Unit) { companion?.wake() }  // so the story is ready by the end
     val sfxPlayer = LocalSfxPlayer.current
 
     // Gradually darken the background as steps progress
@@ -254,10 +257,8 @@ fun BedtimeRoutineScreen(onBack: () -> Unit, viewModel: BedtimeRoutineViewModel 
         }
 
         if (state.isComplete) {
-            // Delayed completion sheet
-            LaunchedEffect(Unit) {
-                delay(3000)
-            }
+            // פּוּקִי's bedtime story, when the brain on the PC is reachable
+            BedtimeStory()
         }
     }
 }
