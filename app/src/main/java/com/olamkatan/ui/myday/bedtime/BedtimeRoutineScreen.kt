@@ -268,7 +268,7 @@ fun BedtimeRoutineScreen(onBack: () -> Unit, viewModel: BedtimeRoutineViewModel 
         }
 
         if (state.isComplete) {
-            // פּוּקִי's bedtime story, when the brain on the PC is reachable
+            // פוקי's bedtime story, when the brain on the PC is reachable
             BedtimeStory()
         }
     }

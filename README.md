@@ -1,6 +1,6 @@
 # Puki 🦜 · עולם קטן
 
-A Hebrew/English Android game for toddlers (ages 2–4), with **פּוּקִי**, a talking parrot
+A Hebrew/English Android game for toddlers (ages 2–4), with **פוקי**, a talking parrot
 whose brain runs on your own PC. No cloud, no ads, no tracking, and nothing ever leaves
 your home.
 
@@ -22,7 +22,7 @@ get a gentle shake and "let's try again"), and every line spoken in a warm voice
 instructions follow the child's gender (תלחצי / תלחץ), set in parent settings. All voice lines
 are generated offline with [BlueTTS](https://github.com/maxmelichov/BlueTTS).
 
-**פּוּקִי, the companion (optional).** A parrot sits in the corner of the games. When it
+**פוקי, the companion (optional).** A parrot sits in the corner of the games. When it
 can reach a PC at home running the [brain server](brain/README.md):
 
 - it comments on what the child just did, written live by a local **Gemma 4 E4B** and spoken
@@ -39,7 +39,7 @@ can reach a PC at home running the [brain server](brain/README.md):
 
 | | |
 |---|---|
-| ![Animal Garden](docs/screenshots/animal-garden.png) | ![פּוּקִי in a game](docs/screenshots/companion.png) |
+| ![Animal Garden](docs/screenshots/animal-garden.png) | ![פוקי in a game](docs/screenshots/companion.png) |
 | ![My Day](docs/screenshots/my-day.png) | ![Sticker album](docs/screenshots/stickers.png) |
 
 ## Why the brain is on a PC
@@ -58,8 +58,10 @@ tablet the whole stack could run on the device; contributions welcome.
 ```
 
 - Minimum Android 8 (API 26). Built for tablets in landscape.
-- Parent settings: long-press the gear on the hub. There you can set language (Hebrew/English),
-  the child's gender, sounds, music, a time limit, and the companion's PC address.
+- On first launch, a short welcome screen asks for the language, the child's name, girl/boy,
+  and the companion's PC address (optional).
+- Parent settings: long-press the gear on the hub. There you can change all of the above,
+  plus sounds, music and a time limit.
 - Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
   bedtime routine, dipping under the bedtime story. To use your own, replace
   `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.
@@ -67,8 +69,10 @@ tablet the whole stack could run on the device; contributions welcome.
 **The companion:** see [brain/README.md](brain/README.md). You'll need a PC with Python, and
 ideally an NVIDIA GPU with about 6 GB of free VRAM (it falls back to the CPU otherwise).
 
-**Personal voice lines:** the game can say the child's name ("כל הכבוד, ___!"). Generate them
-locally; they're git-ignored, so the name never ends up in a repo:
+**Personal voice lines:** the game can say the child's name ("כל הכבוד, ___!"). The first time
+the companion is reachable, Puki records these lines onto the tablet, so they also play when
+the PC is off. The name only ever lives on the tablet and your PC. To bake them into the app
+instead (they're git-ignored, so the name never ends up in a repo):
 
 ```
 python scripts/generate_voices.py --bluetts-dir ~/puki-brain/BlueTTS --child-name "<name>" --child-gender girl

@@ -149,7 +149,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
             drawStroke(DrawPath(currentPath, selectedColor, brushSize))
         }
 
-        // פּוּקִי looks at the drawing: on tap, or by itself after a pause in drawing
+        // פוקי looks at the drawing: on tap, or by itself after a pause in drawing
         val drawn = paths.size + stamps.size
         val companionStatus = companion?.status?.collectAsStateWithLifecycle()?.value
         fun lookNow() {

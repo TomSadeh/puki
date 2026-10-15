@@ -44,7 +44,7 @@ private val STORY_ICONS = linkedMapOf(
 )
 
 /**
- * After the bedtime routine, פּוּקִי tells a short calm story about the child's day,
+ * After the bedtime routine, פוקי tells a short calm story about the child's day,
  * one sentence at a time with a matching picture. Shows nothing if the brain isn't there.
  */
 @Composable

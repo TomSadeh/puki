@@ -166,11 +166,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length) if length else b"{}"
-        if self.path == "/wake":
+        path = self.path.split("?")[0]  # the app adds ?name=...&gender=... to every request
+        if path == "/wake":
             BRAIN.wake()
             BRAIN.touch()
             self._json(200, {"brain": BRAIN.state})
-        elif self.path.split("?")[0] in ("/say", "/listen", "/speak", "/look", "/story"):
+        elif path in ("/say", "/listen", "/speak", "/look", "/story"):
             BRAIN.wake()
             BRAIN.touch()
             deadline = time.time() + CFG["startup_timeout_s"]

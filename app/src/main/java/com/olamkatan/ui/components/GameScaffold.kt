@@ -103,7 +103,7 @@ fun GameBackground(
 
         content()
 
-        // פּוּקִי the parrot, when the companion server is reachable
+        // פוקי the parrot, when the companion server is reachable
         CompanionParrot(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
     }
 }

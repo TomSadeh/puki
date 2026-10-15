@@ -50,7 +50,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * פּוּקִי sitting in the corner of a game. Shows up once the brain server is ready,
+ * פוקי sitting in the corner of a game. Shows up once the brain server is ready,
  * flaps its beak while it talks. A tap makes it say something; holding it records
  * the child talking (Whisper on the PC listens) and it answers when let go.
  */

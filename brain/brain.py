@@ -17,6 +17,7 @@ import os
 import random
 import re
 import sys
+import threading
 import urllib.parse
 import urllib.request
 from collections import deque
@@ -32,12 +33,24 @@ NAME = re.sub(r"[\u0591-\u05C7]", "", CFG.get("child_name") or "")
 GIRL = CFG.get("child_gender", "girl") == "girl"
 COMPANION = re.sub(r"[\u0591-\u05C7]", "", CFG.get("companion_name", "פוקי"))
 CHILD = NAME or ("הילדה" if GIRL else "הילד")
+_CONFIG_CHILD = (NAME, GIRL)
+# One request at a time: Gemma, Whisper and BlueTTS run one job at a time anyway, and the
+# child's name/gender below are per request
+REQUEST_LOCK = threading.Lock()
+
+
+def set_child(name, gender):
+    """Use the name/gender the app sent (set in the app's settings), else the config's."""
+    global NAME, GIRL, CHILD
+    NAME = re.sub(r"[\u0591-\u05C7]", "", (name or "").strip())[:30] or _CONFIG_CHILD[0]
+    GIRL = gender == "girl" if gender in ("girl", "boy") else _CONFIG_CHILD[1]
+    CHILD = NAME or ("הילדה" if GIRL else "הילד")
 
 
 def system_prompt(lang):
     if lang == "en":
         return (
-            f"You are {COMPANION}, a happy, colorful parrot who plays games with {CHILD}, a 2-year-old "
+            f"You are {COMPANION_EN}, a happy, colorful parrot who plays games with {CHILD}, a 2-year-old "
             f"{'girl' if GIRL else 'boy'} who can't read yet. Say ONE or TWO very short, simple sentences "
             "(at most 10 words total). Always warm and encouraging; never say 'no' or 'wrong' - if they "
             "made a mistake, gently cheer them on to try again. Add a fun sound now and then (yum!, hop!, "
@@ -66,7 +79,7 @@ def examples(lang):
         return [
             ("The child fed the cow grass. That's right.", "Yum! The cow loves grass! She's so happy!"),
             ("The child tapped blue, but the target was red.", "Ooh, blue! Let's find red!"),
-            ('The child said to you: "hi Pooki".', "Hi! I'm so happy you came!"),
+            ('The child said to you: "hi Puki".', "Hi! I'm so happy you came!"),
         ]
     n = f" {NAME}" if NAME else ""
     if GIRL:
@@ -319,10 +332,11 @@ HALLUCINATIONS = ("כתוביות", "תודה רבה", "תודה שצפיתם", 
 
 # Words Whisper should expect: the parrot's and child's names and things from the games
 _plain = lambda s: re.sub(r"[֑-ׇ]", "", s)  # noqa: E731 (strip nikud)
-HOTWORDS = " ".join(filter(None, [
-    _plain(COMPANION), _plain(NAME), "היי", "שלום", "פרה", "כלב", "חתול", "סוס", "פיל", "אריה",
-    "ברווז", "תרנגולת", "קוף", "אדום", "כחול", "צהוב", "ירוק", "עיגול", "משולש", "ריבוע",
-]))
+def hotwords():
+    return " ".join(filter(None, [
+        _plain(COMPANION), _plain(NAME), "היי", "שלום", "פרה", "כלב", "חתול", "סוס", "פיל", "אריה",
+        "ברווז", "תרנגולת", "קוף", "אדום", "כחול", "צהוב", "ירוק", "עיגול", "משולש", "ריבוע",
+    ]))
 
 
 def transcribe(wav_bytes, lang):
@@ -333,7 +347,7 @@ def transcribe(wav_bytes, lang):
         import librosa
         audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
     segments, _ = WHISPER.transcribe(
-        audio, language=lang, beam_size=1, vad_filter=True, hotwords=HOTWORDS,
+        audio, language=lang, beam_size=1, vad_filter=True, hotwords=hotwords(),
         condition_on_previous_text=False,
     )
     heard = " ".join(seg.text.strip() for seg in segments).strip()
@@ -401,6 +415,13 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        # The app sends the child's name and gender with every request (?name=...&gender=girl)
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        with REQUEST_LOCK:
+            set_child(query.get("name", [""])[0], query.get("gender", [""])[0])
+            self._post()
+
+    def _post(self):
         url = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(url.query)
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))

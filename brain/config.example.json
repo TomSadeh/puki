@@ -16,7 +16,7 @@
   "whisper_min_free_vram_mb": 2000,
   "bluetts_dir": "~/puki-brain/BlueTTS",
   "voice": "noa",
-  "companion_name": "פּוּקִי",
+  "companion_name": "פוקי",
   "child_name": "",
   "child_gender": "girl"
 }

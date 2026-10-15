@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the companion parrot (פּוּקִי) vector drawables.
+"""Generates the companion parrot (פוקי) vector drawables.
 
 Writes ic_companion_parrot.xml (beak closed) and ic_companion_parrot_talk.xml
 (beak open) to app/src/main/res/drawable. The parrot faces left, toward the

@@ -1,5 +1,7 @@
 package com.olamkatan
 
+import com.olamkatan.data.models.Gender
+import com.olamkatan.ui.onboarding.OnboardingScreen
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.audio.Companion
 import androidx.compose.foundation.layout.Box
@@ -73,6 +75,10 @@ fun OlamKatanApp(
         companion.language = language
     }
 
+    LaunchedEffect(settings.childName, settings.gender) {
+        companion.setChild(settings.childName, settings.gender == Gender.GIRL)
+    }
+
     LaunchedEffect(settings.gender) {
         voicePlayer.gender = settings.gender
     }
@@ -113,8 +119,12 @@ fun OlamKatanApp(
             LocalLayoutDirection provides layoutDirection
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                val navController = rememberNavController()
-                OlamKatanNavGraph(navController = navController)
+                if (settings.loaded && !settings.onboardingDone) {
+                    OnboardingScreen(settings)
+                } else if (settings.loaded) {
+                    val navController = rememberNavController()
+                    OlamKatanNavGraph(navController = navController)
+                }
 
                 if (showTimeLimit) {
                     TimeLimitOverlay(

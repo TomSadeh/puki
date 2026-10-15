@@ -8,6 +8,9 @@ import kotlin.random.Random
 
 class VoicePlayer(private val context: Context) {
 
+    /** Lines the parrot recorded onto the tablet (e.g. with the child's name). */
+    private val personalDir = java.io.File(context.filesDir, "voice")
+
     private var mediaPlayer: MediaPlayer? = null
     var enabled = true
 
@@ -19,6 +22,10 @@ class VoicePlayer(private val context: Context) {
             return
         }
         stop()
+        personalFile(voiceKey, language)?.let {
+            playFile(it, onComplete)
+            return
+        }
         val resId = resolve(voiceKey, language)
         if (resId == 0) {
             onComplete?.invoke()
@@ -92,7 +99,13 @@ class VoicePlayer(private val context: Context) {
     fun personalKey(voiceKey: String, language: Language): String =
         "${voiceKey}_name".takeIf { has(it, language) } ?: voiceKey
 
-    private fun has(voiceKey: String, language: Language) = resolve(voiceKey, language) != 0
+    private fun has(voiceKey: String, language: Language) =
+        personalFile(voiceKey, language) != null || resolve(voiceKey, language) != 0
+
+    private fun personalFile(voiceKey: String, language: Language): java.io.File? {
+        val suffix = if (language == Language.HEBREW) "_he" else "_en"
+        return java.io.File(personalDir, "$voiceKey$suffix.ogg").takeIf { it.exists() }
+    }
 
     // For Hebrew, try the gendered variant first (e.g. voice_prompt_bath_he_f),
     // then fall back to the base one (voice_prompt_bath_he)

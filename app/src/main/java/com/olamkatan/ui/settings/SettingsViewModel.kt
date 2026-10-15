@@ -40,6 +40,26 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun setChildName(name: String) {
+        viewModelScope.launch { settingsRepository.updateChildName(name) }
+    }
+
+    fun setLanguage(language: Language) {
+        viewModelScope.launch { settingsRepository.updateLanguage(language) }
+    }
+
+    fun setGender(gender: Gender) {
+        viewModelScope.launch { settingsRepository.updateGender(gender) }
+    }
+
+    fun setCompanionEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateCompanionEnabled(enabled) }
+    }
+
+    fun finishOnboarding() {
+        viewModelScope.launch { settingsRepository.setOnboardingDone() }
+    }
+
     fun toggleCompanion(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.updateCompanionEnabled(!enabled) }
     }

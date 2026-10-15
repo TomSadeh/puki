@@ -27,7 +27,7 @@ import kotlin.math.sqrt
 enum class CompanionStatus { OFF, WAKING, READY }
 
 /**
- * פּוּקִי the parrot, whose words come from the "brain" server on a PC at home
+ * פוקי the parrot, whose words come from the "brain" server on a PC at home
  * (brain/ in this repo): Gemma writes a short line about what just happened and
  * BlueTTS voices it. Only reachable on the home network; whenever it isn't
  * (PC off, away from home, slow reply) callers fall back to the recorded lines.
@@ -58,6 +58,17 @@ class Companion(
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
     var scene = ""
 
+    private var childName = ""
+    private var childGirl = true
+    private val voiceDir = File(context.filesDir, "voice")
+
+    /** Who's playing, from the app's settings. Sent with every request. */
+    fun setChild(name: String, girl: Boolean) {
+        childName = name.trim()
+        childGirl = girl
+        refreshNameLines()
+    }
+
     /** What the child did this session, for the bedtime story. */
     private val today = ArrayDeque<String>()
 
@@ -74,6 +85,7 @@ class Companion(
             val state = health() ?: run { _status.value = CompanionStatus.OFF; return@launch }
             if (state == "ready") {
                 _status.value = CompanionStatus.READY
+                refreshNameLines()
                 return@launch
             }
             request("POST", "/wake", timeoutMs = 3000)
@@ -81,7 +93,7 @@ class Companion(
             repeat(60) {
                 delay(2000)
                 when (health()) {
-                    "ready" -> { _status.value = CompanionStatus.READY; return@launch }
+                    "ready" -> { _status.value = CompanionStatus.READY; refreshNameLines(); return@launch }
                     null -> { _status.value = CompanionStatus.OFF; return@launch }
                 }
             }
@@ -247,6 +259,48 @@ class Companion(
         withTimeoutOrNull(30_000) { while (voicePlayer.isPlaying()) delay(100) }
     }
 
+    /**
+     * Has the parrot record the lines that say the child's name ("כל הכבוד, ___!") and keeps
+     * them on the tablet, so they also play when the PC isn't reachable. Redone when the
+     * name or gender changes; removed when the name is cleared.
+     */
+    private fun refreshNameLines() {
+        val wanted = if (childName.isBlank()) "" else "$childName|$childGirl|$NAME_LINES_VERSION"
+        val marker = File(voiceDir, "name_lines.txt")
+        val have = runCatching { marker.readText() }.getOrDefault("")
+        if (wanted == have) return
+        if (wanted.isEmpty()) {
+            voiceDir.listFiles()?.forEach { it.delete() }
+            return
+        }
+        if (!isReady) {
+            wake()  // records them as soon as the brain is up
+            return
+        }
+        scope.launch(Dispatchers.IO) {
+            voiceDir.mkdirs()
+            voiceDir.listFiles()?.forEach { it.delete() }
+            var all = true
+            for ((key, he, en) in nameLines(childName, childGirl)) {
+                for ((lang, text) in listOf("he" to he, "en" to en)) {
+                    val body = JSONObject().put("text", text).put("lang", lang).toString()
+                    val audio = request("POST", "/speak", body.toByteArray(Charsets.UTF_8), timeoutMs = 10000)
+                    if (audio != null && audio.isNotEmpty()) File(voiceDir, "${key}_$lang.ogg").writeBytes(audio) else all = false
+                }
+            }
+            if (all) marker.writeText(wanted)
+        }
+    }
+
+    private fun nameLines(n: String, girl: Boolean) = listOf(
+        Triple("voice_praise_name_1", "כל הכבוד, $n!", "Great job, $n!"),
+        Triple("voice_praise_name_2", if (girl) "$n, את אלופה!" else "$n, אתה אלוף!", "$n, you're a champion!"),
+        Triple("voice_praise_name_3", "יופי, $n!", "Yay, $n!"),
+        Triple("voice_praise_name_4", "וואו $n, איזה יופי!", "Wow, $n!"),
+        Triple("voice_hello_name", "שלום $n! לאן נשוט היום?", "Hello $n! Where shall we sail today?"),
+        Triple("voice_round_done_name", if (girl) "$n, את סיימת! כל הכבוד!" else "$n, אתה סיימת! כל הכבוד!", "$n, all done! Great job!"),
+    )
+
     private fun remember(situation: String) {
         today.addLast(situation.take(80))
         while (today.size > 12) today.removeFirst()
@@ -276,7 +330,11 @@ class Companion(
         contentType: String = "application/json; charset=utf-8"
     ): ByteArray? =
         runCatching {
-            val conn = URL(baseUrl() + path).openConnection() as HttpURLConnection
+            val full = if (method == "POST") {
+                val sep = if ("?" in path) "&" else "?"
+                path + sep + "name=" + URLEncoder.encode(childName, "UTF-8") + "&gender=" + (if (childGirl) "girl" else "boy")
+            } else path
+            val conn = URL(baseUrl() + full).openConnection() as HttpURLConnection
             conn.requestMethod = method
             conn.connectTimeout = 1500
             conn.readTimeout = timeoutMs
@@ -298,5 +356,6 @@ class Companion(
 
     private companion object {
         const val LISTEN_MILLIS = 3500L
+        const val NAME_LINES_VERSION = 1
     }
 }

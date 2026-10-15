@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas for what פּוּקִי can do next, building on the stack that's already running on the
+Ideas for what פוקי can do next, building on the stack that's already running on the
 home PC: **Gemma 4 E4B** (writes, and can also see images), **BlueTTS** (speaks Hebrew and
 English) and **ivrit.ai Whisper** (hears Hebrew). Nothing here needs the cloud.
 
@@ -106,7 +106,7 @@ New categories (vehicles, food, family, weather), each with words, prompts and v
 Today, setting up Puki takes Android Studio and eight manual steps on the PC. The goal is
 "install the app, run one program on the PC, type your child's name".
 
-**First-run setup in the app (small).**
+**First-run setup in the app (small). Status: done.**
 - A short welcome on first launch: language, the child's name, girl/boy, and "set up Puki?".
   Everything stays editable in parent settings.
 - The app sends the child's name and gender with each request, so the PC needs no

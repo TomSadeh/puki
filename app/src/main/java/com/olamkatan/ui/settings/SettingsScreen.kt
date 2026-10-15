@@ -106,6 +106,20 @@ fun SettingsScreen(
                     onToggle = { settingsViewModel.toggleGender(settings.gender) }
                 )
 
+                // The child's name: the parrot and the personal voice lines use it
+                var childName by remember(settings.childName) { mutableStateOf(settings.childName) }
+                OutlinedTextField(
+                    value = childName,
+                    onValueChange = { childName = it.take(30) },
+                    label = { Text(BilingualText("שם הילד/ה", "Child's name").resolve(language)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { settingsViewModel.setChildName(childName) }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (!it.isFocused) settingsViewModel.setChildName(childName) }
+                )
+
                 SettingsToggleRow(
                     label = BilingualText("צלילים", "Sounds").resolve(language),
                     icon = R.drawable.ic_ui_speaker,
@@ -125,7 +139,7 @@ fun SettingsScreen(
                 )
 
                 SettingsToggleRow(
-                    label = BilingualText("התוכי פּוּקִי", "Pooki the parrot").resolve(language),
+                    label = BilingualText("התוכי פוקי", "Puki the parrot").resolve(language),
                     icon = R.drawable.ic_companion_parrot,
                     checked = settings.companionEnabled,
                     labelOn = BilingualText("פועל", "On").resolve(language),

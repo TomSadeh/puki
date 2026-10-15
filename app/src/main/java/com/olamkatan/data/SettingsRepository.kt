@@ -25,6 +25,8 @@ class SettingsRepository(private val context: Context) {
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val MUSIC_ENABLED = booleanPreferencesKey("music_enabled")
         val TIME_LIMIT = intPreferencesKey("time_limit_minutes")
+        val CHILD_NAME = stringPreferencesKey("child_name")
+        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
         val COMPANION_ADDRESS = stringPreferencesKey("companion_address")
     }
@@ -36,6 +38,9 @@ class SettingsRepository(private val context: Context) {
             soundEnabled = prefs[Keys.SOUND_ENABLED] ?: true,
             musicEnabled = prefs[Keys.MUSIC_ENABLED] ?: true,
             timeLimitMinutes = prefs[Keys.TIME_LIMIT] ?: 0,
+            childName = prefs[Keys.CHILD_NAME] ?: "",
+            onboardingDone = prefs[Keys.ONBOARDING_DONE] ?: false,
+            loaded = true,
             companionEnabled = prefs[Keys.COMPANION_ENABLED] ?: true,
             companionAddress = prefs[Keys.COMPANION_ADDRESS] ?: DEFAULT_COMPANION_ADDRESS
         )
@@ -55,6 +60,14 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun updateTimeLimit(minutes: Int) {
         context.settingsDataStore.edit { it[Keys.TIME_LIMIT] = minutes }
+    }
+
+    suspend fun updateChildName(name: String) {
+        context.settingsDataStore.edit { it[Keys.CHILD_NAME] = name.trim().take(30) }
+    }
+
+    suspend fun setOnboardingDone() {
+        context.settingsDataStore.edit { it[Keys.ONBOARDING_DONE] = true }
     }
 
     suspend fun updateCompanionEnabled(enabled: Boolean) {

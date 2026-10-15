@@ -1,4 +1,4 @@
-# פּוּקִי's brain (companion server)
+# פוקי's brain (companion server)
 
 The parrot in the games gets its words from a PC at home. Gemma 4 E4B writes a short
 line about what just happened, and [BlueTTS](https://github.com/maxmelichov/BlueTTS)
@@ -66,7 +66,7 @@ Everything goes in `~/puki-brain` by default. You can change any path in the con
    ```
    pythonw.exe "C:\path\to\puki\brain\doorbell.py"
    ```
-9. **In the app:** open parent settings (long-press the gear), turn on **התוכי פּוּקִי**, and
+9. **In the app:** open parent settings (long-press the gear), turn on **התוכי פוקי**, and
    enter the PC's address, for example `192.168.1.20:8790`. A DHCP reservation in your router
    keeps that address from changing.
 
