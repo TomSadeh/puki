@@ -60,7 +60,9 @@ tablet the whole stack could run on the device; contributions welcome.
 - Minimum Android 8 (API 26). Built for tablets in landscape.
 - Parent settings: long-press the gear on the hub. There you can set language (Hebrew/English),
   the child's gender, sounds, music, a time limit, and the companion's PC address.
-- Background music is optional: add your own track as `app/src/main/res/raw/music_hub.mp3`.
+- Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
+  bedtime routine, dipping under the bedtime story. To use your own, replace
+  `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.
 
 **The companion:** see [brain/README.md](brain/README.md). You'll need a PC with Python, and
 ideally an NVIDIA GPU with about 6 GB of free VRAM (it falls back to the CPU otherwise).
@@ -93,6 +95,7 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 
 ## Credits
 
+- Music ("Puki main theme", "Puki nights") by the project's author: piano, produced with Suno
 - [BlueTTS](https://github.com/maxmelichov/BlueTTS) by Max Melichov: Hebrew/English text-to-speech
 - [ivrit.ai](https://huggingface.co/ivrit-ai): Hebrew fine-tuned Whisper
 - [Gemma](https://ai.google.dev/gemma) by Google, subject to the

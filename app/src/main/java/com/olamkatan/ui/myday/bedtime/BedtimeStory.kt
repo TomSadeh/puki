@@ -1,5 +1,6 @@
 package com.olamkatan.ui.myday.bedtime
 
+import com.olamkatan.ui.common.LocalMusicPlayer
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -49,6 +50,7 @@ private val STORY_ICONS = linkedMapOf(
 @Composable
 fun BedtimeStory(modifier: Modifier = Modifier) {
     val companion = LocalCompanion.current ?: return
+    val musicPlayer = LocalMusicPlayer.current
     val context = LocalContext.current
     var sentences by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var current by remember { mutableIntStateOf(-1) }
@@ -60,6 +62,7 @@ fun BedtimeStory(modifier: Modifier = Modifier) {
         val items = story.map { (text, icon) -> text to res(icon) }.filter { it.second != 0 }
         if (items.isEmpty()) return@LaunchedEffect
         sentences = items
+        musicPlayer.duck(true)  // quieter music under the story
         coroutineScope {
             // Fetch the next sentence's audio while the current one plays
             var next = async { companion.fetchSpeech(items[0].first) }
@@ -72,6 +75,7 @@ fun BedtimeStory(modifier: Modifier = Modifier) {
             }
         }
         delay(1500)
+        musicPlayer.duck(false)
         current = -1
     }
 

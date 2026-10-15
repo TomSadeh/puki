@@ -58,10 +58,8 @@ fun OlamKatanApp(
 
     LaunchedEffect(Unit) {
         Sfx.preloadAll(sfxPlayer)
-        // Optional: put your own track at app/src/main/res/raw/music_hub.mp3
-        val context = musicPlayer.context
-        val music = context.resources.getIdentifier("music_hub", "raw", context.packageName)
-        if (music != 0) musicPlayer.play(music)
+        // Optional tracks: app/src/main/res/raw/music_hub.mp3 (and music_night.mp3 for bedtime)
+        musicPlayer.playTrack("music_hub")
     }
 
     LaunchedEffect(settings.soundEnabled) {

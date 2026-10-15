@@ -1,5 +1,7 @@
 package com.olamkatan.ui.myday.bedtime
 
+import androidx.compose.runtime.DisposableEffect
+import com.olamkatan.ui.common.LocalMusicPlayer
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
@@ -104,6 +106,15 @@ fun BedtimeRoutineScreen(onBack: () -> Unit, viewModel: BedtimeRoutineViewModel 
     val voicePlayer = LocalVoicePlayer.current
     val companion = LocalCompanion.current
     LaunchedEffect(Unit) { companion?.wake() }  // so the story is ready by the end
+    // The calm night track while getting ready for bed, back to the main theme afterwards
+    val musicPlayer = LocalMusicPlayer.current
+    DisposableEffect(Unit) {
+        musicPlayer.playTrack("music_night")
+        onDispose {
+            musicPlayer.duck(false)
+            musicPlayer.playTrack("music_hub")
+        }
+    }
     val sfxPlayer = LocalSfxPlayer.current
 
     // Gradually darken the background as steps progress
