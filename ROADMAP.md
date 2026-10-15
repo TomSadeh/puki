@@ -92,6 +92,8 @@ not before.
 **Parent page.** The brain serves a small local web page on the home network: the words the
 child said and when, games played, drawings with Puki's comments, and the diary in plain
 language. It's a private record of a child growing up, and it never leaves the house.
+The brain's dashboard (`brain/dashboard.py`, on the PC only) is the start of it: it already
+shows a live log of what the child said and what Puki answered.
 
 ## 5. More content, faster 🌱
 
@@ -119,6 +121,8 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
 - The brain announces itself on the home network (mDNS / DNS-SD as `_puki._tcp`), and the
   app lists what it finds. No IP addresses.
 - Fallback: the PC shows a QR code with its address, and the parent scans it in settings.
+  **Status:** the dashboard shows the QR code (`puki://pair?host=…&code=…`, address plus
+  pairing code); scanning it in the app is still open.
 
 **English as a first-class language (small to medium).**
 - Speech recognition: load a standard English Whisper (for example `large-v3-turbo` or

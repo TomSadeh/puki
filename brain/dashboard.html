@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puki's brain</title>
+<style>
+  :root {
+    --bg: #f4f8fb; --card: #ffffff; --ink: #1d2a33; --muted: #62727d; --line: #dde6ec;
+    --accent: #2e9d55; --accent-ink: #ffffff; --warn: #c77700; --bad: #c2412d; --cold: #7a8a95;
+    --chip: #eef3f6; --shadow: 0 1px 3px rgba(20, 40, 60, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11181d; --card: #1a242b; --ink: #e5edf2; --muted: #93a3ad; --line: #2b3943;
+      --accent: #3fbf6b; --accent-ink: #0d1a12; --warn: #e3a03a; --bad: #ef6b56; --cold: #8796a0;
+      --chip: #24313a; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  header h1 { font-size: 22px; margin: 0; }
+  .pill { padding: 3px 12px; border-radius: 999px; font-weight: 600; font-size: 13px; color: #fff; background: var(--cold); }
+  .pill.ready { background: var(--accent); color: var(--accent-ink); }
+  .pill.warming { background: var(--warn); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  .big { font-size: 26px; font-weight: 700; }
+  .rows { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 12px 0 16px; }
+  .rows dt { color: var(--muted); }
+  .rows dd { margin: 0; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 8px 14px; cursor: pointer;
+           border: 1px solid var(--line); background: var(--chip); color: var(--ink); }
+  button:hover { border-color: var(--muted); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=number] { font: inherit; width: 70px; padding: 6px 8px; border-radius: 8px;
+                       border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .pair { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .pair img { width: 168px; height: 168px; border-radius: 8px; background: #fff; }
+  .code { font: 700 30px/1.1 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .log-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .log-head label { color: var(--muted); font-size: 13px; }
+  #log { list-style: none; margin: 0; padding: 0; }
+  #log li { display: grid; grid-template-columns: 64px 86px 1fr; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  #log li:first-child { border-top: 0; }
+  @media (max-width: 600px) { #log li { grid-template-columns: 1fr; } }
+  .time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+  .kind { justify-self: start; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 6px; background: var(--chip); color: var(--muted); height: fit-content; }
+  .kind.denied, .kind.lockout { color: var(--bad); }
+  .kind.say, .kind.listen, .kind.look, .kind.story, .kind.speak { color: var(--accent); }
+  .entry > div { overflow-wrap: anywhere; }
+  .asked { color: var(--muted); }
+  .heard::before { content: "heard: "; color: var(--muted); }
+  .reply { font-weight: 600; }
+  .reply::before { content: "🦜 "; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .empty { color: var(--muted); padding: 12px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🦜 Puki's brain</h1>
+    <span id="pill" class="pill">…</span>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Brain</h2>
+      <div class="big" id="state">…</div>
+      <dl class="rows">
+        <dt>Running on</dt><dd id="device">–</dd>
+        <dt>Awake for</dt><dd id="awake">–</dd>
+        <dt>Sleeps in</dt><dd id="sleeps">–</dd>
+        <dt>Free GPU memory</dt><dd id="vram">–</dd>
+        <dt>Sleep after</dt>
+        <dd><input type="number" id="idle" min="1" max="240"> idle minutes
+            <button id="saveIdle" hidden>Save</button></dd>
+      </dl>
+      <button id="sleep">Put to sleep now</button>
+      <span class="muted small">&nbsp;frees the GPU; the next request wakes it again</span>
+    </section>
+
+    <section class="card">
+      <h2>Pairing</h2>
+      <div class="pair">
+        <img id="qr" alt="QR code with this PC's address and pairing code">
+        <div>
+          <div class="muted small">Pairing code</div>
+          <div class="code" id="code">…</div>
+          <div class="muted small" style="margin-top:10px">PC address</div>
+          <div id="address">…</div>
+          <p class="muted small">Type both in the app's parent settings (long-press the gear),
+            or scan the QR code once the app can.</p>
+          <button id="newCode">Make a new code</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="log-head">
+      <h2 style="margin:0">What Puki heard and said</h2>
+      <label><input type="checkbox" id="quiet"> hide wake/sleep and pairing</label>
+    </div>
+    <ul id="log"><li class="empty">Nothing yet. Play a game on the tablet.</li></ul>
+    <p class="muted small">Kept in memory only, never saved; gone when the doorbell stops.</p>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const LABELS = { say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke",
+                 brain: "brain", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
+const QUIET = new Set(["brain", "pairing", "settings"]);
+let lastId = 0, events = [], code = null, idleEdited = false;
+
+function post(path, body) {
+  return fetch(path, { method: "POST", headers: { "X-Puki-Dashboard": "1", "Content-Type": "application/json" },
+                       body: JSON.stringify(body || {}) }).then(r => r.json());
+}
+function duration(s) {
+  if (s == null) return "–";
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  return h ? `${h} h ${m} min` : m ? `${m} min ${sec} s` : `${sec} s`;
+}
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) { e.textContent = text; e.dir = "auto"; }  // text only, never HTML
+  return e;
+}
+
+function showStatus(s) {
+  const names = { cold: "Asleep", warming: "Waking up…", ready: "Awake" };
+  $("pill").textContent = names[s.brain] || s.brain;
+  $("pill").className = "pill " + s.brain;
+  $("state").textContent = names[s.brain] || s.brain;
+  $("device").textContent = s.device || "–";
+  $("awake").textContent = s.awake_since ? duration(s.now - s.awake_since) : "–";
+  $("sleeps").textContent = s.sleeps_in_s == null ? "–" : duration(s.sleeps_in_s);
+  $("vram").textContent = s.free_vram_mb ? `${(s.free_vram_mb / 1024).toFixed(1)} GB` +
+      (s.brain === "cold" ? (s.free_vram_mb >= s.min_free_vram_mb ? " (enough for the GPU)" : " (would use the CPU)") : "")
+    : "no NVIDIA GPU";
+  if (!idleEdited) $("idle").value = s.idle_minutes;
+  $("sleep").disabled = s.brain === "cold";
+  $("address").textContent = s.address;
+  if (s.code !== code) {
+    code = s.code;
+    $("code").textContent = code;
+    $("qr").src = "/api/qr.svg?c=" + encodeURIComponent(code);
+  }
+}
+
+function renderLog() {
+  const list = $("log");
+  const shown = events.filter(e => !($("quiet").checked && QUIET.has(e.kind))).slice().reverse();
+  list.replaceChildren();
+  if (!shown.length) { list.append(el("li", "empty", "Nothing yet. Play a game on the tablet.")); return; }
+  for (const e of shown.slice(0, 200)) {
+    const li = el("li");
+    li.append(el("div", "time", new Date(e.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })));
+    li.append(el("span", "kind " + e.kind, LABELS[e.kind] || e.kind));
+    const body = el("div", "entry");
+    if (e.text) body.append(el("div", "asked", e.text));
+    if (e.heard) body.append(el("div", "heard", e.heard));
+    if (e.reply) body.append(el("div", "reply", e.reply));
+    else if (e.status === 204) body.append(el("div", "meta", "no safe line came out; the game used its recorded voice"));
+    const meta = [];
+    if (e.ip) meta.push(e.ip);
+    if (e.ms != null) meta.push((e.ms / 1000).toFixed(1) + " s");
+    if (e.status && e.status !== 200 && e.status !== 204) meta.push("error " + e.status);
+    if (meta.length) body.append(el("div", "meta", meta.join(" · ")));
+    li.append(body);
+    list.append(li);
+  }
+}
+
+async function tick() {
+  try {
+    showStatus(await fetch("/api/status").then(r => r.json()));
+    const fresh = await fetch("/api/events?after=" + lastId).then(r => r.json());
+    if (fresh.length) {
+      events = events.concat(fresh).slice(-300);
+      lastId = fresh[fresh.length - 1].id;
+      renderLog();
+    }
+  } catch (err) {
+    $("pill").textContent = "doorbell not running";
+    $("pill").className = "pill";
+  }
+}
+
+$("sleep").onclick = async () => showStatus(await post("/api/sleep"));
+$("newCode").onclick = async () => {
+  if (!confirm("Make a new pairing code? Every tablet will need the new code before Puki works there again.")) return;
+  showStatus(await post("/api/new-code"));
+};
+$("idle").oninput = () => { idleEdited = true; $("saveIdle").hidden = false; };
+$("saveIdle").onclick = async () => {
+  const s = await post("/api/idle", { minutes: Number($("idle").value) });
+  if (s.error) { alert(s.error); return; }
+  idleEdited = false; $("saveIdle").hidden = true; showStatus(s);
+};
+$("quiet").onchange = renderLog;
+tick();
+setInterval(tick, 2000);
+</script>
+</body>
+</html>

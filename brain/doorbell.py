@@ -24,6 +24,10 @@ startup; the parent types it into the app once. `python doorbell.py --new-code`
 makes a new one (every tablet then needs the new code). Wrong codes are slowed
 down, and an address that keeps guessing is locked out for a while.
 
+A dashboard for the parent runs next to it on this PC only (dashboard.py,
+http://127.0.0.1:8793 by default): status, the pairing code as a QR code, and a
+live log of what Puki was asked and said.
+
 Standard library only, so it runs with any Python 3.
 """
 
@@ -31,13 +35,17 @@ import hmac
 import json
 import os
 import secrets
+import socket
 import subprocess
 import sys
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import dashboard
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -121,6 +129,7 @@ class Guard:
                 self.blocked[ip] = now + self.LOCKOUT_S
                 self.fails.pop(ip, None)
                 log(f"{ip} sent too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
+                EVENTS.add("lockout", ip=ip, text=f"too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
 
     def succeeded(self, ip):
         with self.lock:
@@ -129,6 +138,7 @@ class Guard:
 
 PAIRING_CODE = load_pairing_code(new="--new-code" in sys.argv)
 GUARD = Guard()
+EVENTS = dashboard.Events()  # what the dashboard's log shows; memory only
 
 
 def free_vram_mb():
@@ -159,6 +169,8 @@ class Brain:
         self.procs = []
         self.state = "cold"
         self.last_used = 0.0
+        self.device = None       # "GPU" or "CPU" while awake
+        self.awake_since = None
 
     def touch(self):
         self.last_used = time.time()
@@ -173,7 +185,9 @@ class Brain:
     def _start(self):
         # GPU if there's room (training runs may be using it), otherwise CPU
         gpu_layers = 99 if free_vram_mb() >= CFG["min_free_vram_mb"] else 0
-        log(f"waking brain on {'GPU' if gpu_layers else 'CPU'}")
+        self.device = "GPU" if gpu_layers else "CPU"
+        log(f"waking brain on {self.device}")
+        EVENTS.add("brain", text=f"waking up on the {self.device}")
         flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         llama = subprocess.Popen(
             [os.path.join(CFG["llama_dir"], "llama-server"), "-m", CFG["model"],
@@ -195,26 +209,32 @@ class Brain:
                 with self.lock:
                     self.state = "ready"
                 self.touch()
+                self.awake_since = time.time()
                 log("brain ready")
+                EVENTS.add("brain", text="awake")
                 return
             time.sleep(0.5)
         log("brain failed to start")
-        self.stop()
+        self.stop("failed to start")
 
-    def stop(self):
+    def stop(self, reason=None):
         for p in self.procs:
             if p.poll() is None:
                 p.kill()
         self.procs = []
         with self.lock:
             self.state = "cold"
+        self.device = None
+        self.awake_since = None
+        if reason:
+            EVENTS.add("brain", text=f"asleep ({reason})")
 
     def idle_watch(self):
         while True:
             time.sleep(20)
             if self.state == "ready" and time.time() - self.last_used > CFG["idle_minutes"] * 60:
                 log("idle, putting brain to sleep")
-                self.stop()
+                self.stop(f"idle for {CFG['idle_minutes']} minutes")
 
 
 BRAIN = Brain()
@@ -243,6 +263,7 @@ class Handler(BaseHTTPRequestHandler):
             GUARD.succeeded(ip)
             return True
         time.sleep(1)  # makes guessing slow
+        EVENTS.add("denied", ip=ip, text="wrong or missing pairing code")
         GUARD.failed(ip)
         self._json(401, {"error": "wrong pairing code"})
         return False
@@ -278,6 +299,9 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(503)
                 self.end_headers()
                 return
+            started = time.time()
+            event = describe_request(path, self.path, body)
+            event["ip"] = self.client_address[0]
             try:
                 ctype = self.headers.get("Content-Type", "application/json")
                 req = urllib.request.Request(f"{BRAIN_URL}{self.path}", data=body, headers={"Content-Type": ctype})
@@ -290,16 +314,134 @@ class Handler(BaseHTTPRequestHandler):
                     self.send_header("Content-Length", str(len(data)))
                     self.end_headers()
                     self.wfile.write(data)
+                    event["status"] = r.status
+                    event["reply"] = describe_reply(path, r.headers, data)
+                    if r.headers.get("X-Heard"):
+                        event["heard"] = urllib.parse.unquote(r.headers["X-Heard"])
             except urllib.error.HTTPError as e:
                 self.send_response(e.code)
                 self.end_headers()
+                event["status"] = e.code
             except Exception as e:
                 log(f"say failed: {e}")
                 self.send_response(502)
                 self.end_headers()
+                event["status"] = 502
+            event["ms"] = int((time.time() - started) * 1000)
+            EVENTS.add(path.strip("/"), **event)
             BRAIN.touch()
         else:
             self._json(404, {"error": "not found"})
+
+
+# ---------- For the dashboard ----------
+
+def describe_request(path, full_path, body):
+    """What the tablet asked, in a line for the dashboard's log."""
+    query = urllib.parse.parse_qs(urllib.parse.urlsplit(full_path).query)
+    try:
+        req = json.loads(body) if path in ("/say", "/speak", "/story") else {}
+    except ValueError:
+        req = {}
+    if path == "/say":
+        return {"text": req.get("situation", ""), "lang": req.get("lang", "he")}
+    if path == "/speak":
+        return {"text": req.get("text", ""), "lang": req.get("lang", "he")}
+    if path == "/story":
+        return {"text": "bedtime story: " + str(req.get("played", "")), "lang": req.get("lang", "he")}
+    if path == "/look":
+        return {"text": f"looked at a drawing ({len(body) // 1024} KB)", "lang": query.get("lang", ["he"])[0]}
+    if path == "/listen":
+        context = query.get("context", [""])[0]
+        return {"text": "listened" + (f" ({context})" if context else ""), "lang": query.get("lang", ["he"])[0]}
+    return {"text": path}
+
+
+def describe_reply(path, headers, data):
+    if headers.get("X-Text"):
+        return urllib.parse.unquote(headers["X-Text"])
+    if path == "/story":
+        try:
+            return " ".join(s.get("text", "") for s in json.loads(data).get("sentences", []))
+        except ValueError:
+            pass
+    return ""
+
+
+def lan_address():
+    """This PC's address on the home network (no packet is sent)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def save_local_config(key, value):
+    """Remembers a setting changed from the dashboard in config.json."""
+    path = os.path.join(HERE, "config.json")
+    local = {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            local = json.load(f)
+    local[key] = value
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(local, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+class DashboardApp:
+    events = EVENTS
+
+    def __init__(self):
+        self._vram = (0.0, 0)
+
+    def pair_url(self):
+        # What the app's QR scanner reads: where the PC is, and the code
+        return f"puki://pair?host={lan_address()}:{CFG['port']}&code={PAIRING_CODE}"
+
+    def free_vram(self):
+        if time.time() - self._vram[0] > 10:  # nvidia-smi is slowish; the page polls every 2 s
+            self._vram = (time.time(), free_vram_mb())
+        return self._vram[1]
+
+    def status(self):
+        now = time.time()
+        sleeps_in = None
+        if BRAIN.state == "ready":
+            sleeps_in = max(0, int(CFG["idle_minutes"] * 60 - (now - BRAIN.last_used)))
+        return {
+            "brain": BRAIN.state,
+            "device": BRAIN.device,
+            "awake_since": BRAIN.awake_since,
+            "sleeps_in_s": sleeps_in,
+            "idle_minutes": CFG["idle_minutes"],
+            "free_vram_mb": self.free_vram(),
+            "min_free_vram_mb": CFG["min_free_vram_mb"],
+            "code": pretty_code(PAIRING_CODE),
+            "address": f"{lan_address()}:{CFG['port']}",
+            "pair_url": self.pair_url(),
+            "now": now,
+        }
+
+    def sleep(self):
+        if BRAIN.state != "cold":
+            log("put to sleep from the dashboard")
+            BRAIN.stop("put to sleep from the dashboard")
+
+    def new_code(self):
+        global PAIRING_CODE
+        PAIRING_CODE = load_pairing_code(new=True)
+        log(f"new pairing code: {pretty_code(PAIRING_CODE)}")
+        EVENTS.add("pairing", text="made a new pairing code; tablets need the new one")
+
+    def set_idle(self, minutes):
+        CFG["idle_minutes"] = minutes
+        save_local_config("idle_minutes", minutes)
+        EVENTS.add("settings", text=f"sleeps after {minutes} idle minutes")
 
 
 def main():
@@ -307,6 +449,8 @@ def main():
     server = ThreadingHTTPServer((CFG["bind"], CFG["port"]), Handler)
     log(f"doorbell listening on {CFG['bind']}:{CFG['port']}")
     log(f"pairing code: {pretty_code(PAIRING_CODE)}  (type it in the app's parent settings)")
+    dashboard.serve(DashboardApp(), CFG["dashboard_port"])
+    log(f"dashboard: http://127.0.0.1:{CFG['dashboard_port']}  (this PC only)")
     try:
         server.serve_forever()
     finally:

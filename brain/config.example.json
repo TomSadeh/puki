@@ -4,6 +4,7 @@
   "port": 8790,
   "brain_port": 8791,
   "llama_port": 8792,
+  "dashboard_port": 8793,
   "idle_minutes": 10,
   "startup_timeout_s": 90,
   "min_free_vram_mb": 4500,

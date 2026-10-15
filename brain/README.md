@@ -81,7 +81,7 @@ the network (a guest's phone, a smart TV) can't make Puki talk or send it record
 
 - The code is made the first time the doorbell starts, printed in its console
   (`pairing code: K7M2-QX9P`), and kept in `brain/pairing_code.txt` (git-ignored). With
-  `pythonw` there's no console, so open that file.
+  `pythonw` there's no console, so open that file, or the [dashboard](#dashboard).
 - Type it once in the app's parent settings, under the PC address. Case and the dash don't
   matter. Below the field, the app shows whether it's connected, the code is wrong, or the
   PC can't be found.
@@ -91,6 +91,23 @@ the network (a guest's phone, a smart TV) can't make Puki talk or send it record
   then needs the new code.
 - The code travels unencrypted over the home Wi-Fi (plain HTTP). It keeps strangers'
   devices out; it isn't meant to protect against someone who already controls your network.
+
+## Dashboard
+
+While the doorbell runs, **http://127.0.0.1:8793** on the PC shows:
+
+- whether the brain is asleep, waking up or awake, on the GPU or the CPU, and when it will
+  go back to sleep; a button puts it to sleep right away (handy before a training run);
+- the pairing code, the PC's address, and a QR code with both (for the app to scan once it
+  can), plus a button that makes a new code;
+- how many idle minutes before it sleeps (saved to `config.json`);
+- a live log: what each game asked, what Whisper heard, what Puki said and how long it took,
+  and any wrong pairing codes.
+
+The dashboard is served on 127.0.0.1 only, never to the home network, because the log holds
+the child's words. The log lives in memory and disappears when the doorbell stops. Pages from
+other websites can't read or use it (requests must address it as 127.0.0.1/localhost, and its
+buttons need a header a foreign page can't send). The port is `dashboard_port` in the config.
 
 ## Trying it
 
