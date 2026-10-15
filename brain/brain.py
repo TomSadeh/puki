@@ -285,9 +285,23 @@ TTS = BlueTTS(
 )
 
 
+# A run of English words, e.g. "dog" or "good night" inside a Hebrew line
+ENGLISH_RUN = re.compile(r"[A-Za-z]+(?:[\s'’,-]+[A-Za-z]+)*")
+
+
+def tag_english(text):
+    """BlueTTS reads English inside a Hebrew line as gibberish unless it's wrapped in <en>…</en>."""
+    if "<en>" in text:
+        return text
+    return ENGLISH_RUN.sub(lambda m: f"<en>{m.group(0)}</en>", text)
+
+
 def speak(text, lang, speed=0.92):
     # BlueTTS mispronounces text that already has nikud (e.g. a name with nikud came out garbled)
-    samples, sr = TTS.synthesize(re.sub(r"[\u0591-\u05C7]", "", text), lang=lang, total_step=8, speed=speed)
+    text = re.sub(r"[\u0591-\u05C7]", "", text)
+    if lang == "he":
+        text = tag_english(text)
+    samples, sr = TTS.synthesize(text, lang=lang, total_step=8, speed=speed)
     samples = np.concatenate([samples, np.zeros(int(sr * 0.15), dtype=np.float32)])
     buf = io.BytesIO()
     sf.write(buf, samples, sr, format="OGG", subtype="VORBIS")

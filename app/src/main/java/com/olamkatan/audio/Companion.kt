@@ -26,6 +26,9 @@ import kotlin.math.sqrt
 
 enum class CompanionStatus { OFF, WAKING, READY }
 
+/** Result of checking the PC from parent settings. */
+enum class Connection { OK, WRONG_CODE, LOCKED_OUT, NOT_FOUND }
+
 /**
  * פוקי the parrot, whose words come from the "brain" server on a PC at home
  * (brain/ in this repo): Gemma writes a short line about what just happened and
@@ -53,6 +56,8 @@ class Companion(
             if (!value) _status.value = CompanionStatus.OFF
         }
     var address = ""
+    /** The pairing code shown on the PC; sent with every request. */
+    var code = ""
     var language = Language.HEBREW
 
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
@@ -308,10 +313,30 @@ class Companion(
 
     private fun lang() = if (language == Language.ENGLISH) "en" else "he"
 
-    private fun baseUrl(): String {
+    private fun baseUrl(address: String = this.address): String {
         // The Android emulator reaches the PC it runs on at 10.0.2.2
         val host = if (isEmulator()) "10.0.2.2:8790" else address.trim()
         return "http://$host"
+    }
+
+    /** For parent settings: can the PC at [address] be reached with [code]? */
+    suspend fun checkConnection(address: String, code: String): Connection = withContext(Dispatchers.IO) {
+        runCatching {
+            val conn = URL(baseUrl(address) + "/health").openConnection() as HttpURLConnection
+            conn.connectTimeout = 2000
+            conn.readTimeout = 4000  // a wrong code is answered after a deliberate 1 s delay
+            conn.setRequestProperty("X-Puki-Code", code.trim())
+            try {
+                when (conn.responseCode) {
+                    200 -> Connection.OK
+                    401 -> Connection.WRONG_CODE
+                    429 -> Connection.LOCKED_OUT
+                    else -> Connection.NOT_FOUND
+                }
+            } finally {
+                conn.disconnect()
+            }
+        }.getOrDefault(Connection.NOT_FOUND)
     }
 
     private fun isEmulator() = Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk_gphone")
@@ -337,6 +362,7 @@ class Companion(
             val conn = URL(baseUrl() + full).openConnection() as HttpURLConnection
             conn.requestMethod = method
             conn.connectTimeout = 1500
+            conn.setRequestProperty("X-Puki-Code", code.trim())
             conn.readTimeout = timeoutMs
             if (body != null) {
                 conn.doOutput = true

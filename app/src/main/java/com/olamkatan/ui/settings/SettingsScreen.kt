@@ -1,5 +1,9 @@
 package com.olamkatan.ui.settings
 
+import com.olamkatan.ui.common.LocalCompanion
+import com.olamkatan.audio.Connection
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import com.olamkatan.ui.components.BackArrowIcon
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.shape.CircleShape
@@ -180,6 +184,58 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged { if (!it.isFocused) settingsViewModel.setCompanionAddress(address) }
+                    )
+                    // Pairing code, shown on the PC when the companion server starts
+                    var code by remember(settings.companionCode) { mutableStateOf(settings.companionCode) }
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = {
+                            code = it.uppercase()
+                            // Saved (and checked) as soon as the whole code is in
+                            if (code.count { c -> c.isLetterOrDigit() } == 8) settingsViewModel.setCompanionCode(code)
+                        },
+                        label = { Text(BilingualText("קוד צימוד (מופיע במחשב)", "Pairing code (shown on the PC)").resolve(language)) },
+                        placeholder = { Text("ABCD-EFGH") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Characters,
+                            autoCorrect = false,
+                            keyboardType = KeyboardType.Ascii,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { settingsViewModel.setCompanionCode(code) }),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { if (!it.isFocused) settingsViewModel.setCompanionCode(code) }
+                    )
+                    // Whether the PC answers with this address and code (tap to check again)
+                    val companion = LocalCompanion.current
+                    var connection by remember { mutableStateOf<Connection?>(null) }
+                    var recheck by remember { mutableStateOf(0) }
+                    LaunchedEffect(settings.companionAddress, settings.companionCode, recheck) {
+                        connection = null
+                        connection = companion?.checkConnection(settings.companionAddress, settings.companionCode) ?: Connection.NOT_FOUND
+                    }
+                    Text(
+                        text = when (connection) {
+                            null -> BilingualText("בודק את החיבור…", "Checking the connection…")
+                            Connection.OK -> BilingualText("✓ פוקי מחובר", "✓ Puki is connected")
+                            Connection.WRONG_CODE -> BilingualText("✗ קוד הצימוד שגוי", "✗ Wrong pairing code")
+                            Connection.LOCKED_OUT -> BilingualText(
+                                "✗ יותר מדי ניסיונות שגויים, נסו שוב בעוד רבע שעה",
+                                "✗ Too many wrong codes, try again in 15 minutes"
+                            )
+                            Connection.NOT_FOUND -> BilingualText(
+                                "✗ המחשב לא נמצא (דלוק? באותה רשת?) · לחצו לבדיקה חוזרת",
+                                "✗ PC not found (is it on, on the same Wi-Fi?) · tap to check again"
+                            )
+                        }.resolve(language),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (connection == Connection.OK) GrassGreen else EarthBrown,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { recheck++ }
+                            .padding(vertical = 4.dp)
                     )
                 }
 

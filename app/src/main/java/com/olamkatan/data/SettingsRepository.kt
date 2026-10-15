@@ -29,6 +29,7 @@ class SettingsRepository(private val context: Context) {
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
         val COMPANION_ADDRESS = stringPreferencesKey("companion_address")
+        val COMPANION_CODE = stringPreferencesKey("companion_code")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
@@ -42,7 +43,8 @@ class SettingsRepository(private val context: Context) {
             onboardingDone = prefs[Keys.ONBOARDING_DONE] ?: false,
             loaded = true,
             companionEnabled = prefs[Keys.COMPANION_ENABLED] ?: true,
-            companionAddress = prefs[Keys.COMPANION_ADDRESS] ?: DEFAULT_COMPANION_ADDRESS
+            companionAddress = prefs[Keys.COMPANION_ADDRESS] ?: DEFAULT_COMPANION_ADDRESS,
+            companionCode = prefs[Keys.COMPANION_CODE] ?: ""
         )
     }
 
@@ -76,6 +78,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun updateCompanionAddress(address: String) {
         context.settingsDataStore.edit { it[Keys.COMPANION_ADDRESS] = address.trim() }
+    }
+
+    suspend fun updateCompanionCode(code: String) {
+        context.settingsDataStore.edit { it[Keys.COMPANION_CODE] = code.trim().uppercase().take(20) }
     }
 
     suspend fun updateGender(gender: Gender) {

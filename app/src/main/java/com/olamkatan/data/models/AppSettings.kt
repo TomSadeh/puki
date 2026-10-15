@@ -11,7 +11,9 @@ data class AppSettings(
     /** False until the stored settings have been read (so the welcome screen doesn't flash). */
     val loaded: Boolean = false,
     val companionEnabled: Boolean = true,
-    val companionAddress: String = DEFAULT_COMPANION_ADDRESS
+    val companionAddress: String = DEFAULT_COMPANION_ADDRESS,
+    /** Shown by brain/doorbell.py on the PC; without it the PC won't answer. */
+    val companionCode: String = ""
 )
 
 /** The PC running brain/doorbell.py, e.g. "192.168.1.20:8790". Empty until a parent sets it. */

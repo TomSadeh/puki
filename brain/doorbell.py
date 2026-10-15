@@ -18,11 +18,19 @@ Endpoints (port from config, default 8790):
   POST /listen?lang=he[&context=...] -> body: WAV recording of the child; Whisper transcribes it and the
                    parrot answers. Same response, plus X-Heard (what Whisper heard).
 
+Every request must carry the pairing code in an X-Puki-Code header. The code is
+made on first start, kept in pairing_code.txt next to this file, and printed at
+startup; the parent types it into the app once. `python doorbell.py --new-code`
+makes a new one (every tablet then needs the new code). Wrong codes are slowed
+down, and an address that keeps guessing is locked out for a while.
+
 Standard library only, so it runs with any Python 3.
 """
 
+import hmac
 import json
 import os
+import secrets
 import subprocess
 import sys
 import threading
@@ -54,6 +62,73 @@ BRAIN_URL = f"http://127.0.0.1:{CFG['brain_port']}"
 
 def log(msg):
     print(time.strftime("%H:%M:%S"), msg, flush=True)
+
+
+# ---------- Pairing code ----------
+
+CODE_FILE = os.path.join(HERE, "pairing_code.txt")
+CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I to mix up
+MAX_BODY = 25 * 1024 * 1024  # a recording or a drawing is far smaller
+
+
+def normalize_code(code):
+    """Case, spaces and dashes don't matter when typing the code."""
+    return "".join(c for c in code.upper() if c.isalnum())
+
+
+def load_pairing_code(new=False):
+    if not new and os.path.exists(CODE_FILE):
+        with open(CODE_FILE, encoding="utf-8") as f:
+            code = normalize_code(f.read())
+        if len(code) >= 8:
+            return code
+    code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))  # 40 bits
+    with open(CODE_FILE, "w", encoding="utf-8") as f:
+        f.write(pretty_code(code) + "\n")
+    return code
+
+
+def pretty_code(code):
+    return f"{code[:4]}-{code[4:]}"
+
+
+class Guard:
+    """Slows down and locks out addresses that keep sending wrong codes."""
+
+    MAX_FAILS = 10        # wrong codes allowed...
+    WINDOW_S = 10 * 60    # ...within this many seconds,
+    LOCKOUT_S = 15 * 60   # before the address is shut out for this long
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.fails = {}    # ip -> times of recent wrong codes
+        self.blocked = {}  # ip -> locked out until
+
+    def is_blocked(self, ip):
+        with self.lock:
+            until = self.blocked.get(ip, 0)
+            if until and time.time() >= until:
+                del self.blocked[ip]
+                return False
+            return bool(until)
+
+    def failed(self, ip):
+        now = time.time()
+        with self.lock:
+            recent = [t for t in self.fails.get(ip, []) if now - t < self.WINDOW_S] + [now]
+            self.fails[ip] = recent
+            if len(recent) >= self.MAX_FAILS:
+                self.blocked[ip] = now + self.LOCKOUT_S
+                self.fails.pop(ip, None)
+                log(f"{ip} sent too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
+
+    def succeeded(self, ip):
+        with self.lock:
+            self.fails.pop(ip, None)
+
+
+PAIRING_CODE = load_pairing_code(new="--new-code" in sys.argv)
+GUARD = Guard()
 
 
 def free_vram_mb():
@@ -157,14 +232,36 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _authorized(self):
+        """Checks the pairing code; answers the request itself (401/429) when it's wrong."""
+        ip = self.client_address[0]
+        if GUARD.is_blocked(ip):
+            self._json(429, {"error": "too many wrong pairing codes, try again later"})
+            return False
+        sent = normalize_code(self.headers.get("X-Puki-Code", ""))
+        if hmac.compare_digest(sent.encode(), PAIRING_CODE.encode()):
+            GUARD.succeeded(ip)
+            return True
+        time.sleep(1)  # makes guessing slow
+        GUARD.failed(ip)
+        self._json(401, {"error": "wrong pairing code"})
+        return False
+
     def do_GET(self):
+        if not self._authorized():
+            return
         if self.path == "/health":
             self._json(200, {"brain": BRAIN.state})
         else:
             self._json(404, {"error": "not found"})
 
     def do_POST(self):
-        length = int(self.headers.get("Content-Length", 0))
+        if not self._authorized():
+            return
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length < 0 or length > MAX_BODY:
+            self._json(413, {"error": "too large"})
+            return
         body = self.rfile.read(length) if length else b"{}"
         path = self.path.split("?")[0]  # the app adds ?name=...&gender=... to every request
         if path == "/wake":
@@ -209,6 +306,7 @@ def main():
     threading.Thread(target=BRAIN.idle_watch, daemon=True).start()
     server = ThreadingHTTPServer((CFG["bind"], CFG["port"]), Handler)
     log(f"doorbell listening on {CFG['bind']}:{CFG['port']}")
+    log(f"pairing code: {pretty_code(PAIRING_CODE)}  (type it in the app's parent settings)")
     try:
         server.serve_forever()
     finally:

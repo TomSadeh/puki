@@ -14,4 +14,5 @@
 
 # Companion server: local settings (child name etc.)
 /brain/config.json
+/brain/pairing_code.txt
 __pycache__/

@@ -69,9 +69,10 @@ fun OlamKatanApp(
         voicePlayer.enabled = settings.soundEnabled
     }
 
-    LaunchedEffect(settings.companionEnabled, settings.companionAddress, language) {
+    LaunchedEffect(settings.companionEnabled, settings.companionAddress, settings.companionCode, language) {
         companion.enabled = settings.companionEnabled
         companion.address = settings.companionAddress
+        companion.code = settings.companionCode
         companion.language = language
     }
 

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.onboarding
 
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -67,6 +68,7 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
     fun t(he: String, en: String) = BilingualText(he, en).resolve(lang)
     var name by remember { mutableStateOf(settings.childName) }
     var address by remember { mutableStateOf(settings.companionAddress) }
+    var code by remember { mutableStateOf(settings.companionCode) }
 
     Box(
         modifier = Modifier
@@ -146,6 +148,22 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                     colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Ink, unfocusedTextColor = Ink),
                     modifier = Modifier.widthIn(min = 320.dp)
                 )
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { code = it.uppercase() },
+                    label = { Text(t("קוד צימוד (מופיע במחשב)", "Pairing code (shown on the PC)")) },
+                    placeholder = { Text("ABCD-EFGH") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Characters,
+                        autoCorrect = false,
+                        keyboardType = KeyboardType.Ascii,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Ink, unfocusedTextColor = Ink),
+                    modifier = Modifier.widthIn(min = 320.dp)
+                )
             }
 
             Box(
@@ -156,6 +174,7 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                     .clickable {
                         viewModel.setChildName(name)
                         viewModel.setCompanionAddress(address)
+                        viewModel.setCompanionCode(code)
                         viewModel.finishOnboarding()
                     }
                     .padding(horizontal = 40.dp, vertical = 14.dp)

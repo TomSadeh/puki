@@ -68,6 +68,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateCompanionAddress(address) }
     }
 
+    fun setCompanionCode(code: String) {
+        viewModelScope.launch { settingsRepository.updateCompanionCode(code) }
+    }
+
     fun cycleTimeLimit(current: Int) {
         val options = listOf(0, 15, 30, 45, 60)
         val nextIndex = (options.indexOf(current) + 1) % options.size

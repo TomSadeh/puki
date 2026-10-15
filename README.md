@@ -59,7 +59,7 @@ tablet the whole stack could run on the device; contributions welcome.
 
 - Minimum Android 8 (API 26). Built for tablets in landscape.
 - On first launch, a short welcome screen asks for the language, the child's name, girl/boy,
-  and the companion's PC address (optional).
+  and the companion's PC address and pairing code (optional).
 - Parent settings: long-press the gear on the hub. There you can change all of the above,
   plus sounds, music and a time limit.
 - Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
