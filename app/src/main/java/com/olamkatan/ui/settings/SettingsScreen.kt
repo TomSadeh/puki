@@ -1,5 +1,10 @@
 package com.olamkatan.ui.settings
 
+import com.olamkatan.ui.components.BackArrowIcon
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -63,12 +68,27 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(SkyBlue)
     ) {
+        // Back to the hub
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(24.dp)
+                .size(64.dp)
+                .clip(CircleShape)
+                .background(EarthBrown.copy(alpha = 0.85f))
+                .clickable { onBack() }
+                .zIndex(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            BackArrowIcon()
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = BilingualText("הגדרות", "Settings").resolve(language),

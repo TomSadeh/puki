@@ -15,7 +15,7 @@ your home.
 - **Music:** play instruments, then repeat a little melody.
 - **My Day:** a cutaway house with bath time, brushing teeth, getting dressed, setting the
   table, tidying up and bedtime.
-- **Drawing** with stamps, and a **sticker album** that fills up with stars.
+- **Drawing**, with Puki looking at the picture, and a **sticker album** that fills up with stars.
 
 Toddler-first design: no reading needed, big tap targets, no failure states (wrong answers
 get a gentle shake and "let's try again"), and every line spoken in a warm voice. Hebrew

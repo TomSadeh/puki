@@ -119,13 +119,8 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                 .fillMaxSize()
                 .background(Color.White)
                 .onSizeChanged { canvasSize = it }
-                .pointerInput(selectedColor, brushSize, selectedStamp) {
-                    if (selectedStamp != null) {
-                        // A tap places the selected stamp where the finger touched
-                        detectTapGestures { offset ->
-                            stamps.add(Stamp(offset, selectedStamp!!))
-                        }
-                    } else {
+                .pointerInput(selectedColor, brushSize) {
+                    run {
                         detectDragGestures(
                             onDragStart = { offset ->
                                 currentPath = listOf(offset)
@@ -268,24 +263,6 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.width(8.dp))
-
-            // Stamps
-            stampIcons.forEach { icon ->
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (selectedStamp == icon) Color(0xFFE0E0E0) else Color.Transparent)
-                        .clickable { selectedStamp = if (selectedStamp == icon) null else icon },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(icon),
-                        contentDescription = null,
-                        modifier = Modifier.size(50.dp)
-                    )
-                }
-            }
         }
     }
 }
