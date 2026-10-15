@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Sky -->
+    <path android:fillColor="#81D4FA" android:pathData="M0,0 L108,0 L108,108 L0,108Z"/>
+    <path android:fillColor="#B3E5FC" android:pathData="M0,40 L108,40 L108,70 L0,70Z"/>
+    <!-- Sun -->
+    <path android:fillColor="#FFE082" android:pathData="M70,33 A7,7 0 1,1 84,33 A7,7 0 1,1 70,33Z"/>
+    <!-- Sea -->
+    <path android:fillColor="#29B6F6" android:pathData="M0,70 Q13.5,66 27,70 Q40.5,74 54,70 Q67.5,66 81,70 Q94.5,74 108,70 L108,108 L0,108Z"/>
+    <!-- Island -->
+    <path android:fillColor="#E0B972" android:pathData="M30,79 A24,6 0 1,1 78,79 A24,6 0 1,1 30,79Z"/>
+    <path android:fillColor="#FFE0A3" android:pathData="M33,77.5 A21,4.5 0 1,1 75,77.5 A21,4.5 0 1,1 33,77.5Z"/>
+</vector>
