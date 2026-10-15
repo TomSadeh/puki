@@ -37,6 +37,10 @@ can reach a PC at home running the [brain server](brain/README.md):
 - if the PC is off or out of reach, the parrot just doesn't show up and the game uses its
   recorded voices.
 
+On the PC, a small **dashboard** (http://127.0.0.1:8793, visible on that PC only) shows
+whether the brain is awake, the pairing code, and a live log of what the child said and
+what Puki answered.
+
 | | |
 |---|---|
 | ![Animal Garden](docs/screenshots/animal-garden.png) | ![פוקי in a game](docs/screenshots/companion.png) |
@@ -48,6 +52,22 @@ Toddler tablets tend to be cheap and weak (this was built for a Galaxy Tab A7 Li
 of RAM). A language model, Hebrew speech recognition and Hebrew TTS together need far more,
 so the tablet stays the screen and a PC on the home network does the thinking. On a high-end
 tablet the whole stack could run on the device; contributions welcome.
+
+## Privacy and security
+
+- **Nothing leaves your home.** The models run on your PC, and the tablet talks only to that
+  PC over your Wi-Fi. No accounts, ads, analytics or cloud calls.
+- **A pairing code** keeps other devices on the network out. The PC makes the code on first
+  start, and you type it once in the app. Requests without it are refused, and a device that
+  keeps guessing is locked out.
+- **The child's name** lives only on the tablet and your PC, and the files that hold it are
+  git-ignored.
+- **The live log** of what the child said is kept in the PC's memory only, and is gone when
+  the server stops. The dashboard is never served to the network.
+- **Firewall:** the setup opens one port (8790) for home networks only. Keep your home Wi-Fi
+  set to *Private* in Windows, and don't give Python itself a firewall exception.
+- The tablet and PC talk over plain HTTP inside your network. The pairing code keeps out
+  guests' devices; it isn't meant to stop someone who already controls your network.
 
 ## Getting started
 
@@ -68,6 +88,8 @@ tablet the whole stack could run on the device; contributions welcome.
 
 **The companion:** see [brain/README.md](brain/README.md). You'll need a PC with Python, and
 ideally an NVIDIA GPU with about 6 GB of free VRAM (it falls back to the CPU otherwise).
+When it starts, it prints a pairing code (also on the dashboard and in
+`brain/pairing_code.txt`). Enter it in the app with the PC's address.
 
 **Personal voice lines:** the game can say the child's name ("כל הכבוד, ___!"). The first time
 the companion is reachable, Puki records these lines onto the tablet, so they also play when
@@ -82,7 +104,7 @@ python scripts/generate_voices.py --bluetts-dir ~/puki-brain/BlueTTS --child-nam
 
 ```
 app/                       Android app (Kotlin, Jetpack Compose)
-brain/                     companion server for the PC (doorbell.py, brain.py)
+brain/                     companion server for the PC (doorbell.py, brain.py, dashboard)
 scripts/generate_voices.py all voice lines, generated with BlueTTS
 scripts/check_voices.py    checks every voice line the app plays has audio
 scripts/draw_companion.py  draws the parrot
@@ -111,8 +133,9 @@ Models are downloaded separately and are not part of this repository.
 
 ## What's next
 
-Puki seeing the child's drawings, bedtime stories, talking games, and a memory that
-stays in your home. See [ROADMAP.md](ROADMAP.md).
+A memory that stays in your home (so Puki remembers yesterday), more talking games,
+English on par with Hebrew, pairing by scanning the dashboard's QR code, and a one-click
+installer for the PC brain. See [ROADMAP.md](ROADMAP.md).
 
 ## License
 
