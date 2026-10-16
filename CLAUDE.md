@@ -1,4 +1,4 @@
-# CLAUDE.md — Olam Katan (עולם קטן)
+# CLAUDE.md — Puki (פוקי)
 
 ## What This Project Is
 

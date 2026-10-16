@@ -1,4 +1,4 @@
-# Puki 🦜 · עולם קטן
+# Puki 🦜 · פוקי
 
 A Hebrew/English Android game for toddlers (ages 2–4), with **פוקי**, a talking parrot
 whose brain runs on your own PC. No cloud, no ads, no tracking, and nothing ever leaves
@@ -8,9 +8,8 @@ your home.
 
 ## What's inside
 
-**The game (Olam Katan, "a small world")**, an island world with toddler-sized games, each in
-its own illustrated scene (a farm, a garden, a playground under a rainbow, a theater stage, a
-cozy house):
+**The game:** an island world with toddler-sized games, each in its own illustrated scene
+(a farm, a garden, a playground under a rainbow, a theater stage, a cozy house):
 
 - **Animal Garden:** feed each animal the right food. The animal munches and does a happy hop.
 - **Colors, Shapes, Counting, Letters:** pop the right balloon, drag chunky shapes into place,
