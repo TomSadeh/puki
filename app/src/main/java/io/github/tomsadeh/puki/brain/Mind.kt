@@ -39,6 +39,21 @@ class Mind(model: File, cacheDir: File) {
             text(c.sendMessage(user))
         }
 
+    /**
+     * The first token of a greedy answer to [ask] (no instructions): the safety gate's digit
+     * (see [Safety]). LiteRT-LM gives no token probabilities, so this is the pick, not P(digit);
+     * topK 1 is greedy whatever the temperature.
+     */
+    @Synchronized
+    fun digit(ask: String): String =
+        engine.createConversation(
+            ConversationConfig(
+                samplerConfig = SamplerConfig(topK = 1, topP = 1.0, temperature = 0.0, seed = 0),
+                maxOutputToken = 1,
+                thinkingConfig = ThinkingConfig(false),
+            )
+        ).use { c -> text(c.sendMessage(ask)) }
+
     /** A reply about an image (her drawing). */
     @Synchronized
     fun look(system: String, ask: String, png: ByteArray, maxTokens: Int = 60, temperature: Double = 0.8): String =

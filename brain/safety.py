@@ -11,7 +11,8 @@ toddler says (hurt, danger, big questions, secrets, attachment):
   of the 35 new phrasings with 1-2 false alarms in 18 ordinary ones.
 After the model writes, reply_ok() drops lines that promise or bond in ways a playmate shouldn't.
 
-The phone brain (app/.../brain/Persona.kt) doesn't have these yet; keep them in step when it does.
+The phone brain has the same nets in app/.../brain/Safety.kt; keep the two in step. Its gate is one
+greedy digit (LiteRT-LM gives no token probabilities), so it catches less than the threshold here.
 """
 import re
 

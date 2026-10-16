@@ -84,9 +84,11 @@ class Persona(
 
     private val recent = ArrayDeque<String>()
 
-    fun situationPrompt(situation: String, lang: String): String {
+    fun situationPrompt(situation: String, lang: String, listening: Boolean = false): String {
         val kind = if (FOOD_WORDS.any { it in situation }) "food" else "other"
-        val opener = OPENERS.getValue(lang).getValue(kind).random()
+        // A suggested opening sound keeps game lines varied; not for answering the child, where a
+        // forced "Hooray!" can land on "I fell down"
+        val opener = if (listening) "" else OPENERS.getValue(lang).getValue(kind).random()
         val sb = StringBuilder(situation)
         if (lang == "he") {
             if (opener.isNotEmpty()) sb.append("\n(תתחיל את התשובה ב-'$opener!')")

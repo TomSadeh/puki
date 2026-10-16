@@ -123,10 +123,15 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         // She talked to Puki (optionally answering ?context=, what he just asked)
                         val lang = if (query["lang"]?.firstOrNull() == "en") "en" else "he"
                         val heard = ears().transcribe(body ?: ByteArray(0), lang, if (lang == "he") persona.hotwords() else "")
+                        // Hurt, danger, big questions and the like get a fixed, kind reply (Safety)
+                        guardedReply(mind, heard, lang)?.let { (cat, text) ->
+                            Log.i(TAG, "heard something careful: [$cat]")  // (not what she said)
+                            return@synchronized reply(text, lang, voice)
+                        }
                         var situation = persona.listenSituation(heard, lang)
                         val context = query["context"]?.firstOrNull()?.take(200) ?: ""
                         if (context.isNotEmpty()) situation = "$context $situation"
-                        reply(line(mind, situation, lang), lang, voice)
+                        reply(line(mind, situation, lang, listening = true), lang, voice)
                     }
                     else -> null
                 }
@@ -140,13 +145,27 @@ class LocalBrain(private val models: DeviceModels) : Brain {
     private fun ears(): Ears = ears ?: Ears(models.whisperModel()).also { ears = it }
 
     /** A cleaned line from Gemma about [situation], or null (three tries, like the PC). */
-    private fun line(mind: Mind, situation: String, lang: String): String? {
+    private fun line(mind: Mind, situation: String, lang: String, listening: Boolean = false): String? {
         repeat(3) {
-            val raw = mind.chat(persona.systemPrompt(lang), persona.examples(lang), persona.situationPrompt(situation, lang))
-            persona.clean(raw, lang)?.let { persona.said(it); return it }
+            val system = persona.systemPrompt(lang) + Safety.systemExtra(lang, persona.girl)
+            val raw = mind.chat(system, persona.examples(lang), persona.situationPrompt(situation, lang, listening))
+            persona.clean(raw, lang)?.takeIf { Safety.replyOk(it) }?.let { persona.said(it); return it }
             Log.i(TAG, "a line didn't pass the filter; trying again")  // (not what it said: it may be about her)
         }
         return null
+    }
+
+    /** (category, fixed reply) when what the child said needs a careful answer, else null. */
+    private fun guardedReply(mind: Mind, heard: String, lang: String): Pair<String, String>? {
+        if (heard.isEmpty()) return null
+        Safety.guard(heard, lang, persona.girl)?.let { return it }
+        val cat = try {
+            Safety.gateCategory(mind.digit(Safety.classifyPrompt(heard)))
+        } catch (e: Exception) {
+            Log.e(TAG, "safety gate failed: ${e.javaClass.simpleName}")
+            return null
+        }
+        return cat?.let { it to Safety.replies(lang, persona.girl).getValue(it) }
     }
 
     /** [text] spoken (empty when there's nothing to say; null when it can't be voiced here). */
