@@ -1,6 +1,5 @@
 package com.olamkatan.ui.animals
 
-import com.olamkatan.ui.components.hintGlow
 import com.olamkatan.ui.components.noticeTouches
 import com.olamkatan.ui.components.rememberHelp
 import com.olamkatan.ui.components.Scene

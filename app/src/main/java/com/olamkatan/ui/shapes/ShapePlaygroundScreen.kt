@@ -5,7 +5,6 @@ import com.olamkatan.ui.components.noticeTouches
 import com.olamkatan.ui.components.rememberHelp
 import com.olamkatan.ui.components.rememberSessionSeed
 import androidx.compose.foundation.layout.fillMaxWidth
-import com.olamkatan.ui.components.scatterTilt
 import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Brush
@@ -18,18 +17,13 @@ import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.reaction
 import com.olamkatan.ui.components.rememberReactionState
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -52,7 +46,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.olamkatan.audio.Sfx
 import com.olamkatan.data.content.ShapeDef
 import com.olamkatan.data.models.BilingualText
-import com.olamkatan.theme.CloudWhite
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.common.localized
 import com.olamkatan.ui.common.LocalSfxPlayer

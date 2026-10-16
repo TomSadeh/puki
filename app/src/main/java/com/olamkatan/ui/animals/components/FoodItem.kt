@@ -22,7 +22,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.olamkatan.data.content.FoodDef
-import com.olamkatan.theme.CloudWhite
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.components.DragTarget
 

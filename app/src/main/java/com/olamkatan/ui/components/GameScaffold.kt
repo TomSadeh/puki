@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.olamkatan.R
-import com.olamkatan.theme.EarthBrown
 
 @Composable
 fun GameBackground(

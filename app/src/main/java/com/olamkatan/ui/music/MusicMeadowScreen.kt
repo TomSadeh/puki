@@ -40,7 +40,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,11 +62,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.olamkatan.OlamKatanApplication
 import com.olamkatan.audio.Sfx
-import com.olamkatan.data.content.InstrumentDef
 import com.olamkatan.data.content.instruments
 import com.olamkatan.data.models.BilingualText
 import com.olamkatan.theme.CloudWhite
-import com.olamkatan.theme.EarthBrown
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.common.localized
 import com.olamkatan.ui.common.LocalSfxPlayer

@@ -1,7 +1,6 @@
 package com.olamkatan.ui.counting
 
 import com.olamkatan.ui.components.rememberSessionSeed
-import com.olamkatan.ui.components.scatterTilt
 import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.ColorFilter
 import com.olamkatan.ui.components.popIn
@@ -19,27 +18,21 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +56,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.olamkatan.audio.Sfx
-import com.olamkatan.theme.CloudWhite
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.common.LocalSfxPlayer
 import com.olamkatan.ui.common.LocalVoicePlayer

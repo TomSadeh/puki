@@ -125,11 +125,6 @@ val level3Foods = level2Foods + listOf(
     FoodDef("banana", BilingualText("בננה", "Banana"), "\uD83C\uDF4C", Color(0xFFFFEE58), R.drawable.ic_food_banana)
 )
 
-fun animalsForLevel(level: Int): List<AnimalDef> = when {
-    level >= 3 -> level3Animals
-    level >= 2 -> level2Animals
-    else -> level1Animals
-}
 
 fun foodsForLevel(level: Int): List<FoodDef> = when {
     level >= 3 -> level3Foods

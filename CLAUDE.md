@@ -144,7 +144,7 @@ Build and reuse these across all islands:
 - **No failing states.** Never show error messages, red indicators, sad sounds, or negative feedback to the child. Wrong actions get gentle, playful redirects.
 - **No small tap targets.** If it's tappable, it's at least 100dp. 120dp preferred.
 - **No text-only navigation.** The child cannot read. All navigation is visual (icons, pictures, animations).
-- **No internet.** The only network use is the optional companion on a PC at home, over the home network (see `brain/`). Everything else works fully offline.
+- **No internet.** The only network use is the optional companion on a PC at home, over the home network (see `brain/`), and checking GitHub for app updates. Everything else works fully offline.
 - **No third-party analytics, ads, or tracking.**
 - **No `Thread.sleep` or blocking calls on main thread.** Use coroutines.
 - **No hardcoded strings in composables.** All text goes through `BilingualText`.

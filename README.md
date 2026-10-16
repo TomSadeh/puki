@@ -182,9 +182,10 @@ Models are downloaded separately and are not part of this repository.
 
 ## What's next
 
-A memory that stays in your home (so Puki remembers yesterday), more talking games,
-English on par with Hebrew, pairing by scanning the dashboard's QR code, and a one-click
-installer for the PC brain. See [ROADMAP.md](ROADMAP.md).
+Finishing the security, performance and tidy-up pass; polish for the phone brain (English,
+a faster start); a sticker moment and a progress page for the parent; and a few small new
+toys. Later, a memory that stays in your home, so Puki remembers yesterday. See
+[ROADMAP.md](ROADMAP.md).
 
 ## Contributing
 

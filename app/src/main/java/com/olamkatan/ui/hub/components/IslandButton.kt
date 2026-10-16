@@ -11,7 +11,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,9 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,8 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.hub.IslandDef
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** Size of the whole island composable; HubScreen centers it on the island's position. */
 val IslandWidth = 220.dp
@@ -66,7 +61,6 @@ private val PlankText = Color(0xFF5D4037)
 @Composable
 fun IslandButton(
     island: IslandDef,
-    isUnlocked: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     palmOnLeft: Boolean = true
@@ -74,7 +68,6 @@ fun IslandButton(
     val language = LocalLanguage.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scope = rememberCoroutineScope()
 
     // Islands bob on the water, each at its own pace so they don't move in lockstep
     val transition = rememberInfiniteTransition(label = "island_${island.id}")
@@ -106,36 +99,14 @@ fun IslandButton(
         label = "press_scale"
     )
 
-    // Wobble for locked islands
-    var wobbleRotation by remember { mutableFloatStateOf(0f) }
-    val wobbleAnim by animateFloatAsState(
-        targetValue = wobbleRotation,
-        animationSpec = spring(dampingRatio = 0.3f, stiffness = 400f),
-        label = "wobble"
-    )
-
     Box(
         modifier = modifier
             .size(IslandWidth, IslandHeight)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
-                rotationZ = wobbleAnim
             }
-            .alpha(if (isUnlocked) 1f else 0.5f)
-            .clickable(interactionSource = interactionSource, indication = null) {
-                if (isUnlocked) {
-                    onClick()
-                } else {
-                    scope.launch {
-                        wobbleRotation = 8f
-                        delay(100)
-                        wobbleRotation = -8f
-                        delay(100)
-                        wobbleRotation = 0f
-                    }
-                }
-            }
+            .clickable(interactionSource = interactionSource, indication = null) { onClick() }
     ) {
         // Water ripple stays put while the island bobs above it
         Spacer(modifier = Modifier.fillMaxSize().drawWithCache {
@@ -174,7 +145,7 @@ fun IslandButton(
                     .size(108.dp)
                     .shadow(10.dp, CircleShape)
                     .clip(CircleShape)
-                    .background(if (isUnlocked) island.color else Color.Gray)
+                    .background(island.color)
                     .border(BorderStroke(5.dp, Color.White), CircleShape),
                 contentAlignment = Alignment.Center
             ) {

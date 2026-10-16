@@ -28,3 +28,6 @@ __pycache__/
 # whisper.cpp source and build folders (native/whisper/build.py)
 /native/whisper/.whisper.cpp/
 /native/whisper/.build/
+
+# Kotlin compiler caches
+.kotlin/

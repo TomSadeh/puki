@@ -19,7 +19,6 @@ data class IslandDef(
     val color: Color,
     val emoji: String,
     @DrawableRes val drawableRes: Int = 0,
-    val starsToUnlock: Int,
     val fractionalX: Float,
     val fractionalY: Float
 )
@@ -32,7 +31,6 @@ val allIslands = listOf(
         color = GrassGreen,
         emoji = "\uD83D\uDC04",
         drawableRes = R.drawable.ic_island_animals,
-        starsToUnlock = 0,
         fractionalX = 0.14f,
         fractionalY = 0.50f
     ),
@@ -43,7 +41,6 @@ val allIslands = listOf(
         color = CoralPink,
         emoji = "\uD83C\uDFA8",
         drawableRes = R.drawable.ic_island_colors,
-        starsToUnlock = 4,
         fractionalX = 0.33f,
         fractionalY = 0.42f
     ),
@@ -54,7 +51,6 @@ val allIslands = listOf(
         color = SoftPurple,
         emoji = "\uD83D\uDD37",
         drawableRes = R.drawable.ic_island_shapes,
-        starsToUnlock = 10,
         fractionalX = 0.52f,
         fractionalY = 0.53f
     ),
@@ -65,7 +61,6 @@ val allIslands = listOf(
         color = SunYellow,
         emoji = "\uD83C\uDF3B",
         drawableRes = R.drawable.ic_island_counting,
-        starsToUnlock = 18,
         fractionalX = 0.71f,
         fractionalY = 0.43f
     ),
@@ -76,7 +71,6 @@ val allIslands = listOf(
         color = WarmOrange,
         emoji = "\uD83C\uDFB5",
         drawableRes = R.drawable.ic_island_music,
-        starsToUnlock = 40,
         fractionalX = 0.87f,
         fractionalY = 0.63f
     ),
@@ -87,7 +81,6 @@ val allIslands = listOf(
         color = CoralPink,
         emoji = "\uD83D\uDCD6",
         drawableRes = R.drawable.ic_island_words,
-        starsToUnlock = 60,
         fractionalX = 0.66f,
         fractionalY = 0.80f
     ),
@@ -98,7 +91,6 @@ val allIslands = listOf(
         color = GrassGreen,
         emoji = "\uD83E\uDD9C",
         drawableRes = R.drawable.ic_companion_parrot_talk,
-        starsToUnlock = 0,
         fractionalX = 0.15f,
         fractionalY = 0.80f
     ),
@@ -109,7 +101,6 @@ val allIslands = listOf(
         color = EarthBrown,
         emoji = "\uD83C\uDFE0",
         drawableRes = R.drawable.ic_island_myday,
-        starsToUnlock = 25,
         fractionalX = 0.37f,
         fractionalY = 0.80f
     )

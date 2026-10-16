@@ -21,15 +21,12 @@ import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
 import com.olamkatan.ui.components.idleBob
 import com.olamkatan.ui.components.PromptBubble
 import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,9 +42,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +54,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -69,11 +62,9 @@ import com.olamkatan.OlamKatanApplication
 import com.olamkatan.R
 import com.olamkatan.audio.Sfx
 import com.olamkatan.data.models.BilingualText
-import com.olamkatan.theme.CloudWhite
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.common.LocalSfxPlayer
 import com.olamkatan.ui.common.LocalVoicePlayer
-import com.olamkatan.ui.components.ConfettiOverlay
 import com.olamkatan.ui.components.DragDropState
 import com.olamkatan.ui.components.GameBackground
 import com.olamkatan.ui.components.DragTarget

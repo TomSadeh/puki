@@ -88,7 +88,7 @@ fun BedtimeStory(modifier: Modifier = Modifier) {
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color(0xDD1A237E)),
+                .background(Color(0xF51A237E)),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {

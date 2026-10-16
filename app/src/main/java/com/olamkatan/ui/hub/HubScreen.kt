@@ -11,10 +11,8 @@ import androidx.compose.runtime.LaunchedEffect
 import android.app.Activity
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -116,7 +114,6 @@ fun HubScreen(
                 val depthScale = 0.82f + 0.35f * ((island.fractionalY - 0.42f) / 0.38f).coerceIn(0f, 1f)
                 IslandButton(
                     island = island,
-                    isUnlocked = true,
                     onClick = { onIslandClick(island.route) },
                     palmOnLeft = index % 2 == 0,
                     modifier = Modifier

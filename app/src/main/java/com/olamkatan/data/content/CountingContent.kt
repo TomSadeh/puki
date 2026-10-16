@@ -41,15 +41,3 @@ fun countingRoundsForLevel(level: Int): List<CountingRound> = when {
     else -> level1CountingRounds
 }
 
-val hebrewNumbers = listOf(
-    BilingualText("אחת", "one"),
-    BilingualText("שתיים", "two"),
-    BilingualText("שלוש", "three"),
-    BilingualText("ארבע", "four"),
-    BilingualText("חמש", "five"),
-    BilingualText("שש", "six"),
-    BilingualText("שבע", "seven"),
-    BilingualText("שמונה", "eight"),
-    BilingualText("תשע", "nine"),
-    BilingualText("עשר", "ten")
-)
