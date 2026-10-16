@@ -10,6 +10,7 @@ import io.github.tomsadeh.puki.ui.colors.ColorSplashScreen
 import io.github.tomsadeh.puki.ui.shapes.ShapePlaygroundScreen
 import io.github.tomsadeh.puki.ui.counting.CountingGardenScreen
 import io.github.tomsadeh.puki.ui.myday.kitchen.CakeScreen
+import io.github.tomsadeh.puki.ui.myday.garage.CarWashScreen
 import io.github.tomsadeh.puki.ui.music.MusicMeadowScreen
 import io.github.tomsadeh.puki.ui.words.WordGardenScreen
 import io.github.tomsadeh.puki.ui.echo.EchoScreen
@@ -45,6 +46,7 @@ object Routes {
     const val MY_DAY_TABLE = "myday/table"
     const val MY_DAY_BEDTIME = "myday/bedtime"
     const val MY_DAY_KITCHEN = "myday/kitchen"
+    const val MY_DAY_GARAGE = "myday/garage"
     const val CANVAS = "canvas"
     const val STICKERS = "stickers"
     const val SETTINGS = "settings"
@@ -138,6 +140,9 @@ fun PukiNavGraph(navController: NavHostController) {
         }
         composable(Routes.MY_DAY_KITCHEN) {
             CakeScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_KITCHEN))
+        }
+        composable(Routes.MY_DAY_GARAGE) {
+            CarWashScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_GARAGE))
         }
         composable(Routes.MY_DAY_BEDTIME) {
             BedtimeRoutineScreen(onBack = safeBack)

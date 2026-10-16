@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- A little car, with soap bubbles -->
+    <path android:fillColor="#1E88E5" android:pathData="M8,74 L8,58 Q9,50 18,49 L30,48 L39,32 Q42,28 47,28 L64,28 Q69,28 72,33 L79,48 Q91,50 92,60 L92,74 Z"/>
+    <path android:fillColor="#B3E5FC" android:pathData="M37,48 L44,34 L56,34 L56,48 Z"/>
+    <path android:fillColor="#B3E5FC" android:pathData="M60,34 L69,34 L75,48 L60,48 Z"/>
+    <path android:fillColor="#FFF59D" android:pathData="M10,58 A5,5 0 1,0 20,58 A5,5 0 1,0 10,58 Z"/>
+    <path android:fillColor="#37474F" android:pathData="M15,76 A11,11 0 1,0 37,76 A11,11 0 1,0 15,76 Z"/>
+    <path android:fillColor="#37474F" android:pathData="M63,76 A11,11 0 1,0 85,76 A11,11 0 1,0 63,76 Z"/>
+    <path android:fillColor="#B0BEC5" android:pathData="M21,76 A5,5 0 1,0 31,76 A5,5 0 1,0 21,76 Z"/>
+    <path android:fillColor="#B0BEC5" android:pathData="M69,76 A5,5 0 1,0 79,76 A5,5 0 1,0 69,76 Z"/>
+    <path android:fillColor="#FFFFFF" android:strokeColor="#4FC3F7" android:strokeWidth="2" android:pathData="M70,14 A7,7 0 1,0 84,14 A7,7 0 1,0 70,14 Z"/>
+    <path android:fillColor="#FFFFFF" android:strokeColor="#4FC3F7" android:strokeWidth="2" android:pathData="M84,26 A4,4 0 1,0 92,26 A4,4 0 1,0 84,26 Z"/>
+    <path android:fillColor="#FFFFFF" android:strokeColor="#4FC3F7" android:strokeWidth="2" android:pathData="M22,34 A5,5 0 1,0 32,34 A5,5 0 1,0 22,34 Z"/>
+</vector>

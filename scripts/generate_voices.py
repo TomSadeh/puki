@@ -199,6 +199,12 @@ voice_lines = [
     ("voice_cook_ready", "Ding! The cake is ready!", "דינג! העוגה מוכנה!"),
     ("voice_cook_decorate", "Let's decorate the cake!", ("בואי נקשט את העוגה!", "בוא נקשט את העוגה!")),
     ("voice_cook_yum", "Yummy! What a delicious cake!", "יאמי! איזו עוגה טעימה!"),
+    # --- Garage: the car wash ---
+    ("voice_car_intro", "The car is all muddy! Scrub it with the sponge.", ("המכונית מלאה בוץ! תשפשפי אותה עם הספוג.", "המכונית מלאה בוץ! תשפשף אותה עם הספוג.")),
+    ("voice_car_scrub", "Scrub off the mud!", ("תשפשפי את הבוץ!", "תשפשף את הבוץ!")),
+    ("voice_car_rinse", "Now rinse it with the hose!", ("עכשיו תשטפי עם הצינור!", "עכשיו תשטוף עם הצינור!")),
+    ("voice_car_dry", "Dry it with the towel!", ("עכשיו תנגבי עם המגבת!", "עכשיו תנגב עם המגבת!")),
+    ("voice_car_clean", "Beep beep! The car is clean!", "טוּט טוּט! המכונית נקייה!"),
 
     # --- My Day prompts ---
     ("voice_prompt_bath", "Let's take a bath!", ("בואי נתרחץ!", "בוא נתרחץ!")),

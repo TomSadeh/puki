@@ -71,12 +71,13 @@ private val rooms = listOf(
     RoomDef(Routes.MY_DAY_DRESS, BilingualText("להתלבש", "Getting Dressed"), R.drawable.ic_clothing_shirt, Color(0xFFEF9A9A)),
     RoomDef(Routes.MY_DAY_TABLE, BilingualText("ארוחה", "Table Time"), R.drawable.ic_table_plate, Color(0xFFA5D6A7)),
     RoomDef(Routes.MY_DAY_BEDTIME, BilingualText("שינה", "Bedtime"), R.drawable.ic_bedtime_moon, Color(0xFF7E57C2)),
-    RoomDef(Routes.MY_DAY_KITCHEN, BilingualText("מטבח", "Kitchen"), R.drawable.ic_myday_cake, Color(0xFFFFAB91))
+    RoomDef(Routes.MY_DAY_KITCHEN, BilingualText("מטבח", "Kitchen"), R.drawable.ic_myday_cake, Color(0xFFFFAB91)),
+    RoomDef(Routes.MY_DAY_GARAGE, BilingualText("שטיפת מכונית", "Car Wash"), R.drawable.ic_myday_car, Color(0xFF90A4AE))
 )
 
-// Upstairs: toys, dressing, teeth and bed; downstairs: the bath, the table and the kitchen
+// Upstairs: toys, dressing, teeth and bed; downstairs: the bath, the table, the kitchen and the garage
 private val upstairs = listOf(rooms[2], rooms[3], rooms[1], rooms[5])
-private val downstairs = listOf(rooms[0], rooms[4], rooms[6])
+private val downstairs = listOf(rooms[0], rooms[4], rooms[6], rooms[7])
 
 // The house occupies this part of the screen (fractions of width / height)
 private const val HOUSE_LEFT = 0.12f
