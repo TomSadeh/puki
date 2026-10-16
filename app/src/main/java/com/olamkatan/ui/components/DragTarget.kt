@@ -45,13 +45,18 @@ fun DragTarget(
     val scope = rememberCoroutineScope()
     val offsetAnim = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     var isDragging by remember { mutableStateOf(false) }
+    // How far the finger has moved the piece; folded into [offsetAnim] when it lets go
+    var dragDelta by remember { mutableStateOf(Offset.Zero) }
     var rootPosition by remember { mutableStateOf(Offset.Zero) }
     var pieceSize by remember { mutableStateOf(Size.Zero) }
     val flyTo by rememberUpdatedState(tapToZone)
     val dropped by rememberUpdatedState(onDragEnd)
     val started by rememberUpdatedState(onDragStart)
     val goHome: () -> Unit = {
+        val delta = dragDelta
         scope.launch {
+            offsetAnim.snapTo(offsetAnim.value + delta)
+            dragDelta = Offset.Zero
             offsetAnim.animateTo(Offset.Zero, animationSpec = spring(dampingRatio = 0.4f, stiffness = 300f))
         }
     }
@@ -72,13 +77,12 @@ fun DragTarget(
                         dragDropState.draggedItemId = itemId
                         dragDropState.draggedSize = pieceSize
                         dragDropState.isDragging = true
+                        scope.launch { offsetAnim.stop() }  // grabbed while flying home: stay put
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        // Where the item is going now (the snap below happens a frame later)
-                        val next = offsetAnim.value + Offset(dragAmount.x, dragAmount.y)
-                        scope.launch { offsetAnim.snapTo(next) }
-                        dragDropState.dragPosition = rootPosition + next +
+                        dragDelta += dragAmount
+                        dragDropState.dragPosition = rootPosition + offsetAnim.value + dragDelta +
                             Offset(size.width / 2f, size.height / 2f)
                     },
                     onDragEnd = {
@@ -118,10 +122,8 @@ fun DragTarget(
                 })
             }
             .absoluteOffset {
-                IntOffset(
-                    offsetAnim.value.x.roundToInt(),
-                    offsetAnim.value.y.roundToInt()
-                )
+                val at = offsetAnim.value + dragDelta
+                IntOffset(at.x.roundToInt(), at.y.roundToInt())
             }
             // After the touch handling: inside a scaled layer, finger movement is measured scaled
             // down, and the item would fall behind the finger the farther it's dragged

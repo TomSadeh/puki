@@ -4,5 +4,7 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowFullscreen">true</item>
+        <!-- Sky blue, not white, while the app starts and between screens -->
+        <item name="android:windowBackground">@color/sky_blue</item>
     </style>
 </resources>

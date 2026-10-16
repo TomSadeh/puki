@@ -59,8 +59,9 @@ class VoicePlayer(private val context: Context) {
             return
         }
         stop()
+        val player = MediaPlayer()
         mediaPlayer = runCatching {
-            MediaPlayer().apply {
+            player.apply {
                 setDataSource(file.absolutePath)
                 setVolume(level, level)
                 setOnCompletionListener {
@@ -72,6 +73,7 @@ class VoicePlayer(private val context: Context) {
                 start()
             }
         }.getOrElse {
+            player.release()  // a broken or half-written file: don't leak the player
             onComplete?.invoke()
             null
         }
@@ -127,10 +129,15 @@ class VoicePlayer(private val context: Context) {
             Gender.GIRL -> "_f"
             Gender.BOY -> "_m"
         }
-        val gendered = context.resources.getIdentifier("$voiceKey$suffix$genderSuffix", "raw", context.packageName)
+        val gendered = rawId("$voiceKey$suffix$genderSuffix")
         if (gendered != 0) return gendered
-        return context.resources.getIdentifier("$voiceKey$suffix", "raw", context.packageName)
+        return rawId("$voiceKey$suffix")
     }
+
+    // getIdentifier is slow (a praise pick asks about a dozen names); the answers never change
+    private val ids = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private fun rawId(name: String): Int =
+        ids.getOrPut(name) { context.resources.getIdentifier(name, "raw", context.packageName) }
 
     fun isPlaying(): Boolean = runCatching { mediaPlayer?.isPlaying == true }.getOrDefault(false)
 

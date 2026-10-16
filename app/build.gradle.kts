@@ -35,7 +35,9 @@ android {
             // Signed like the builds Android Studio installs from this PC, so a release installs
             // over one of those without losing the child's progress
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false
+            // Shrunk: a smaller download and faster start (keep rules for native code in proguard-rules.pro)
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

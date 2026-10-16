@@ -1,5 +1,10 @@
 package com.olamkatan.ui.hub.components
 
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -55,68 +60,83 @@ fun HubBackground() {
         label = "boat"
     )
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        val horizon = h * HORIZON
-
-        // Sky
-        drawRect(
-            brush = Brush.verticalGradient(
-                listOf(Color(0xFF64C8F5), Color(0xFFB3E5FC)),
-                endY = horizon
-            ),
-            size = Size(w, horizon + 2f)
-        )
-
-        drawSun(Offset(w * 0.80f, h * 0.13f), h * 0.065f, sunSpin)
-
-        drawCloud(w * cloudOffset, h * 0.10f, w * 0.045f)
-        drawCloud(w * ((cloudOffset + 0.55f) % 1.3f - 0.15f), h * 0.19f, w * 0.035f)
-
-        // Faraway islands on the horizon
-        drawFarIsland(w * 0.08f, horizon, w * 0.07f, h * 0.025f)
-        drawFarIsland(w * 0.58f, horizon, w * 0.05f, h * 0.018f)
-
-        // Sea
-        drawRect(
-            brush = Brush.verticalGradient(
-                listOf(Color(0xFF4FC3F7), Color(0xFF29B6F6), Color(0xFF0397D6)),
-                startY = horizon,
-                endY = h
-            ),
-            topLeft = Offset(0f, horizon),
-            size = Size(w, h - horizon)
-        )
-        // Bright line where sky meets sea
-        drawRect(Color(0x66FFFFFF), Offset(0f, horizon), Size(w, h * 0.006f))
-
-        drawBoat(w * boatX, horizon + h * 0.035f, h * 0.035f, wavePhase)
-
-        // Little wave arcs drifting sideways, bigger towards the viewer
-        val rows = 7
-        for (row in 0 until rows) {
-            val t = (row + 0.5f) / rows
-            val y = horizon + (h - horizon) * t
-            val waveW = w * (0.018f + 0.022f * t)
-            val gap = waveW * 5f
-            val drift = (wavePhase + row * 0.37f) % 1f * gap * (if (row % 2 == 0) 1 else -1)
-            val bob = sin((wavePhase + row * 0.2f) * 2 * PI).toFloat() * h * 0.003f
-            var x = -2 * gap + drift + (row * 0.43f % 1f) * gap
-            while (x < w + gap) {
-                drawWave(x, y + bob, waveW, Color.White.copy(alpha = 0.18f + 0.22f * t))
-                x += gap
-            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Sky, sea and the faraway islands never move: drawn once, in a layer of their own
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
+            val w = size.width
+            val h = size.height
+            val horizon = h * HORIZON
+            drawRect(
+                brush = Brush.verticalGradient(listOf(Color(0xFF64C8F5), Color(0xFFB3E5FC)), endY = horizon),
+                size = Size(w, horizon + 2f)
+            )
+            drawFarIsland(w * 0.08f, horizon, w * 0.07f, h * 0.025f)
+            drawFarIsland(w * 0.58f, horizon, w * 0.05f, h * 0.018f)
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFF4FC3F7), Color(0xFF29B6F6), Color(0xFF0397D6)),
+                    startY = horizon,
+                    endY = h
+                ),
+                topLeft = Offset(0f, horizon),
+                size = Size(w, h - horizon)
+            )
+            // Bright line where sky meets sea
+            drawRect(Color(0x66FFFFFF), Offset(0f, horizon), Size(w, h * 0.006f))
         }
 
-        // Twinkling sparkles on the water
-        val sparkles = listOf(0.15f to 0.38f, 0.45f to 0.34f, 0.9f to 0.45f, 0.25f to 0.66f, 0.8f to 0.9f, 0.55f to 0.95f)
-        sparkles.forEachIndexed { i, (sx, sy) ->
-            val a = (sin((wavePhase + i * 0.29f) * 2 * PI).toFloat() + 1f) / 2f
-            drawCircle(Color.White.copy(alpha = 0.7f * a), radius = h * 0.005f * (0.5f + a), center = Offset(w * sx, h * sy))
-        }
+        // What moves: sun, clouds, the boat, waves and sparkles. Their shapes are built once
+        // (per size) and only placed each frame, so the tablet doesn't make new ones 60 times a second
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer()
+                .drawWithCache {
+                    val wave = unitWave()
+                    val boat = unitBoat()
+                    val waveStroke = Stroke(width = 0.12f, cap = StrokeCap.Round)
+                    onDrawBehind {
+                        val w = size.width
+                        val h = size.height
+                        val horizon = h * HORIZON
+
+                        drawSun(Offset(w * 0.80f, h * 0.13f), h * 0.065f, sunSpin)
+                        drawCloud(w * cloudOffset, h * 0.10f, w * 0.045f)
+                        drawCloud(w * ((cloudOffset + 0.55f) % 1.3f - 0.15f), h * 0.19f, w * 0.035f)
+                        drawBoat(boat, w * boatX, horizon + h * 0.035f, h * 0.035f, wavePhase)
+
+                        // Little wave arcs drifting sideways, bigger towards the viewer
+                        val rows = 7
+                        for (row in 0 until rows) {
+                            val t = (row + 0.5f) / rows
+                            val y = horizon + (h - horizon) * t
+                            val waveW = w * (0.018f + 0.022f * t)
+                            val gap = waveW * 5f
+                            val drift = (wavePhase + row * 0.37f) % 1f * gap * (if (row % 2 == 0) 1 else -1)
+                            val bob = sin((wavePhase + row * 0.2f) * 2 * PI).toFloat() * h * 0.003f
+                            val color = Color.White.copy(alpha = 0.18f + 0.22f * t)
+                            var x = -2 * gap + drift + (row * 0.43f % 1f) * gap
+                            while (x < w + gap) {
+                                withTransform({
+                                    translate(x, y + bob)
+                                    scale(waveW, waveW, pivot = Offset.Zero)
+                                }) { drawPath(wave, color, style = waveStroke) }
+                                x += gap
+                            }
+                        }
+
+                        // Twinkling sparkles on the water
+                        SPARKLES.forEachIndexed { i, (sx, sy) ->
+                            val a = (sin((wavePhase + i * 0.29f) * 2 * PI).toFloat() + 1f) / 2f
+                            drawCircle(Color.White.copy(alpha = 0.7f * a), radius = h * 0.005f * (0.5f + a), center = Offset(w * sx, h * sy))
+                        }
+                    }
+                }
+        )
     }
 }
+
+private val SPARKLES = listOf(0.15f to 0.38f, 0.45f to 0.34f, 0.9f to 0.45f, 0.25f to 0.66f, 0.8f to 0.9f, 0.55f to 0.95f)
 
 private fun DrawScope.drawSun(center: Offset, radius: Float, spin: Float) {
     drawCircle(Color(0x33FFE082), radius * 1.9f, center)
@@ -159,40 +179,32 @@ private fun DrawScope.drawFarIsland(cx: Float, horizon: Float, halfW: Float, hei
     drawPath(p, Color(0xFF7CB9A8))
 }
 
-private fun DrawScope.drawBoat(x: Float, y: Float, s: Float, phase: Float) {
+/** The boat's hull, sail and jib, at size 1 around (0, 0). */
+private class Boat(val hull: Path, val sail: Path, val jib: Path)
+
+private fun unitBoat() = Boat(
+    hull = Path().apply { moveTo(-1.1f, 0f); lineTo(1.1f, 0f); lineTo(0.75f, 0.45f); lineTo(-0.75f, 0.45f); close() },
+    sail = Path().apply { moveTo(0.06f, -1.55f); lineTo(0.9f, -0.15f); lineTo(0.06f, -0.15f); close() },
+    jib = Path().apply { moveTo(-0.06f, -1.3f); lineTo(-0.7f, -0.15f); lineTo(-0.06f, -0.15f); close() },
+)
+
+private fun DrawScope.drawBoat(boat: Boat, x: Float, y: Float, s: Float, phase: Float) {
     val rock = sin(phase * 2 * PI).toFloat() * 4f
-    rotate(rock, Offset(x, y)) {
-        val hull = Path().apply {
-            moveTo(x - s * 1.1f, y)
-            lineTo(x + s * 1.1f, y)
-            lineTo(x + s * 0.75f, y + s * 0.45f)
-            lineTo(x - s * 0.75f, y + s * 0.45f)
-            close()
-        }
-        drawPath(hull, Color(0xFFE57373))
-        drawLine(Color(0xFF6D4C41), Offset(x, y), Offset(x, y - s * 1.6f), strokeWidth = s * 0.08f)
-        val sail = Path().apply {
-            moveTo(x + s * 0.06f, y - s * 1.55f)
-            lineTo(x + s * 0.9f, y - s * 0.15f)
-            lineTo(x + s * 0.06f, y - s * 0.15f)
-            close()
-        }
-        drawPath(sail, Color.White)
-        val jib = Path().apply {
-            moveTo(x - s * 0.06f, y - s * 1.3f)
-            lineTo(x - s * 0.7f, y - s * 0.15f)
-            lineTo(x - s * 0.06f, y - s * 0.15f)
-            close()
-        }
-        drawPath(jib, Color(0xFFFFF59D))
+    withTransform({
+        rotate(rock, Offset(x, y))
+        translate(x, y)
+        scale(s, s, pivot = Offset.Zero)
+    }) {
+        drawPath(boat.hull, Color(0xFFE57373))
+        drawLine(Color(0xFF6D4C41), Offset(0f, 0f), Offset(0f, -1.6f), strokeWidth = 0.08f)
+        drawPath(boat.sail, Color.White)
+        drawPath(boat.jib, Color(0xFFFFF59D))
     }
 }
 
-private fun DrawScope.drawWave(x: Float, y: Float, width: Float, color: Color) {
-    val p = Path().apply {
-        moveTo(x, y)
-        quadraticBezierTo(x + width * 0.25f, y - width * 0.3f, x + width * 0.5f, y)
-        quadraticBezierTo(x + width * 0.75f, y - width * 0.3f, x + width, y)
-    }
-    drawPath(p, color, style = Stroke(width = width * 0.12f, cap = StrokeCap.Round))
+/** One little wave arc, 1 wide, starting at (0, 0). */
+private fun unitWave() = Path().apply {
+    moveTo(0f, 0f)
+    quadraticBezierTo(0.25f, -0.3f, 0.5f, 0f)
+    quadraticBezierTo(0.75f, -0.3f, 1f, 0f)
 }

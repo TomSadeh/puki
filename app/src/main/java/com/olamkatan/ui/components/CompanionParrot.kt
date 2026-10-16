@@ -86,19 +86,6 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
         beakOpen = false
     }
 
-    val transition = rememberInfiniteTransition(label = "parrot")
-    val bob by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(if (speaking) 260 else 1400), RepeatMode.Reverse),
-        label = "bob"
-    )
-    val pulse by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Restart),
-        label = "listen_pulse"
-    )
     val listenScale by animateFloatAsState(if (listening || autoListening) 1.15f else 1f, spring(dampingRatio = 0.4f), label = "listen_scale")
 
     AnimatedVisibility(
@@ -107,9 +94,22 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
         enter = slideInVertically(spring(dampingRatio = 0.5f)) { it },
         exit = slideOutVertically { it } + fadeOut()
     ) {
+        // (inside, so nothing ticks while the parrot is away)
+        val bob by rememberInfiniteTransition(label = "parrot").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(if (speaking) 260 else 1400), RepeatMode.Reverse),
+            label = "bob"
+        )
         Box(contentAlignment = Alignment.Center) {
             // Pulsing rings while it listens
             if (listening || autoListening) {
+                val pulse by rememberInfiniteTransition(label = "listen").animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(tween(900), RepeatMode.Restart),
+                    label = "listen_pulse"
+                )
                 Canvas(modifier = Modifier.matchParentSize()) {
                     for (k in 0..1) {
                         val t = (pulse + k * 0.5f) % 1f

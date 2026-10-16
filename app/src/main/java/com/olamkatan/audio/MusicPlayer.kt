@@ -17,6 +17,7 @@ class MusicPlayer(val context: Context) {
     private var currentTrack: String? = null
     private var ducked = false
     private var currentVolume = 0f
+    private var prepared = false  // a track loads in the background; until then it can't start
 
     /** The parent's music volume, 0..1 (parent settings). */
     var level = 1f
@@ -36,16 +37,26 @@ class MusicPlayer(val context: Context) {
         currentTrack = name
         val old = mediaPlayer
         mediaPlayer = null
+        prepared = false
         fadeTo(old, 0f) {
             old?.release()
             if (currentTrack != name) return@fadeTo
-            mediaPlayer = MediaPlayer.create(context, resId)?.apply {
-                isLooping = true
-                setVolume(0f, 0f)
-                if (enabled) start()
-            }
+            val player = runCatching {
+                MediaPlayer().apply {
+                    context.resources.openRawResourceFd(resId).use { setDataSource(it.fileDescriptor, it.startOffset, it.length) }
+                    isLooping = true
+                    setVolume(0f, 0f)
+                }
+            }.getOrNull() ?: return@fadeTo
+            mediaPlayer = player
             currentVolume = 0f
-            fadeTo(mediaPlayer, target())
+            player.setOnPreparedListener {
+                if (mediaPlayer !== it) return@setOnPreparedListener  // another track was picked meanwhile
+                prepared = true
+                if (enabled) it.start()
+                fadeTo(it, target())
+            }
+            player.prepareAsync()  // (not on the main thread: a long track would stall the screen opening)
         }
     }
 
@@ -77,21 +88,23 @@ class MusicPlayer(val context: Context) {
     }
 
     fun pause() {
+        if (!prepared) return
         mediaPlayer?.takeIf { it.isPlaying }?.pause()
     }
 
     fun resume() {
-        if (!enabled) return
+        if (!enabled || !prepared) return
         mediaPlayer?.takeIf { !it.isPlaying }?.start()
     }
 
     fun stop() {
         fade?.cancel()
         mediaPlayer?.apply {
-            if (isPlaying) stop()
+            if (prepared && isPlaying) stop()
             release()
         }
         mediaPlayer = null
+        prepared = false
         currentTrack = null
     }
 

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.components
 
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -151,25 +152,28 @@ private fun SunRays(modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(30000, easing = LinearEasing)),
         label = "rays_turn"
     )
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val c = center
+    // Drawn once; the layer does the turning (only its angle changes each frame)
+    Spacer(modifier = modifier.fillMaxSize().graphicsLayer { rotationZ = turn }.drawWithCache {
+        val c = Offset(size.width / 2, size.height / 2)
         val r = size.maxDimension
-        drawCircle(Brush.radialGradient(listOf(Color(0x66FFF59D), Color.Transparent), center = c, radius = size.minDimension * 0.6f), size.minDimension * 0.6f, c)
-        rotate(turn, pivot = c) {
-            val rays = 16
-            for (i in 0 until rays step 2) {
-                val a0 = Math.toRadians((i * 360.0 / rays)).toFloat()
-                val a1 = Math.toRadians(((i + 1) * 360.0 / rays)).toFloat()
-                val ray = Path().apply {
-                    moveTo(c.x, c.y)
-                    lineTo(c.x + kotlin.math.cos(a0) * r, c.y + kotlin.math.sin(a0) * r)
-                    lineTo(c.x + kotlin.math.cos(a1) * r, c.y + kotlin.math.sin(a1) * r)
-                    close()
-                }
-                drawPath(ray, Brush.radialGradient(listOf(Color(0x40FFFFFF), Color.Transparent), center = c, radius = r * 0.55f))
+        val glow = Brush.radialGradient(listOf(Color(0x66FFF59D), Color.Transparent), center = c, radius = size.minDimension * 0.6f)
+        val rayBrush = Brush.radialGradient(listOf(Color(0x40FFFFFF), Color.Transparent), center = c, radius = r * 0.55f)
+        val rays = Path().apply {
+            val n = 16
+            for (i in 0 until n step 2) {
+                val a0 = Math.toRadians((i * 360.0 / n)).toFloat()
+                val a1 = Math.toRadians(((i + 1) * 360.0 / n)).toFloat()
+                moveTo(c.x, c.y)
+                lineTo(c.x + kotlin.math.cos(a0) * r, c.y + kotlin.math.sin(a0) * r)
+                lineTo(c.x + kotlin.math.cos(a1) * r, c.y + kotlin.math.sin(a1) * r)
+                close()
             }
         }
-    }
+        onDrawBehind {
+            drawCircle(glow, size.minDimension * 0.6f, c)
+            drawPath(rays, rayBrush)
+        }
+    })
 }
 
 /** A star that drops in spinning, squashes as it lands, and plays its chime. */

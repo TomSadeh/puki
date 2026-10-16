@@ -1,5 +1,9 @@
 package com.olamkatan.ui.components
 
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.CacheDrawScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
@@ -139,6 +143,30 @@ enum class Scene { FARM, GARDEN, PLAYGROUND, STAGE, HOME, SUNSET, BATH }
 
 @Composable
 fun SceneBackdrop(scene: Scene, modifier: Modifier = Modifier) {
+    val rooms = scene == Scene.HOME || scene == Scene.BATH
+    Box(modifier = modifier.fillMaxSize()) {
+        // What never moves, drawn once in a layer of its own (hills built once per size)
+        Spacer(modifier = Modifier.fillMaxSize().graphicsLayer().drawWithCache {
+            val hills = if (rooms || scene == Scene.STAGE) null else run {
+                hillPath(size.height * 0.66f, size.height * 0.05f, 1.3f, 0.2f) to hillPath(size.height * 0.76f, size.height * 0.035f, 2.1f, 0.65f)
+            }
+            val pal = paletteFor(scene)
+            onDrawBehind {
+                when (scene) {
+                    Scene.STAGE -> drawStage()
+                    Scene.HOME -> drawRoom(wall = Color(0xFFFFF3E0), stripe = Color(0xFFFFE0B2), floor = Color(0xFFD7A86E))
+                    Scene.BATH -> drawRoom(wall = Color(0xFFE1F5FE), stripe = Color(0xFFB3E5FC), floor = Color(0xFFB0BEC5), tiles = true)
+                    else -> drawOutdoorsStill(scene, pal, hills!!)
+                }
+            }
+        })
+        // What moves (clouds, grass, spotlights); the rooms don't move at all
+        if (!rooms) SceneMotion(scene)
+    }
+}
+
+@Composable
+private fun SceneMotion(scene: Scene) {
     val t = rememberInfiniteTransition(label = "scene")
     val drift by t.animateFloat(
         initialValue = 0f,
@@ -152,14 +180,13 @@ fun SceneBackdrop(scene: Scene, modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(3000), RepeatMode.Reverse),
         label = "sway"
     )
-    Canvas(modifier = modifier.fillMaxSize()) {
-        when (scene) {
-            Scene.STAGE -> drawStage(sway)
-            Scene.HOME -> drawRoom(wall = Color(0xFFFFF3E0), stripe = Color(0xFFFFE0B2), floor = Color(0xFFD7A86E))
-            Scene.BATH -> drawRoom(wall = Color(0xFFE1F5FE), stripe = Color(0xFFB3E5FC), floor = Color(0xFFB0BEC5), tiles = true)
-            else -> drawOutdoors(scene, drift, sway)
+    Spacer(modifier = Modifier.fillMaxSize().graphicsLayer().drawWithCache {
+        val beam = if (scene == Scene.STAGE) spotlightBeam() else null
+        val pal = paletteFor(scene)
+        onDrawBehind {
+            if (beam != null) drawSpotlights(beam, sway) else drawOutdoorsMotion(scene, pal, drift, sway)
         }
-    }
+    })
 }
 
 private class Palette(val skyTop: Color, val skyBottom: Color, val hillBack: Color, val hillFront: Color, val accent: Color)
@@ -172,30 +199,31 @@ private fun paletteFor(scene: Scene) = when (scene) {
     else -> Palette(Color(0xFF81D4FA), Color(0xFFE1F5FE), Color(0xFFAED581), Color(0xFF7CB342), Color(0xFFFFF176))
 }
 
-private fun DrawScope.drawOutdoors(scene: Scene, drift: Float, sway: Float) {
-    val p = paletteFor(scene)
+private val CLOUDS = listOf(Triple(0.1f, 0.14f, 1f), Triple(0.45f, 0.08f, 0.7f), Triple(0.7f, 0.26f, 0.85f))
+
+private fun DrawScope.drawOutdoorsStill(scene: Scene, p: Palette, hills: Pair<Path, Path>) {
     val w = size.width
     val h = size.height
     drawRect(Brush.verticalGradient(listOf(p.skyTop, p.skyBottom), endY = h * 0.75f))
-
     // Sun with a soft glow
     val sun = Offset(w * 0.86f, h * 0.17f)
     drawCircle(Brush.radialGradient(listOf(Color(0x88FFF59D), Color.Transparent), center = sun, radius = h * 0.2f), h * 0.2f, sun)
     drawCircle(Color(0xFFFFE082), h * 0.075f, sun)
     drawCircle(Color(0xFFFFF59D), h * 0.055f, sun)
-
     if (scene == Scene.PLAYGROUND) drawRainbow(Offset(w * 0.5f, h * 0.78f), h * 0.62f)
+    // Two rows of hills
+    drawPath(hills.first, p.hillBack)
+    drawPath(hills.second, p.hillFront)
+}
 
-    // Clouds drifting by
-    listOf(Triple(0.1f, 0.14f, 1f), Triple(0.45f, 0.08f, 0.7f), Triple(0.7f, 0.26f, 0.85f)).forEachIndexed { i, (fx, fy, s) ->
+private fun DrawScope.drawOutdoorsMotion(scene: Scene, p: Palette, drift: Float, sway: Float) {
+    val w = size.width
+    val h = size.height
+    // Clouds drifting by (high in the sky, clear of the hills)
+    CLOUDS.forEachIndexed { i, (fx, fy, s) ->
         val x = ((fx + drift * (0.6f + i * 0.25f)) % 1.2f - 0.1f) * w
         drawCloud(Offset(x, h * fy), h * 0.06f * s)
     }
-
-    // Two rows of hills
-    drawHill(h * 0.66f, h * 0.05f, 1.3f, 0.2f, p.hillBack)
-    drawHill(h * 0.76f, h * 0.035f, 2.1f, 0.65f, p.hillFront)
-
     // Grass tufts and flowers along the front hill
     val tuft = p.hillFront.copy(red = p.hillFront.red * 0.8f, green = p.hillFront.green * 0.85f, blue = p.hillFront.blue * 0.8f)
     for (i in 0 until 14) {
@@ -214,15 +242,15 @@ private fun DrawScope.drawOutdoors(scene: Scene, drift: Float, sway: Float) {
             drawCircle(Color(0xFFFFC107), h * 0.006f, Offset(x + 14f, y - h * 0.03f))
         }
     }
-    if (scene == Scene.FARM) drawFence(h * 0.74f)
+    if (scene == Scene.FARM) drawFence(h * 0.74f)  // in front of the grass, as before
 }
 
 private fun hillY(x: Float, w: Float, base: Float, amp: Float, freq: Float, phase: Float) =
     base - sin((x / w * freq + phase) * PI.toFloat()) * amp
 
-private fun DrawScope.drawHill(base: Float, amp: Float, freq: Float, phase: Float, color: Color) {
+private fun CacheDrawScope.hillPath(base: Float, amp: Float, freq: Float, phase: Float): Path {
     val w = size.width
-    val path = Path().apply {
+    return Path().apply {
         moveTo(0f, size.height)
         var x = 0f
         while (x <= w) {
@@ -233,7 +261,6 @@ private fun DrawScope.drawHill(base: Float, amp: Float, freq: Float, phase: Floa
         lineTo(w, size.height)
         close()
     }
-    drawPath(path, color)
 }
 
 private fun DrawScope.drawCloud(c: Offset, r: Float) {
@@ -267,19 +294,28 @@ private fun DrawScope.drawFence(y: Float) {
     }
 }
 
-private fun DrawScope.drawStage(sway: Float) {
+/** A spotlight beam with its top at x = 0. */
+private fun CacheDrawScope.spotlightBeam(): Path {
+    val w = size.width
+    val h = size.height
+    return Path().apply {
+        moveTo(-w * 0.02f, 0f); lineTo(w * 0.02f, 0f)
+        lineTo(w * 0.16f, h * 0.8f); lineTo(-w * 0.16f, h * 0.8f); close()
+    }
+}
+
+private fun DrawScope.drawSpotlights(beam: Path, sway: Float) {
+    val w = size.width
+    val brush = Brush.verticalGradient(listOf(Color(0x55FFF9C4), Color(0x10FFF9C4)), endY = size.height * 0.8f)
+    listOf(0.3f, 0.7f).forEachIndexed { i, fx ->
+        translate(left = w * fx + sway * w * 0.03f * (if (i == 0) 1 else -1)) { drawPath(beam, brush) }
+    }
+}
+
+private fun DrawScope.drawStage() {
     val w = size.width
     val h = size.height
     drawRect(Brush.verticalGradient(listOf(Color(0xFF4A148C), Color(0xFF7B1FA2), Color(0xFFAB47BC))))
-    // Spotlights
-    listOf(0.3f, 0.7f).forEachIndexed { i, fx ->
-        val top = Offset(w * fx + sway * w * 0.03f * (if (i == 0) 1 else -1), 0f)
-        val beam = Path().apply {
-            moveTo(top.x - w * 0.02f, 0f); lineTo(top.x + w * 0.02f, 0f)
-            lineTo(top.x + w * 0.16f, h * 0.8f); lineTo(top.x - w * 0.16f, h * 0.8f); close()
-        }
-        drawPath(beam, Brush.verticalGradient(listOf(Color(0x55FFF9C4), Color(0x10FFF9C4)), endY = h * 0.8f))
-    }
     // Wooden floor
     drawRect(Color(0xFFBF8A5A), Offset(0f, h * 0.78f), Size(w, h * 0.22f))
     for (i in 1..3) drawLine(Color(0xFF9C6B40), Offset(0f, h * (0.78f + i * 0.055f)), Offset(w, h * (0.78f + i * 0.055f)), 3f)

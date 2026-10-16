@@ -1,5 +1,6 @@
 package com.olamkatan.ui.components
 
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -100,10 +101,11 @@ private fun makePieces(): List<Piece> {
         )
     }
     // Two cannons, aimed up and inwards
-    repeat(55) { piece(-0.02f, 1.02f, -62f + r.nextFloat() * 26f - 13f, 1.7f + r.nextFloat() * 1.1f, r.nextFloat() * 0.25f) }
-    repeat(55) { piece(1.02f, 1.02f, -118f + r.nextFloat() * 26f - 13f, 1.7f + r.nextFloat() * 1.1f, r.nextFloat() * 0.25f) }
+    // (about 90 pieces: plenty for a party, light enough for the tablet)
+    repeat(34) { piece(-0.02f, 1.02f, -62f + r.nextFloat() * 26f - 13f, 1.7f + r.nextFloat() * 1.1f, r.nextFloat() * 0.25f) }
+    repeat(34) { piece(1.02f, 1.02f, -118f + r.nextFloat() * 26f - 13f, 1.7f + r.nextFloat() * 1.1f, r.nextFloat() * 0.25f) }
     // And a gentle shower from above
-    repeat(40) { piece(r.nextFloat(), -0.05f, 90f, 0.1f + r.nextFloat() * 0.2f, 0.3f + r.nextFloat() * 0.9f) }
+    repeat(24) { piece(r.nextFloat(), -0.05f, 90f, 0.1f + r.nextFloat() * 0.2f, 0.3f + r.nextFloat() * 0.9f) }
     return list
 }
 
@@ -128,7 +130,7 @@ private fun DrawScope.drawPiece(p: Piece, t: Float, fade: Float) {
             }
             Bit.DOT -> drawCircle(color, s * 0.45f, c)
             Bit.STAR -> scale(scaleX = 0.6f + 0.4f * kotlin.math.abs(turn), scaleY = 1f, pivot = c) {
-                drawPath(confettiStar(c, s * 0.6f), color)
+                translate(x, y) { scale(s * 0.6f, s * 0.6f, pivot = Offset.Zero) { drawPath(UNIT_STAR, color) } }
             }
             Bit.RIBBON -> scale(scaleX = 1f, scaleY = turn, pivot = c) {
                 drawRoundRect(color, Offset(x - s * 0.18f, y - s * 1.2f), Size(s * 0.36f, s * 2.4f), CornerRadius(s * 0.18f))
@@ -137,12 +139,13 @@ private fun DrawScope.drawPiece(p: Piece, t: Float, fade: Float) {
     }
 }
 
-private fun confettiStar(c: Offset, r: Float): Path = Path().apply {
+/** A star of radius 1 around (0, 0), shared by every piece. */
+private val UNIT_STAR = Path().apply {
     for (k in 0 until 10) {
-        val rad = if (k % 2 == 0) r else r * 0.45f
+        val rad = if (k % 2 == 0) 1f else 0.45f
         val a = (k * 36f - 90f) * PI.toFloat() / 180f
-        val px = c.x + cos(a) * rad
-        val py = c.y + sin(a) * rad
+        val px = cos(a) * rad
+        val py = sin(a) * rad
         if (k == 0) moveTo(px, py) else lineTo(px, py)
     }
     close()

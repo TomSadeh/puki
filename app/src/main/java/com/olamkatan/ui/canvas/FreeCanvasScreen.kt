@@ -77,6 +77,8 @@ import com.olamkatan.ui.components.BackArrowIcon
 import com.olamkatan.ui.components.idleBob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.io.ByteArrayOutputStream
 import kotlin.math.sin
 
@@ -169,7 +171,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                         .background(Brush.verticalGradient(listOf(Color(0xFFC8935B), Color(0xFFAE7642))))
                         .padding(18.dp)
                 ) {
-                    Canvas(
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .shadow(4.dp, RoundedCornerShape(6.dp))
@@ -196,10 +198,15 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                 )
                             }
                     ) {
-                        drawPaperGrain()
-                        drawArtwork(paths)
-                        // The stroke being drawn right now
-                        drawStroke(DrawPath(currentPath, selectedColor, brushSize))
+                        // The paper and the finished strokes, in a layer redrawn only when a stroke is added
+                        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
+                            drawPaperGrain()
+                            drawArtwork(paths)
+                        }
+                        // The stroke being drawn right now (the only thing redrawn as the finger moves)
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            drawStroke(DrawPath(currentPath, selectedColor, brushSize))
+                        }
                     }
                 }
                 // Strips of tape holding the paper's corners
@@ -213,7 +220,8 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                     looking = true
                     lastLooked = drawn
                     scope.launch {
-                        val png = snapshot(canvasSize, density, paths.toList())
+                        val strokes = paths.toList()
+                        val png = withContext(Dispatchers.Default) { snapshot(canvasSize, density, strokes) }
                         companion.look(png)
                         looking = false
                     }

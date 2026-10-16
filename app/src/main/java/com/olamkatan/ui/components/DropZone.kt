@@ -1,5 +1,7 @@
 package com.olamkatan.ui.components
 
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -22,7 +24,10 @@ fun DropZone(
     content: @Composable () -> Unit
 ) {
     val dragDropState = LocalDragDropState.current
-    val isHovered = dragDropState.isDragging && dragDropState.getHoveredDropZone() == zoneId
+    // Derived, so the zone recomposes when the piece enters or leaves it, not on every finger move
+    val isHovered by remember(zoneId) {
+        derivedStateOf { dragDropState.isDragging && dragDropState.getHoveredDropZone() == zoneId }
+    }
 
     val glowAlpha by animateFloatAsState(
         targetValue = if (isHovered) 0.5f else 0f,

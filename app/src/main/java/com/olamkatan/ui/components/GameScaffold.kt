@@ -48,17 +48,6 @@ fun GameBackground(
     scene: Scene? = null,
     content: @Composable () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
-    val bubbleOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "bubble_float"
-    )
-
     Box(modifier = modifier.fillMaxSize()) {
         if (scene != null) SceneBackdrop(scene)
         // Gradient background
@@ -70,6 +59,16 @@ fun GameBackground(
 
         // Floating decorative circles
         if (withBubbles && scene == null) {
+            // (the animation runs only while the bubbles are shown)
+            val bubbleOffset by rememberInfiniteTransition(label = "bg_anim").animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(8000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "bubble_float"
+            )
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
