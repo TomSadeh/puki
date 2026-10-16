@@ -30,6 +30,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -274,13 +276,17 @@ fun MusicMeadowScreen(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .offset(y = if (index % 2 == 0) (-26).dp else 26.dp)  // not all in one line
+                            .weight(1f)  // they share the stage, so none gets squeezed
+                            // Not all in one line: the middle two a little higher, clear of the play button
+                            .offset(y = if (index == 0 || index == instruments.lastIndex) 18.dp else (-18).dp)
                             .popIn(index)
                             .then(if (isHighlighted) Modifier else Modifier.idleBob(index, 0.7f))
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(220.dp)
+                                .widthIn(max = 220.dp)
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
                                 .drawBehind {
                                     // A round glow that fades out, so there's no edge to see
                                     drawCircle(
@@ -307,11 +313,11 @@ fun MusicMeadowScreen(
                             androidx.compose.foundation.Image(
                                 painter = androidx.compose.ui.res.painterResource(id = instrument.drawableRes),
                                 contentDescription = instrument.name.resolve(language),
-                                modifier = Modifier.size(175.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                                modifier = Modifier.fillMaxSize(0.8f).graphicsLayer { scaleX = scale; scaleY = scale }
                             )
                             NoteBurst(key = plays[index], color = lerp(instrument.color, Color.White, 0.35f))
                         }
-                        Text(instrument.name.resolve(language), style = MaterialTheme.typography.titleMedium, color = CloudWhite)
+                        Text(instrument.name.resolve(language), style = MaterialTheme.typography.titleMedium, color = CloudWhite, maxLines = 1, softWrap = false)
                     }
                 }
             }

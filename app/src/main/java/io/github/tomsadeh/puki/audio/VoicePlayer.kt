@@ -23,12 +23,35 @@ class VoicePlayer(private val context: Context) {
             runCatching { mediaPlayer?.setVolume(field, field) }
         }
 
+    /**
+     * Lines waiting for the one playing to finish, so a new line never cuts the last one off
+     * mid-word. Only a couple wait: when a child taps fast, the oldest waiting line is skipped
+     * (its onComplete still runs, so whatever was waiting on it carries on).
+     */
+    private val waiting = ArrayDeque<Pair<() -> Unit, (() -> Unit)?>>()
+
+    private fun enqueue(start: () -> Unit, onComplete: (() -> Unit)?) {
+        waiting.addLast(start to onComplete)
+        while (waiting.size > MAX_WAITING) waiting.removeFirst().second?.invoke()
+    }
+
+    /** A line ended: tell its caller, then start the next waiting one (unless the caller just did). */
+    private fun finished(onComplete: (() -> Unit)?) {
+        mediaPlayer = null
+        onComplete?.invoke()
+        if (mediaPlayer == null) waiting.removeFirstOrNull()?.first?.invoke()
+    }
+
     fun play(voiceKey: String, language: Language, onComplete: (() -> Unit)? = null) {
         if (!enabled) {
             onComplete?.invoke()
             return
         }
-        stop()
+        if (isPlaying()) {
+            enqueue({ play(voiceKey, language, onComplete) }, onComplete)
+            return
+        }
+        releaseStale()
         personalFile(voiceKey, language)?.let {
             playFile(it, onComplete)
             return
@@ -42,12 +65,11 @@ class VoicePlayer(private val context: Context) {
             setVolume(level, level)
             setOnCompletionListener {
                 it.release()
-                mediaPlayer = null
-                onComplete?.invoke()
+                finished(onComplete)
             }
             start()
         } ?: run {
-            onComplete?.invoke()
+            finished(onComplete)
             null
         }
     }
@@ -58,7 +80,11 @@ class VoicePlayer(private val context: Context) {
             onComplete?.invoke()
             return
         }
-        stop()
+        if (isPlaying()) {
+            enqueue({ playFile(file, onComplete) }, onComplete)
+            return
+        }
+        releaseStale()
         val player = MediaPlayer()
         mediaPlayer = runCatching {
             player.apply {
@@ -66,15 +92,14 @@ class VoicePlayer(private val context: Context) {
                 setVolume(level, level)
                 setOnCompletionListener {
                     it.release()
-                    mediaPlayer = null
-                    onComplete?.invoke()
+                    finished(onComplete)
                 }
                 prepare()
                 start()
             }
         }.getOrElse {
             player.release()  // a broken or half-written file: don't leak the player
-            onComplete?.invoke()
+            finished(onComplete)
             null
         }
     }
@@ -141,7 +166,15 @@ class VoicePlayer(private val context: Context) {
 
     fun isPlaying(): Boolean = runCatching { mediaPlayer?.isPlaying == true }.getOrDefault(false)
 
+    /** A player that's no longer playing but never said it finished: let it go (keeps the queue moving). */
+    private fun releaseStale() {
+        mediaPlayer?.let { runCatching { it.release() } }
+        mediaPlayer = null
+    }
+
+    /** Silence now: the line playing and everything waiting (e.g. before the microphone listens). */
     fun stop() {
+        waiting.clear()
         mediaPlayer?.apply {
             if (isPlaying) stop()
             release()
@@ -153,3 +186,5 @@ class VoicePlayer(private val context: Context) {
         stop()
     }
 }
+
+private const val MAX_WAITING = 3
