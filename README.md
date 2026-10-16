@@ -153,6 +153,12 @@ A memory that stays in your home (so Puki remembers yesterday), more talking gam
 English on par with Hebrew, pairing by scanning the dashboard's QR code, and a one-click
 installer for the PC brain. See [ROADMAP.md](ROADMAP.md).
 
+## Contributing
+
+Pull requests are welcome. The rules come from the audience: no failure states, nothing the
+child has to read, big targets, both languages, and nothing that leaves the home. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for what gets accepted and what a PR needs to show.
+
 ## License
 
 [MIT](LICENSE). Built with lots of help from [Claude Code](https://claude.com/claude-code).
