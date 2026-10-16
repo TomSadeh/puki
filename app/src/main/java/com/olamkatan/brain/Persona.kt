@@ -164,8 +164,8 @@ class Persona(
         val check = if (lang == "en" && name.isNotEmpty()) text.replace(name, "Name") else text
         if (!(if (lang == "en") ENGLISH_OK else HEBREW_OK).matches(check)) return null
         // Whole words only ("רע" is bad, "רעבה" — hungry — is fine); Hebrew prefixes like ו/ה allowed
-        // (?U): \w includes Hebrew letters, as in Python
-        val words = Regex("(?U)[\\w']+").findAll(text.lowercase()).map { it.value }.toList()
+        // Letters, digits and _ in any script (Python's \w), spelled out: Android's regex has no (?U)
+        val words = Regex("[\\p{L}\\p{N}_']+").findAll(text.lowercase()).map { it.value }.toList()
         if (words.any { w -> BANNED.any { b -> ' ' !in b && (w == b || w.trimStart(*"והבלמש".toCharArray()) == b) } }) return null
         if (BANNED.any { b -> ' ' in b && b in text.lowercase() }) return null
         return text
@@ -215,10 +215,10 @@ class Persona(
         private val BANNED = listOf("טעות", "רע", "טיפש", "טיפשה", "מכוער", "מכוערת", "לא נכון",
             "wrong", "bad", "stupid", "dumb", "ugly", "idiot", "hate", "not right", "mistake")
         private val COMPLIMENT = Regex(
-            "(?U)^(את|אתה|you'?re|you are)\\s+(כל כך |ממש |כזאת |כזה |מאוד |so |really |such an? )*" +
+            "^(את|אתה|you'?re|you are)\\s+(כל כך |ממש |כזאת |כזה |מאוד |so |really |such an? )*" +
                 "(מקסימה|מקסים|מתוקה|מתוק|חכמה|חכם|מדהימה|מדהים|מיוחדת|מיוחד|טובה|טוב|יפה|נהדרת|נהדר|" +
                 "עושה (יופי|טוב|כל כך טוב)|sweet|smart|amazing|special|great|lovely|clever|wonderful|awesome|" +
-                "brilliant|beautiful|the best|doing (great|so well|amazing))\\b",
+                "brilliant|beautiful|the best|doing (great|so well|amazing))(?![\\p{L}\\p{N}_])",  // a word boundary, in any script
             RegexOption.IGNORE_CASE,
         )
         private val FOOD_WORDS = listOf("האכיל", "אוכל", "fed ", "food")
@@ -236,7 +236,7 @@ class Persona(
 
         private fun words(text: String): List<String> {
             val t = stripNikud(text).lowercase().map { c -> FINALS.indexOf(c).let { if (it >= 0) PLAIN[it] else c } }.joinToString("")
-            return Regex("(?U)[^\\w\\s]").replace(Normalizer.normalize(t, Normalizer.Form.NFC), " ")
+            return Regex("[^\\p{L}\\p{N}_\\s]").replace(Normalizer.normalize(t, Normalizer.Form.NFC), " ")
                 .split(Regex("\\s+")).filter { it.isNotEmpty() }
         }
 

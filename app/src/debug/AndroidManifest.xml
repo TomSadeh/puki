@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: a self-test for the device brain's text code, run over adb:
+     adb shell am broadcast -n com.olamkatan/.SelfTestReceiver ; adb logcat -s PukiSelfTest -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver android:name=".SelfTestReceiver" android:exported="true" />
+    </application>
+</manifest>

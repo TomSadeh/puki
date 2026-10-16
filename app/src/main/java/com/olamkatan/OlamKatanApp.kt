@@ -91,11 +91,16 @@ fun OlamKatanApp(
     val context = LocalContext.current
     LaunchedEffect(settings.brainOnDevice) {
         val app = context.applicationContext as OlamKatanApplication
-        val onDevice = settings.brainOnDevice && app.deviceModels.ready()
-        companion.deviceBrain = app.localBrain
+        // Only touched when switched on, and never allowed to stop the game from opening:
+        // if anything about it fails, Puki simply stays on the PC
+        val brain = if (settings.brainOnDevice) runCatching {
+            app.localBrain.takeIf { app.deviceModels.ready() }
+        }.onFailure { android.util.Log.e("PukiBrain", "device brain unavailable", it) }.getOrNull() else null
+        val onDevice = brain != null
+        if (onDevice) companion.deviceBrain = brain
         if (onDevice != companion.onDevice) {
             companion.onDevice = onDevice
-            if (!onDevice) app.localBrain.close()  // gives the memory back
+            if (!onDevice) companion.deviceBrain?.let { runCatching { app.localBrain.close() } }  // gives the memory back
             companion.recheck()
         }
     }

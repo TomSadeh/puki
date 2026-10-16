@@ -111,7 +111,7 @@ class Renikud(private val env: OrtEnvironment, model: File, threads: Int = 2) {
     /** In each word, the vowel-bearing letter the model is surest carries the stress. */
     private fun bestStressPerWord(normalized: String, stressLogits: Array<FloatArray>, vowelPred: IntArray): Set<Int> {
         val stressed = mutableSetOf<Int>()
-        for (word in Regex("(?U)\\S+").findAll(normalized)) {
+        for (word in Regex("\\S+").findAll(normalized)) {
             var best = -1
             for (t in word.range.first + 1..word.range.last + 1) {  // tokens of this word's characters
                 if ((vowels[vowelPred[t]] ?: "∅") == "∅") continue

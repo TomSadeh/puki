@@ -23,46 +23,46 @@ object VoiceText {
     }
 
     private fun normalizeCommonText(text: String): String {
-        var t = Regex("(?U)(^|\\s)#{1,6}\\s*").replace(text, "$1")
+        var t = Regex("(^|\\s)#{1,6}\\s*").replace(text, "$1")
         // strip_brackets
-        t = Regex("(?U)\\s*[(\\[{]\\s*").replace(t, ", ")
-        t = Regex("(?U)\\s*[)\\]}]\\s*").replace(t, ", ")
+        t = Regex("\\s*[(\\[{]\\s*").replace(t, ", ")
+        t = Regex("\\s*[)\\]}]\\s*").replace(t, ", ")
         // normalize_repeated_punctuation
         t = t.replace("…", ",")
         t = Regex("(?<!\\d)\\.{2,}(?!\\d)").replace(t, ",")
         t = Regex("!+").replace(t, "!")
         t = Regex("\\?+").replace(t, "?")
-        t = Regex("(?U),(?:\\s*,)+").replace(t, ",")
-        t = Regex("(?U)\\s*[,;:]+\\s*(?=[.!?])").replace(t, "")
-        return Regex("(?U)(?<=[.!?])\\s*[,;:]+\\s*").replace(t, " ")
+        t = Regex(",(?:\\s*,)+").replace(t, ",")
+        t = Regex("\\s*[,;:]+\\s*(?=[.!?])").replace(t, "")
+        return Regex("(?<=[.!?])\\s*[,;:]+\\s*").replace(t, " ")
     }
 
     private fun expandDialogueQuotes(text: String): String {
-        var t = Regex("(?U)(?<=\\S)\\s*[\"“„”]\\s*$").replace(text, ".")
-        t = Regex("(?U)\\s*:?\\s*[\"“„”]\\s*(?=\\S)").replace(t, ", ")
-        return Regex("(?U)(?<=\\S)\\s*[\"“„”]").replace(t, ", ")
+        var t = Regex("(?<=\\S)\\s*[\"“„”]\\s*$").replace(text, ".")
+        t = Regex("\\s*:?\\s*[\"“„”]\\s*(?=\\S)").replace(t, ", ")
+        return Regex("(?<=\\S)\\s*[\"“„”]").replace(t, ", ")
     }
 
     private fun stripSilentSeparatorTokens(text: String): String {
         var t = Regex("(?<=[$HEB])[-–—‑]+(?=[A-Za-z0-9])").replace(text, " ")
         t = Regex("(?<=[A-Za-z0-9])[-–—‑]+(?=[$HEB])").replace(t, " ")
-        t = Regex("(?U)(?<![A-Za-z])\\s*[-–—‑]+\\s*(?![A-Za-z])").replace(t, " ")
-        t = Regex("(?U)(?<!\\d)\\s*:+\\s*(?!\\d)").replace(t, " ")
-        return Regex("(?U)\\s+").replace(t, " ").trim()
+        t = Regex("(?<![A-Za-z])\\s*[-–—‑]+\\s*(?![A-Za-z])").replace(t, " ")
+        t = Regex("(?<!\\d)\\s*:+\\s*(?!\\d)").replace(t, " ")
+        return Regex("\\s+").replace(t, " ").trim()
     }
 
     // ---- blue_onnx helpers ----
 
-    private val LANG_TAG = Regex("(?U)</?\\w+>")
+    private val LANG_TAG = Regex("</?[\\p{L}\\p{N}_]+>")
 
-    fun stripLangTags(s: String): String = Regex("(?U)\\s+").replace(LANG_TAG.replace(s, ""), " ").trim()
+    fun stripLangTags(s: String): String = Regex("\\s+").replace(LANG_TAG.replace(s, ""), " ").trim()
 
     /** chunk_text: sentences packed into chunks of at most [maxLen] characters. */
     fun chunkText(text: String, maxLen: Int = 300): List<String> {
         val chunks = mutableListOf<String>()
-        for (paragraph in Regex("(?U)\\n\\s*\\n+").split(text.trim()).map { it.trim() }.filter { it.isNotEmpty() }) {
+        for (paragraph in Regex("\\n\\s*\\n+").split(text.trim()).map { it.trim() }.filter { it.isNotEmpty() }) {
             var current = ""
-            for (sentence in Regex("(?U)(?<=[.!?])\\s+").split(paragraph)) {
+            for (sentence in Regex("(?<=[.!?])\\s+").split(paragraph)) {
                 if (current.length + sentence.length + 1 <= maxLen) {
                     current += (if (current.isNotEmpty()) " " else "") + sentence
                 } else {
@@ -93,7 +93,7 @@ object VoiceText {
         while ("\"\"" in t) t = t.replace("\"\"", "\"")
         while ("''" in t) t = t.replace("''", "'")
         while ("``" in t) t = t.replace("``", "`")
-        t = Regex("(?U)\\s+").replace(t, " ").trim()
+        t = Regex("\\s+").replace(t, " ").trim()
         if (!Regex("[.!?;:,'\"')\\]}…。」』】〉》›»]$").containsMatchIn(t)) t += "."
         // (_preprocess_text wraps it in <he>…</he> and _encode strips the tags again)
         val ids = IntArray(t.codePointCount(0, t.length))

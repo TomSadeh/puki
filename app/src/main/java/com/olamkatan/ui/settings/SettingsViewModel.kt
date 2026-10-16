@@ -105,7 +105,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun removeDeviceBrain() {
         viewModelScope.launch {
             settingsRepository.updateBrainOnDevice(false)
-            app.localBrain.close()
+            runCatching { app.localBrain.close() }
             app.deviceModels.delete()
         }
     }

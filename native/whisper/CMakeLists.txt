@@ -18,4 +18,5 @@ add_library(puki_whisper SHARED
 target_include_directories(puki_whisper PRIVATE
     ${WHISPER_DIR}/examples ${WHISPER_DIR}/include ${WHISPER_DIR}/ggml/include)
 target_link_libraries(puki_whisper PRIVATE whisper ggml log)
-target_link_options(puki_whisper PRIVATE -Wl,--gc-sections -s)
+# 16 KB page alignment, which newer Android phones require
+target_link_options(puki_whisper PRIVATE -Wl,--gc-sections -s -Wl,-z,max-page-size=16384)
