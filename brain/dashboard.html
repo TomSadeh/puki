@@ -110,6 +110,8 @@
           <div class="code" id="code">…</div>
           <div class="muted small" style="margin-top:10px">PC address</div>
           <div id="address">…</div>
+          <div class="muted small" style="margin-top:10px">Certificate (the app checks it)</div>
+          <div id="fingerprint" class="small">…</div>
           <p class="muted small">Type both in the app's parent settings (long-press the gear),
             or scan the QR code once the app can.</p>
           <button id="newCode">Make a new code</button>
@@ -179,6 +181,7 @@ function showStatus(s) {
   if (!idleEdited) $("idle").value = s.idle_minutes;
   $("sleep").disabled = s.brain === "cold";
   $("address").textContent = s.address;
+  $("fingerprint").textContent = s.fingerprint;
   if (s.code !== code) {
     code = s.code;
     $("code").textContent = code;

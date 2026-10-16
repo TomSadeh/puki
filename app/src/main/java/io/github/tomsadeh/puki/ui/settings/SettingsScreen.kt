@@ -220,8 +220,7 @@ fun SettingsScreen(
                     ) { link ->
                         scanFailed = link == null
                         if (link != null) {
-                            settingsViewModel.setCompanionAddress(link.host)
-                            settingsViewModel.setCompanionCode(link.code)
+                            settingsViewModel.setCompanionPairing(link)
                         }
                     }
                     OutlinedButton(onClick = scan, modifier = Modifier.fillMaxWidth()) {
@@ -279,9 +278,10 @@ fun SettingsScreen(
                     val companion = LocalCompanion.current
                     var connection by remember { mutableStateOf<Connection?>(null) }
                     var recheck by remember { mutableStateOf(0) }
-                    LaunchedEffect(settings.companionAddress, settings.companionCode, recheck) {
+                    LaunchedEffect(settings.companionAddress, settings.companionCode, settings.companionPin, recheck) {
                         connection = null
-                        connection = companion?.checkConnection(settings.companionAddress, settings.companionCode) ?: Connection.NOT_FOUND
+                        connection = companion?.checkConnection(settings.companionAddress, settings.companionCode, settings.companionPin)
+                            ?: Connection.NOT_FOUND
                     }
                     Text(
                         text = when (connection) {
@@ -291,6 +291,10 @@ fun SettingsScreen(
                             Connection.LOCKED_OUT -> BilingualText(
                                 "✗ יותר מדי ניסיונות שגויים, נסו שוב בעוד רבע שעה",
                                 "✗ Too many wrong codes, try again in 15 minutes"
+                            )
+                            Connection.WRONG_PC -> BilingualText(
+                                "✗ זה לא המחשב שצומד. סרקו שוב את קוד ה-QR שבמחשב",
+                                "✗ That isn't the paired PC. Scan the QR code on the PC again"
                             )
                             Connection.NOT_FOUND -> BilingualText(
                                 "✗ המחשב לא נמצא (דלוק? באותה רשת?) · לחצו לבדיקה חוזרת",

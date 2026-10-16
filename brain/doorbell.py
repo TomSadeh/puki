@@ -20,6 +20,9 @@ Endpoints (port from config, default 8790):
   POST /repeat?lang=he&target=כלב[&alt=הב] -> body: WAV of the child saying a word (Say it with Puki)
                    -> JSON {"heard", "match": "word" | "close" | "tried"}
 
+Everything goes over HTTPS with the PC's own certificate (tls.py, made on first start); the
+app trusts it by its fingerprint, which the pairing QR code carries.
+
 Every request must carry the pairing code in an X-Puki-Code header. The code is
 made on first start, kept in pairing_code.txt next to this file, and printed at
 startup; the parent types it into the app once. `python doorbell.py --new-code`
@@ -30,7 +33,8 @@ A dashboard for the parent runs next to it on this PC only (dashboard.py,
 http://127.0.0.1:8793 by default): status, the pairing code as a QR code, and a
 live log of what Puki was asked and said.
 
-Standard library only, so it runs with any Python 3.
+Standard library only, so it runs with any Python 3 (making the certificate, once, borrows the
+brain's Python, see tls.py).
 """
 
 import hmac
@@ -39,6 +43,7 @@ import os
 import secrets
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
 import threading
@@ -49,6 +54,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dashboard
+import tls
 
 # Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
 HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
@@ -153,6 +159,7 @@ class Guard:
 
 
 PAIRING_CODE = load_pairing_code(new="--new-code" in sys.argv)
+CERT_FP = ""  # the HTTPS certificate's fingerprint, set by start()
 GUARD = Guard()
 EVENTS = dashboard.Events()  # what the dashboard's log shows; memory only
 
@@ -501,7 +508,7 @@ class DashboardApp:
 
     def pair_url(self):
         # What the app's QR scanner reads: where the PC is, and the code
-        return f"puki://pair?host={lan_address()}:{CFG['port']}&code={PAIRING_CODE}"
+        return f"puki://pair?host={lan_address()}:{CFG['port']}&code={PAIRING_CODE}&fp={tls.for_link(CERT_FP)}"
 
     def free_vram(self):
         if time.time() - self._vram[0] > 10:  # nvidia-smi is slowish; the page polls every 2 s
@@ -528,6 +535,7 @@ class DashboardApp:
             "min_free_vram_mb": CFG["min_free_vram_mb"],
             "code": pretty_code(PAIRING_CODE),
             "address": f"{lan_address()}:{CFG['port']}",
+            "fingerprint": " ".join(CERT_FP[i:i + 4] for i in range(0, 16, 4)),
             "pair_url": self.pair_url(),
             "now": now,
         }
@@ -554,12 +562,38 @@ class DashboardApp:
         EVENTS.add("settings", text=f"sleeps after {minutes} idle minutes")
 
 
+class TLSServer(ThreadingHTTPServer):
+    """HTTPS only. Each connection does its handshake in its own thread, under the handler's
+    timeout, so a slow or silent device can't hold up the others."""
+
+    def __init__(self, address, handler, context):
+        super().__init__(address, handler)
+        self.context = context
+
+    def get_request(self):
+        sock, address = super().get_request()
+        return self.context.wrap_socket(sock, server_side=True, do_handshake_on_connect=False), address
+
+    def handle_error(self, request, client_address):
+        err = sys.exc_info()[1]
+        if isinstance(err, (ssl.SSLError, ConnectionError, TimeoutError, OSError)):
+            # Most often an older app still speaking plain HTTP, or a device that went away
+            EVENTS.add("denied", ip=client_address[0], text=f"connection dropped ({type(err).__name__}); "
+                                                            "an app older than 0.5 needs updating")
+            return
+        super().handle_error(request, client_address)
+
+
 def start():
     """Starts everything but the main loop (the tray runs that in a thread); returns the server."""
+    global CERT_FP
     threading.Thread(target=BRAIN.idle_watch, daemon=True).start()
-    server = ThreadingHTTPServer((CFG["bind"], CFG["port"]), Handler)
-    log(f"doorbell listening on {CFG['bind']}:{CFG['port']}")
-    if sys.stdout.isatty():  # someone ran it in a terminal; a service's log shouldn't keep the code
+    CERT_FP = tls.ensure(CFG.get("brain_python"))
+    server = TLSServer((CFG["bind"], CFG["port"]), Handler, tls.server_context())
+    log(f"doorbell listening on {CFG['bind']}:{CFG['port']} (HTTPS, certificate {CERT_FP[:16]}...)")
+    # Someone ran it in a terminal; a service's log shouldn't keep the code (and under pythonw or
+    # Puki.exe there's no stdout at all)
+    if sys.stdout is not None and sys.stdout.isatty():
         log(f"pairing code: {pretty_code(PAIRING_CODE)}  (type it in the app's parent settings)")
     else:
         log("pairing code: on the dashboard and in pairing_code.txt")

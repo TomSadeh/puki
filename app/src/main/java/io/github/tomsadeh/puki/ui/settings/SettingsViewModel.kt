@@ -79,6 +79,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateCompanionCode(code) }
     }
 
+    /** From a scanned QR code: the PC's address, the pairing code and its certificate. */
+    fun setCompanionPairing(link: PairingLink) {
+        viewModelScope.launch { settingsRepository.updateCompanionPairing(link.host, link.code, link.pin) }
+    }
+
     // ---- Puki's brain on this device ----
 
     private val app = application as PukiApplication

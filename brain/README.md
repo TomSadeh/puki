@@ -171,8 +171,10 @@ the network (a guest's phone, a smart TV) can't make Puki talk or send it record
   within 10 minutes is shut out for 15 minutes.
 - `python doorbell.py --new-code` makes a new code, for example if it leaked. Every tablet
   then needs the new code.
-- The code travels unencrypted over the home Wi-Fi (plain HTTP). It keeps strangers'
-  devices out; it isn't meant to protect against someone who already controls your network.
+- Everything travels over HTTPS with the PC's own certificate (`tls.py` makes it on first
+  start, in `puki_cert.pem` and `puki_key.pem`, never in git). The QR code carries its
+  fingerprint, and the dashboard shows the start of it. Deleting the two files makes a new
+  certificate on the next start; every tablet then needs pairing again.
 
 ## Dashboard
 

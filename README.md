@@ -93,8 +93,11 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
   `a799cab5bcf83c20c754490f8d0eb271cf844e2b7e69518760789f2a96eb3c3d`. Android only installs an
   update signed with the same key as the installed app, so a changed Puki can't come in as an
   update. To check a download: `apksigner verify --print-certs Puki-<version>.apk`.
-- The tablet and PC talk over plain HTTP inside your network. The pairing code keeps out
-  guests' devices; it isn't meant to stop someone who already controls your network.
+- **Encrypted:** the tablet and PC talk over HTTPS. The PC makes its own certificate on first
+  start, and the pairing QR code carries its fingerprint, so the app talks only to that PC:
+  another machine on the network can neither read the child's voice and name nor pose as the
+  PC. (Typed in by hand instead of scanned, the app trusts the PC it first reaches with the
+  right code, then holds it to that certificate.)
 
 ## Getting started
 

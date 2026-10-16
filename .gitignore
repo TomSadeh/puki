@@ -15,6 +15,8 @@
 # Companion server: local settings (child name etc.)
 /brain/config.json
 /brain/pairing_code.txt
+/brain/puki_cert.pem
+/brain/puki_key.pem
 /brain/brain_errors.log
 __pycache__/
 

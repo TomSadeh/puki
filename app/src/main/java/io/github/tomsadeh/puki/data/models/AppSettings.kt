@@ -18,6 +18,8 @@ data class AppSettings(
     val companionAddress: String = DEFAULT_COMPANION_ADDRESS,
     /** Shown by brain/doorbell.py on the PC; without it the PC won't answer. */
     val companionCode: String = "",
+    /** The PC's HTTPS certificate fingerprint (hex); empty until scanned or learned. */
+    val companionPin: String = "",
     /** Puki thinks on this device instead of the PC (high-end phones, models downloaded). */
     val brainOnDevice: Boolean = false
 )

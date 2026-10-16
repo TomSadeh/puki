@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
+import io.github.tomsadeh.puki.brain.PinnedTls
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.ByteBuffer
@@ -35,7 +35,8 @@ enum class CompanionStatus { OFF, WAKING, READY }
 enum class WordTry { SILENT, TRIED, CLOSE, WORD, SPOKE }
 
 /** Result of checking the PC from parent settings. */
-enum class Connection { OK, WRONG_CODE, LOCKED_OUT, NOT_FOUND }
+/** WRONG_PC: something answered at the address, but not with the paired PC's certificate. */
+enum class Connection { OK, WRONG_CODE, LOCKED_OUT, NOT_FOUND, WRONG_PC }
 
 /**
  * פוקי the parrot, whose words come from the "brain" server on a PC at home
@@ -66,6 +67,10 @@ class Companion(
     var address = ""
     /** The pairing code shown on the PC; sent with every request. */
     var code = ""
+    /** The PC's certificate fingerprint (from the QR code, or learned on first use; see [PinnedTls]). */
+    var pin = ""
+    /** Saves a fingerprint learned on first use (set by the app, to keep it in the settings). */
+    var onPinLearned: (String) -> Unit = {}
     var language = Language.HEBREW
 
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
@@ -374,13 +379,14 @@ class Companion(
     private fun baseUrl(address: String = this.address): String {
         // The Android emulator reaches the PC it runs on at 10.0.2.2
         val host = if (isEmulator()) "10.0.2.2:8790" else address.trim()
-        return "http://$host"
+        return "https://$host"
     }
 
-    /** For parent settings: can the PC at [address] be reached with [code]? */
-    suspend fun checkConnection(address: String, code: String): Connection = withContext(Dispatchers.IO) {
-        runCatching {
-            val conn = URL(baseUrl(address) + "/health").openConnection() as HttpURLConnection
+    /** For parent settings: can the PC at [address] be reached with [code] (and is it the one in [pin])? */
+    suspend fun checkConnection(address: String, code: String, pin: String): Connection = withContext(Dispatchers.IO) {
+        var seen = ""
+        val result = runCatching {
+            val conn = PinnedTls.open(baseUrl(address) + "/health", pin) { seen = it }
             conn.connectTimeout = 2000
             conn.readTimeout = 4000  // a wrong code is answered after a deliberate 1 s delay
             conn.setRequestProperty("X-Puki-Code", code.trim())
@@ -394,7 +400,11 @@ class Companion(
             } finally {
                 conn.disconnect()
             }
-        }.getOrDefault(Connection.NOT_FOUND)
+        }.getOrElse { e ->
+            if (generateSequence(e) { it.cause }.any { it is PinnedTls.WrongPc }) Connection.WRONG_PC else Connection.NOT_FOUND
+        }
+        if (result == Connection.OK && pin.isEmpty() && seen.isNotEmpty()) onPinLearned(seen)
+        result
     }
 
     private fun isEmulator() = Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("sdk_gphone")
@@ -405,7 +415,7 @@ class Companion(
     }
 
     /** The PC's brain over the home network, or this device's own (see [Brain]). */
-    private val pcBrain = HttpBrain({ baseUrl() }, { code })
+    private val pcBrain = HttpBrain({ baseUrl() }, { code }, { pin }, { onPinLearned(it) })
     var deviceBrain: Brain? = null
     /** Think on this device instead of the PC (parent settings; needs [deviceBrain]). */
     var onDevice = false

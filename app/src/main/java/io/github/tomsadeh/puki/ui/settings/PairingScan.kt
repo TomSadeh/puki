@@ -8,12 +8,13 @@ import java.net.URI
 import java.net.URLDecoder
 
 /** Where the PC is and its pairing code, as read from the QR code on the brain's dashboard. */
-data class PairingLink(val host: String, val code: String)
+/** [pin]: the PC's certificate fingerprint as hex (the link carries it as base64url), if given. */
+data class PairingLink(val host: String, val code: String, val pin: String? = null)
 
 private val HOST = Regex("^[A-Za-z0-9.-]{1,253}:([0-9]{1,5})$")
 private val CODE = Regex("^[A-Z0-9]{8,20}$")
 
-/** Reads `puki://pair?host=<ip>:<port>&code=<CODE>`; anything else (or a bad host or code) is null. */
+/** Reads `puki://pair?host=<ip>:<port>&code=<CODE>&fp=<fingerprint>`; anything else (or a bad host, code or fingerprint) is null. */
 fun parsePairingLink(text: String?): PairingLink? {
     val uri = runCatching { URI(text?.trim() ?: return null) }.getOrNull() ?: return null
     if (!uri.scheme.equals("puki", ignoreCase = true) || !uri.host.equals("pair", ignoreCase = true)) return null
@@ -28,7 +29,12 @@ fun parsePairingLink(text: String?): PairingLink? {
     // Case, spaces and dashes don't matter, as on the PC (doorbell.normalize_code)
     val code = params["code"]?.uppercase()?.filter { it.isLetterOrDigit() } ?: return null
     if (!CODE.matches(code)) return null
-    return PairingLink(host, code)
+    val pin = params["fp"]?.let { fp ->
+        val bytes = runCatching { java.util.Base64.getUrlDecoder().decode(fp) }.getOrNull()
+        if (bytes == null || bytes.size != 32) return null
+        bytes.joinToString("") { "%02x".format(it) }
+    }
+    return PairingLink(host, code, pin)
 }
 
 /**

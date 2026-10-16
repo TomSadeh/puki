@@ -81,10 +81,13 @@ fun PukiApp(
         voicePlayer.enabled = settings.soundEnabled
     }
 
-    LaunchedEffect(settings.companionEnabled, settings.companionAddress, settings.companionCode, language) {
+    val pukiApp = LocalContext.current.applicationContext as PukiApplication
+    LaunchedEffect(settings.companionEnabled, settings.companionAddress, settings.companionCode, settings.companionPin, language) {
         companion.enabled = settings.companionEnabled
         companion.address = settings.companionAddress
         companion.code = settings.companionCode
+        companion.pin = settings.companionPin
+        companion.onPinLearned = { pin -> pukiApp.appScope.launch { pukiApp.settingsRepository.learnCompanionPin(pin) } }
         companion.language = language
     }
 

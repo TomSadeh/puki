@@ -4,9 +4,16 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import io.github.tomsadeh.puki.audio.Companion
+import io.github.tomsadeh.puki.audio.Connection
+import io.github.tomsadeh.puki.audio.VoicePlayer
 import io.github.tomsadeh.puki.brain.Persona
 import io.github.tomsadeh.puki.brain.WhisperNative
 import io.github.tomsadeh.puki.brain.voice.VoiceText
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlin.concurrent.thread
 
 /** Runs the device brain's text handling on Android's own regex engine, and checks the whisper library loads (debug builds only). */
 class SelfTestReceiver : BroadcastReceiver() {
@@ -32,6 +39,35 @@ class SelfTestReceiver : BroadcastReceiver() {
             // The whisper library's functions are named after the package: this fails if they don't match
             WhisperNative.load()
             check("whisper binding", WhisperNative.init("/no/such/model.bin"), 0L)
+            // With --es host <ip:port> --es code <CODE> --es pin <hex>: the app's real connection check
+            // against that PC (right pin, wrong pin, and first use), off the main thread
+            val host = intent.getStringExtra("host")
+            val code = intent.getStringExtra("code")
+            if (host != null && code != null) {
+                val pin = intent.getStringExtra("pin") ?: ""
+                val app = context.applicationContext
+                val companion = Companion(app, VoicePlayer(app), CoroutineScope(Dispatchers.IO))
+                val pending = goAsync()
+                thread {
+                    try {
+                        runBlocking {
+                            check("https, pinned", companion.checkConnection(host, code, pin), Connection.OK)
+                            check("https, other pin", companion.checkConnection(host, code, "00".repeat(32)), Connection.WRONG_PC)
+                            var learned = ""
+                            companion.onPinLearned = { learned = it }
+                            check("https, first use", companion.checkConnection(host, code, ""), Connection.OK)
+                            check("first use learns the pin", learned, pin)
+                            check("wrong code", companion.checkConnection(host, "WRONGCOD", pin), Connection.WRONG_CODE)
+                        }
+                    } catch (e: Throwable) {
+                        Log.e(tag, "CRASH", e)
+                    } finally {
+                        Log.i(tag, "done")
+                        pending.finish()
+                    }
+                }
+                return
+            }
             Log.i(tag, "done")
         } catch (e: Throwable) {
             Log.e(tag, "CRASH", e)

@@ -1,7 +1,5 @@
 package io.github.tomsadeh.puki.brain
 
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * Where Puki's thinking happens: the brain server on the family PC (brain/brain.py), or this
@@ -24,11 +22,22 @@ interface Brain {
     fun request(method: String, path: String, body: ByteArray?, timeoutMs: Int, contentType: String): ByteArray?
 }
 
-/** The brain on the family PC, over the home network, with the pairing code. */
-class HttpBrain(private val baseUrl: () -> String, private val code: () -> String) : Brain {
+/**
+ * The brain on the family PC, over HTTPS on the home network, with the pairing code. Only the
+ * PC whose certificate matches [pin] is talked to ([PinnedTls]); with no pin yet, the
+ * certificate of the first PC that accepts the code is handed to [learnPin].
+ */
+class HttpBrain(
+    private val baseUrl: () -> String,
+    private val code: () -> String,
+    private val pin: () -> String,
+    private val learnPin: (String) -> Unit
+) : Brain {
     override fun request(method: String, path: String, body: ByteArray?, timeoutMs: Int, contentType: String): ByteArray? =
         runCatching {
-            val conn = URL(baseUrl() + path).openConnection() as HttpURLConnection
+            val pinned = pin()
+            var seen = ""
+            val conn = PinnedTls.open(baseUrl() + path, pinned) { seen = it }
             conn.requestMethod = method
             conn.connectTimeout = 1500
             conn.setRequestProperty("X-Puki-Code", code().trim())
@@ -39,7 +48,9 @@ class HttpBrain(private val baseUrl: () -> String, private val code: () -> Strin
                 conn.outputStream.use { it.write(body) }
             }
             try {
-                when (conn.responseCode) {
+                val status = conn.responseCode
+                if (pinned.isEmpty() && seen.isNotEmpty() && (status == 200 || status == 204)) learnPin(seen)
+                when (status) {
                     200 -> conn.inputStream.use { it.readBytes() }
                     204 -> ByteArray(0)
                     else -> null

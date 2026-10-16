@@ -145,8 +145,7 @@ fun OnboardingScreen(settings: AppSettings, viewModel: SettingsViewModel = viewM
                     if (link != null) {
                         address = link.host
                         code = link.code
-                        viewModel.setCompanionAddress(link.host)
-                        viewModel.setCompanionCode(link.code)
+                        viewModel.setCompanionPairing(link)
                     }
                 }
                 OutlinedButton(onClick = scan, modifier = Modifier.widthIn(min = 320.dp)) {

@@ -8,7 +8,7 @@ plugins {
 
 // The game's version. Bump it for each release; scripts/release.py reads it from here, and the
 // game updates itself to a newer one found in the GitHub releases.
-val pukiVersion = "0.4.1"
+val pukiVersion = "0.5.0"
 
 // The release key lives outside the repo, in ~/keys (puki-release.jks, and its password in
 // puki-signing.properties as storePassword=...). Without it (CI, contributors) builds use the
