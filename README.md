@@ -66,7 +66,9 @@ tablet the whole stack could run on the device; contributions welcome.
 ## Privacy and security
 
 - **Nothing leaves your home.** The models run on your PC, and the tablet talks only to that
-  PC over your Wi-Fi. No accounts, ads, analytics or cloud calls.
+  PC over your Wi-Fi. No accounts, ads, analytics or cloud calls. The one exception: about
+  once a day the app asks GitHub whether there's a newer version (a plain list request,
+  with nothing about the child in it).
 - **A pairing code** keeps other devices on the network out. The PC makes the code on first
   start, and you type it once in the app. Requests without it are refused, and a device that
   keeps guessing is locked out.
@@ -96,6 +98,13 @@ tablet the whole stack could run on the device; contributions welcome.
   bedtime routine, dipping under the bedtime story. To use your own, replace
   `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.
 
+**Updates:** the app updates itself from this repo's
+[releases](https://github.com/TomSadeh/puki/releases). When there's a newer version, a red dot
+shows on the gear; in the parent settings, tap **Update**. The first time, Android asks you to
+let Puki install apps (a switch on the next screen); after that, each update just asks you to
+confirm. Progress, stars and settings are kept. You can also install the APK from the releases
+page by hand.
+
 **The companion:** on Windows, run **Puki.exe** from the
 [releases](https://github.com/TomSadeh/puki/releases) (or `python brain\install.py` from this
 repo); on Linux, `python3 brain/install.py`. It downloads
@@ -121,6 +130,8 @@ app/                       Android app (Kotlin, Jetpack Compose)
 brain/                     companion server for the PC (doorbell.py, brain.py, dashboard)
 scripts/generate_voices.py all voice lines, generated with BlueTTS
 scripts/check_voices.py    checks every voice line the app plays has audio
+scripts/generate_instruments.py  the music game's instrument sounds
+scripts/release.py         builds the APK and publishes it as a GitHub release
 scripts/draw_companion.py  draws the parrot
 CLAUDE.md                  conventions for working on the code (also read by Claude Code)
 ```
@@ -130,6 +141,9 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 - **BlueTTS and nikud:** BlueTTS's Hebrew pronunciation model garbles text that already has
   nikud, so all text is fed to it plain. Words plain spelling can't disambiguate (letter
   names, animal sounds) are given as phonemes in `generate_voices.py`.
+- **Releasing:** bump `pukiVersion` in `app/build.gradle.kts`, commit, then run
+  `python scripts/release.py --publish` from this checkout. It refuses if personal voice lines
+  (`voice_*_name*`) are in `res/raw`, so a release never carries a child's name.
 - **Adding a voice line:** add it to `voice_lines` in `scripts/generate_voices.py`, generate it,
   then run `scripts/check_voices.py`.
 

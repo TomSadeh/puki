@@ -1,5 +1,7 @@
 package com.olamkatan.ui.hub
 
+import androidx.compose.runtime.collectAsState
+import com.olamkatan.update.Updater
 import com.olamkatan.ui.common.LocalLanguage
 import com.olamkatan.ui.common.LocalVoicePlayer
 import kotlinx.coroutines.delay
@@ -58,6 +60,11 @@ fun HubScreen(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val voicePlayer = LocalVoicePlayer.current
     val language = LocalLanguage.current
+
+    // Look for a game update now and then (at most once a day); a dot on the settings button shows one
+    val context = LocalContext.current
+    val update by Updater.available.collectAsState()
+    LaunchedEffect(Unit) { Updater.checkDaily(context) }
 
     // Say hello (by name, if the personal lines exist) the first time the hub opens
     LaunchedEffect(Unit) {
@@ -141,6 +148,7 @@ fun HubScreen(
         CornerButton(
             icon = R.drawable.ic_ui_settings,
             onLongClick = onSettingsClick,
+            dot = update != null,
             modifier = Modifier.align(Alignment.TopEnd)
         )
 
@@ -168,10 +176,12 @@ private fun CornerButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
-    onDoubleClick: (() -> Unit)? = null
+    onDoubleClick: (() -> Unit)? = null,
+    dot: Boolean = false
 ) {
+  Box(modifier = modifier) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .padding(16.dp)
             .size(64.dp)
             .shadow(6.dp, CircleShape)
@@ -186,4 +196,16 @@ private fun CornerButton(
             modifier = Modifier.size(40.dp)
         )
     }
+    if (dot) {
+        // Something for the grown-up (a game update), small enough not to tempt the child
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(14.dp)
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFE53935))
+        )
+    }
+  }
 }

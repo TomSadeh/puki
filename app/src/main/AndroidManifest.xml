@@ -2,8 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Only used to reach the companion "brain" on the family PC over the home network -->
+    <!-- Reaches the companion "brain" on the family PC over the home network, and asks GitHub
+         whether there's a newer game (nothing about the child is sent anywhere else) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Installing a game update; Android asks the parent to confirm each one -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Hold the parrot to talk to it; the recording goes to the family PC only -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
@@ -29,6 +32,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Android's answers while an update installs (update/Updater.kt) -->
+        <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
     </application>
 
 </manifest>

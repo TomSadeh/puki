@@ -344,6 +344,10 @@ fun SettingsScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            UpdateCard()
+
             Spacer(modifier = Modifier.height(32.dp))
 
             Box(

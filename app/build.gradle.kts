@@ -3,6 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// The game's version. Bump it for each release; scripts/release.py reads it from here, and the
+// game updates itself to a newer one found in the GitHub releases.
+val pukiVersion = "0.2.0"
+
 android {
     namespace = "com.olamkatan"
     compileSdk = 34
@@ -11,8 +15,8 @@ android {
         applicationId = "com.olamkatan"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = pukiVersion.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
+        versionName = pukiVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -22,6 +26,9 @@ android {
 
     buildTypes {
         release {
+            // Signed like the builds Android Studio installs from this PC, so a release installs
+            // over one of those without losing the child's progress
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

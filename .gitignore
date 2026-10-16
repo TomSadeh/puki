@@ -21,3 +21,6 @@ __pycache__/
 # Puki.exe builds (brain/build_exe.py)
 /brain/.build/
 /brain/dist/
+
+# Release APKs (scripts/release.py)
+/dist/
