@@ -18,7 +18,8 @@ import ssl
 import subprocess
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# The brain's folder; Puki.exe points this at the unpacked copy (its own files are temporary)
+HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
 CERT_FILE = os.path.join(HERE, "puki_cert.pem")
 KEY_FILE = os.path.join(HERE, "puki_key.pem")
 
@@ -74,7 +75,7 @@ def ensure(other_python=None):
         except ImportError:
             if not other_python:
                 raise RuntimeError("making the HTTPS certificate needs the 'cryptography' package")
-            subprocess.run([other_python, os.path.abspath(__file__), CERT_FILE, KEY_FILE], check=True,
+            subprocess.run([other_python, os.path.join(HERE, "tls.py"), CERT_FILE, KEY_FILE], check=True,
                            capture_output=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     return fingerprint()
 

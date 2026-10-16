@@ -394,7 +394,10 @@ def long_paths_ok(root):
 
 
 def powershell(cmd):
-    return subprocess.run(["powershell", "-NoProfile", "-Command", cmd], capture_output=True, text=True)
+    # No console window: Puki.exe's tray calls this too (e.g. "Start with Windows"), and each call
+    # would flash one on the screen
+    return subprocess.run(["powershell", "-NoProfile", "-Command", cmd], capture_output=True, text=True,
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
 def port_open(port):
