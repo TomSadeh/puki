@@ -64,6 +64,7 @@ what Puki answered.
 | | |
 |---|---|
 | ![Animal Garden](docs/screenshots/animal-garden.png) | ![Colors, with פוקי in the corner](docs/screenshots/companion.png) |
+| ![Peekaboo barn](docs/screenshots/peekaboo.png) | ![Echo Puki](docs/screenshots/echo.png) |
 | ![Say it with Puki](docs/screenshots/say-it.png) | ![My Day](docs/screenshots/my-day.png) |
 | ![Sticker album](docs/screenshots/stickers.png) | |
 
