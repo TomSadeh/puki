@@ -1,241 +1,119 @@
 # Roadmap
 
-Ideas for what פוקי can do next, building on the stack that's already running on the
-home PC: **Gemma 4 E4B** (writes, and can also see images), **BlueTTS** (speaks Hebrew and
-English) and **ivrit.ai Whisper** (hears Hebrew). Nothing here needs the cloud.
+Where Puki is, what comes next, and the ideas after that. Order is a suggestion: real
+play-testing with a toddler decides what comes first. Nothing here needs the cloud.
 
-Order is a suggestion. Real play-testing with a toddler decides what comes first.
+Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
 
-## Now: growing with her 🌱
+## Where Puki is today
 
-A code review and a research pass (October 2026) found that every game always plays its
-easiest level, a few toddler habits (double taps, idle moments) trip the games up, and the
-research points to what helps at two. This comes first.
+**The game**
+- Islands with scene-based games: animals, colors, shapes, counting, letters, music, and
+  "My Day" (bath, table, dressing, tidying, teeth, bedtime), plus drawing and a sticker album.
+- Every game grows with the child: levels move up after easy sessions and back down after
+  hard ones. A quiet moment repeats the question, and after two misses the answer glows.
+  Taps work where dragging is hard, and double taps can't break anything.
+- Hebrew and English, girl/boy forms, no reading needed, all voices generated with BlueTTS.
+- The game updates itself from GitHub releases (parent settings).
 
-**Bugs.**
-- A double tap on the right answer gives two stars and skips a round (colors, letters, counting).
-- A double tap on the door button quits the game; settings open on an ordinary long press.
-  Both should need the 2-second hold.
-- The time limit counts time the game spends in the background.
-- In My Day, Puki still thinks she's in the previous game.
-- Long scribbles get slow in the drawing game.
+**Puki, the companion**
+- Comments on what the child does, looks at her drawings, tells a bedtime story about her
+  day, answers when she talks to him, and plays "Say it with Puki" (repeat a word, checked
+  by speech recognition) and "what does the cow say?".
+- His brain runs on a PC at home (Gemma 4, BlueTTS, ivrit.ai Whisper, Parakeet for English),
+  set up by one program (Puki.exe on Windows, `install.py` on Linux) and paired by QR code.
+- **Or on a high-end phone** (about 12 GB, tested on a Galaxy S25): the same brain on the
+  device, in Hebrew, no PC needed.
 
-**Quick wins.**
-- "Continue" on the end card plays another round instead of going home.
-- Music: a big pictured start button, replay the same tune after a wrong note, and go
-  straight on after a right one, so the tune game needs no grown-up.
-- Getting dressed names each next item, including the first.
-- Letters start somewhere new each time, with 2 choices at first.
-- Say it with Puki: 4–5 words a session, and toddler forms count.
-- A wrong food teaches ("the cat eats fish"); the chicken clucks instead of crowing.
-- Layouts vary from session to session, not just from round to round.
+## Next up
 
-**Bigger steps.**
-- **Difficulty that grows:** the levels and their content already exist but aren't used. Move
-  up after a few clean rounds, keeping some easy ones mixed in.
-- **Hints:** after a quiet moment, Puki repeats the question; after two misses, the right
-  answer wiggles and glows.
-- **Tap instead of drag:** a tap sends a piece to its place, and drops that only overlap count.
-- A "new sticker!" moment at the end of a session, and more stickers, spaced further apart.
-- Counting by tapping each thing (one tap, one number).
-- Bedtime as a bedroom scene, like the other routines.
-- A fridge for her drawings, with Puki's comments.
-- A parent progress page: stars and level per game, words she said, reset and level override.
-- More variety in My Day: items drawn from a bigger pool.
+1. **Security, performance and code hygiene pass** (in progress, M–L): reviews of the app,
+   the PC brain and the installer; fix what they find; add the first automated tests.
+2. **Phone brain polish** (M each)
+   - English on the phone: BlueTTS needs espeak there, or use Kokoro.
+   - Faster start: Gemma takes about 18 s the first time.
+   - Whisper on the phone's GPU (about 2 s a word now).
+   - The hub's islands crowd together on a phone's wide screen.
+3. **Rewards and the parent's view** (M each)
+   - A "new sticker!" moment at the end of a session, and more stickers, spaced further apart.
+   - A parent progress page: stars and level per game, words she said, reset and level override.
+   - A fridge for her drawings, with Puki's comments.
+4. **Games that feel better** (S–M each)
+   - Counting by tapping each thing (one tap, one number).
+   - Bedtime as a bedroom scene, like the other routines.
+   - More variety in My Day: items drawn from a bigger pool each visit.
+5. **Small new toys** (S–M each, from the research below)
+   - **Peekaboo barn:** animals pop out from behind doors and bushes. Nothing to get wrong.
+   - **Big and small:** "who gets the big apple?", with two choices.
+   - **Sort it:** socks to the drawer, balls to the box.
+   - **A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves.
+     No countdown (warnings make the end harder, not easier).
+   - **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
+   - **Echo parrot:** she says anything, and Puki says it back in a silly parrot voice.
 
-**New games and toys** (from the research; small first):
-- **Peekaboo barn:** animals pop out from behind doors and bushes. Nothing to get wrong.
-- **Big and small:** "who gets the big apple?", with two choices.
-- **Sort it:** socks to the drawer, balls to the box.
-- **A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves. No
-  countdown (warnings make the end harder, not easier).
-- **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
-- **Echo parrot:** she says anything, and Puki says it back in a silly parrot voice.
-- **Family photos with Puki:** the parent adds a few photos with names, and Puki asks
-  "מי זה? זאת סבתא!" and waits for her answer. Photos stay on the tablet and the PC.
+## Later
+
+**Puki gets closer to her** (L)
+- **Puki remembers:** a diary of past days, so he can say "yesterday you fed the elephant!"
+  and the bedtime story can reach back. See the design notes below.
+- **Family photos:** the parent adds a few photos with names, and Puki asks
+  "מי זה? זאת סבתא!" and waits for her answer. Photos stay on the device and the PC.
 - **Feelings:** Puki is sad because his balloon flew away, and she comforts him.
+- **Show-and-tell:** she holds a toy up to the camera and Puki names it.
+
+**More to play** (M each)
 - **Baby care corner:** open pretend play: feed, rock, bathe and tuck in a baby animal.
 - **Act out the word:** after Say it, the animals act the verb out ("קופץ!").
 - **A daytime picture book** where Puki pauses for her to finish the line.
+- **Say it, grown up:** two-word phrases, and English words ("זה כלב. באנגלית: dog!").
+- **New word categories** (vehicles, food, family, weather): Gemma drafts the words and
+  prompts, BlueTTS voices them, `scripts/check_voices.py` confirms nothing is silent.
 
-**Principles** (from the research):
-- Toy first, task second: as few wrong moves as possible.
-- Talk less, wait more: Puki asks, then leaves her a few seconds to answer.
-- Use the AI only where the reply depends on what she just did or said; recorded lines
+**Easier for other families** (M–L)
+- The app finds the PC by itself (mDNS, `_puki._tcp`), instead of an address or QR code.
+- A proper release key for the APKs (they're signed with the developer's local key now), a
+  signed Puki.exe (no SmartScreen warning), and a macOS brain.
+- Google Play, once the rest is solid (its "Designed for Families" rules mean real paperwork).
+- Compare BlueTTS's English with Kokoro on the PC too.
+
+**Ongoing:** tune Puki's personality from real logs: which lines delight, which fall flat.
+
+## Principles
+
+From play-testing and a research pass on what helps at two:
+- **Toy first, task second:** as few wrong moves as possible.
+- **Talk less, wait more:** Puki asks, then leaves her a few seconds to answer.
+- **Use the AI only where the reply depends on what she just did or said;** recorded lines
   everywhere else (they also hide the second of thinking).
-- Two choices, big targets, short bursts of play.
-- Built-in endings; no streaks, no autoplay.
-- Puki is a playmate, not a best friend: he never guilts her for leaving, and points her
+- **Two choices, big targets, short bursts of play.**
+- **Built-in endings;** no streaks, no autoplay.
+- **Puki is a playmate, not a best friend:** he never guilts her for leaving, and points her
   back to her family.
-- The parent stays in the loop.
+- **The parent stays in the loop.**
+- **Nothing leaves the home:** no accounts, ads, analytics or cloud.
 
-After this: a **security, code hygiene and performance pass** over the app and the brain.
+## Design notes: Puki remembers
 
-## 1. Puki sees her drawings 🎨
+Puki forgets everything between replies today. The plan for memory:
 
-**Status: drawings done. Show-and-tell with the camera is still open.**
-
-When the child finishes a drawing on the canvas, the parrot looks at it and reacts:
-"וואו, שמש צהובה גדולה!", or for scribbles, "איזה כחול חזק! זה ים?"
-
-- Gemma 4 E4B is multimodal. llama-server loads its vision projector with `--mmproj`
-  (`mmproj-F16.gguf`, about 1 GB, from the same Unsloth repo).
-- The app sends the canvas as a PNG to a new `/look` endpoint. The brain asks Gemma to
-  describe it warmly in one short sentence, with the usual filter and BlueTTS.
-- The prompt should praise effort and color, never judge ("that's not a cat").
-- **Later, show-and-tell:** the child holds a toy up to the tablet camera and Puki names it.
-  Same endpoint; the photo goes only to the PC.
-
-**Why first:** cheapest delight per line of code. The canvas and the brain both exist already.
-
-## 2. Bedtime story 📖
-
-**Status: done, using what the child did this session. A story that remembers earlier days needs §4.**
-
-At the end of the bedtime routine, Puki tells a 1–2 minute story starring the child, their
-favorite animals, and something they did today ("היום האכלת את הפיל, ובלילה הפיל חלם…").
-
-- Gemma writes the story in short sentences. BlueTTS reads it one sentence at a time, so
-  the first sentence starts within a few seconds.
-- For each sentence, Gemma picks one of the app's existing drawings (from a list of
-  `ic_*` names), so the story is illustrated with no image generation.
-- It needs a small "today" summary from memory (see §4); until then, it uses the games
-  played this session.
-- Calm prompt: slow pace, sleepy ending, the same closing line every night as a ritual.
-
-## 3. Talking games 🗣️
-
-**Status: Say it with Puki is done (22 everyday words, Hebrew and English), and questions and
-answers with hands-free listening are done in Animal Garden. English words and two-word
-phrases are open.**
-
-- **Say it with Puki:** a picture appears, Puki says the word, and the child repeats it.
-  Reward attempts, not accuracy. Matching is lenient (first sound, syllable count, known
-  toddler versions like "פה" for "פרה"). Grow from single words to two-word phrases.
-- **Questions and answers:** "מה הפרה אומרת?" The child says "מו!" and the cow moos. This
-  turns existing games into conversations.
-- **English words:** "זה כלב. באנגלית: dog!" Invite the child to repeat it.
-- **Hands-free listening:** holding a button is hard at two. After Puki asks a question,
-  listen automatically for a few seconds and stop on silence (Whisper's VAD is already on).
-
-## 4. Puki remembers 🧠
-
-Puki currently forgets everything between replies. Memory makes it feel like a friend:
-"אתמול האכלת את הפיל! רוצה לבקר אותו שוב?"
-
-The design follows a few rules:
 - **The log is the memory.** Every event, transcript and reply is appended verbatim to a
-  local, append-only log on the PC. It's never edited and never garbage-collected, and
-  everything above it is derived from it and can be re-derived.
-- **Write-time work happens off the hot path.** When the brain is about to go to sleep
-  after idling, it first *consolidates*: Gemma reads the session's log and writes a short
-  **diary entry** (a leaf), then updates a few small **pages** (the child's profile, their
-  favorite things, words they say, milestones). This costs nothing while the child is playing.
-- **The hot path stays cheap.** Each reply's prompt gets the profile page, plus any diary
-  entries that are relevant to the current moment.
-- **Retrieval isn't the mouth's job.** Code and small scoring models decide what memory
-  reaches the prompt. Gemma only receives it and writes the reply.
-
-**The diary is written in English, while the log stays in Hebrew.**
-- Small, fast, well-studied encoders exist mostly for English (MiniLM, DeBERTa-v3, Ettin,
-  and the NLI/cross-encoder checkpoints built on them). That makes English entries easy to
-  embed, retrieve and gate on CPU. Hebrew small encoders are scarce and not tuned for retrieval.
-- Gemma writes the entries at consolidation time anyway, so translating costs nothing extra.
-- **The child's own words stay verbatim Hebrew inside the English entry**
-  (`said "פיל!" while feeding the elephant`). Translating toddler speech would destroy exactly
-  what the parent wants to keep, and Whisper's transcript can already be shaky.
-- Keep canonical Hebrew names for recurring things (animals, toys, people) in the pages, so
-  the Hebrew reply doesn't back-translate oddly.
-- The reply model reads English memory and answers in Hebrew. Gemma handles that cross-lingual
-  step well.
-
-**Start small.** A few sessions a day is a tiny corpus. For the first months, the profile page
-plus the last few diary entries fit in the prompt, so retrieval isn't needed yet. Encoder
-retrieval, a relevance gate deciding whether a memory is worth mentioning at all, and
-measuring both against a hand-labeled set should come in when the diary outgrows the context,
-not before.
-
-**Parent page.** The brain serves a small local web page on the home network: the words the
-child said and when, games played, drawings with Puki's comments, and the diary in plain
-language. It's a private record of a child growing up, and it never leaves the house.
-The brain's dashboard (`brain/dashboard.py`, on the PC only) is the start of it: it already
-shows a live log of what the child said and what Puki answered.
-
-## 5. More content, faster 🌱
-
-New categories (vehicles, food, family, weather), each with words, prompts and voice lines:
-- Gemma drafts the word list and prompts.
-- BlueTTS voices them, with phonemes for anything ambiguous (see the note on nikud in the README).
-- Illustrations are vector drawables in the existing style.
-- `scripts/check_voices.py` confirms nothing is silent.
-
-## 6. Making it easy for other families 🏡
-
-Today, setting up Puki takes Android Studio and eight manual steps on the PC. The goal is
-"install the app, run one program on the PC, type your child's name".
-
-**First-run setup in the app (small). Status: done.**
-- A short welcome on first launch: language, the child's name, girl/boy, and "set up Puki?".
-  Everything stays editable in parent settings.
-- The app sends the child's name and gender with each request, so the PC needs no
-  `config.json` and one brain can serve siblings on different tablets.
-- The first time the PC is reachable, the app asks the brain to record the lines with the
-  child's name ("כל הכבוד, ___!") and saves them on the tablet. They then work offline too,
-  with no generator script.
-
-**The app finds the PC by itself (small to medium).**
-- The brain announces itself on the home network (mDNS / DNS-SD as `_puki._tcp`), and the
-  app lists what it finds. No IP addresses.
-- Fallback: the PC shows a QR code with its address, and the parent scans it in settings.
-  **Status: done.** The dashboard and the setup show the QR code (`puki://pair?host=…&code=…`,
-  address plus pairing code), and the app scans it in settings and on first launch.
-
-**English as a first-class language (small to medium). Status: done, except the voice comparison.**
-- Speech recognition: NVIDIA's Parakeet (int8 ONNX, on the CPU) when the app is in English.
-  The ivrit.ai model stays for Hebrew.
-- Game situations sent to the brain become bilingual (about 20 strings), instead of always
-  Hebrew.
-- Voice: compare BlueTTS's English with [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M),
-  a small and very natural English voice, and use whichever sounds better for English.
-
-**One program for the PC instead of a setup guide (medium).**
-- **Status:** a setup script is done (`brain/install.py`): it downloads everything with
-  resume, picks the GPU or CPU build, and sets up the firewall, autostart and pairing. The
-  single .exe with a tray icon is built too (`brain/build_exe.py`: Puki.exe sets
-  everything up on its first run, Python included via uv), and `--update`/`--uninstall`
-  work, on Windows and on Linux (systemd service, ufw). Still open: code signing, and macOS.
-- **A single brain binary:** doorbell, brain, a Python runtime, onnxruntime, CTranslate2
-  and llama.cpp, bundled with Nuitka or PyInstaller into one Windows app with a tray icon.
-  The icon shows whether Puki is asleep, awake or busy, and offers pause and settings.
-- **Models download on first run** with a progress bar (Gemma, its vision part, Whisper,
-  BlueTTS; about 8 GB), and resume if interrupted. Models aren't bundled, so the download
-  stays small, each model keeps its own license, and models update independently.
-- **GPU or CPU:** detect an NVIDIA GPU and fetch the CUDA build of llama.cpp and the cuBLAS/
-  cuDNN libraries only when there is one. Everyone else gets the CPU build.
-- **Firewall and autostart:** one admin prompt adds the home-network firewall rule, and an
-  "open at login" option replaces the startup shortcut.
-- **Trust:** unsigned executables trigger Windows SmartScreen warnings and the occasional
-  antivirus false positive. A code-signing certificate fixes this; until then, publish
-  checksums and the build script so people can build it themselves.
-- **Later:** a macOS build (Apple Silicon makes a great brain: llama.cpp uses Metal, and
-  Whisper and BlueTTS run on the CPU) and a Linux build or Docker image.
-- **Testing:** test on a clean PC every time. Installers mostly fail on machines that
-  aren't the developer's.
-
-**Getting the app onto tablets (medium).**
-- APKs on GitHub Releases: enough for tech-savvy parents. **Status: done.** The game also
-  updates itself from the releases (parent settings, with a dot on the gear), and
-  `scripts/release.py` builds and publishes them. Releases are signed with the developer's
-  local key for now; a proper release key is still open.
-- Google Play: its "Designed for Families" rules for kids' apps, plus microphone and
-  local-network permissions, mean real paperwork. Worth it once the rest is solid.
-
-## Ongoing
-
-- **Run the whole stack on a high-end tablet or phone:** Gemma 4 E4B through LiteRT-LM on
-  the GPU, BlueTTS through ONNX Runtime, and ivrit.ai's Whisper through whisper.cpp. This
-  would make Puki work away from home. **Status:** measured on a Galaxy S25 (Gemma's first word in
-  about 0.85 s on the GPU, the voice 0.6 s a line, Whisper about 2 s a word), and built into the
-  app as "Puki on this phone" in parent settings. Still open: an English voice on the phone
-  (espeak for BlueTTS, or Kokoro), Whisper on the GPU, and loading Gemma faster (18 s the first time).
-- **Tuning the persona** from real logs: which lines delight, which fall flat.
+  local, append-only log on the PC. It's never edited or pruned; everything else is derived
+  from it and can be re-derived.
+- **Work happens off the hot path.** When the brain is about to sleep after idling, Gemma
+  reads the session's log and writes a short **diary entry**, then updates a few small
+  **pages** (her profile, favorite things, words she says, milestones). This costs nothing
+  while she plays.
+- **Replies stay cheap.** Each reply's prompt gets the profile page plus any diary entries
+  relevant to the moment. Code and small scoring models decide what memory reaches the
+  prompt; Gemma only receives it.
+- **The diary is in English, the log stays in Hebrew.** Small, fast encoders for retrieval
+  exist mostly for English, and Gemma writes the entries anyway. Her own words stay
+  verbatim in Hebrew inside the entry (`said "פיל!" while feeding the elephant`), and
+  recurring names keep their Hebrew form, so the Hebrew reply doesn't back-translate oddly.
+- **Start small.** For the first months, the profile page plus the last few diary entries fit
+  in the prompt. Retrieval, a gate on whether a memory is worth mentioning, and measuring
+  both against a hand-labeled set come in when the diary outgrows the context.
+- **A parent page** on the home network: words she said and when, games played, drawings
+  with Puki's comments, and the diary in plain language. A private record that never leaves
+  the house. The PC dashboard (`brain/dashboard.py`) is its start: it already shows a live
+  log of what she said and what Puki answered.
