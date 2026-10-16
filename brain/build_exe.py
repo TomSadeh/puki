@@ -17,7 +17,9 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUILD = os.path.join(HERE, ".build")
 PY = os.path.join(BUILD, "venv", "Scripts", "python.exe")
-PACKAGES = ["pyinstaller==6.11.1", "pystray==0.19.5", "pillow"]
+# cryptography: Puki.exe makes the HTTPS certificate itself (an updated exe may meet a brain
+# environment from before it was in requirements.txt)
+PACKAGES = ["pyinstaller==6.11.1", "pystray==0.19.5", "pillow", "cryptography"]
 
 
 def run(*cmd):
@@ -50,7 +52,7 @@ def main():
     cmd = [PY, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed", "--name", "Puki", "--icon", ico,
            "--distpath", os.path.join(HERE, "dist"), "--workpath", os.path.join(BUILD, "work"),
            "--specpath", BUILD, "--paths", HERE,
-           "--hidden-import", "doorbell", "--hidden-import", "dashboard", "--hidden-import", "qr", "--hidden-import", "tls",
+           "--hidden-import", "doorbell", "--hidden-import", "dashboard", "--hidden-import", "qr", "--hidden-import", "tls", "--collect-submodules", "cryptography",
            "--hidden-import", "install", "--hidden-import", "setup_gui", "--hidden-import", "pystray._win32"]
     for d in data:
         cmd += ["--add-data", d]
