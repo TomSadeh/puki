@@ -1,5 +1,6 @@
 package io.github.tomsadeh.puki.ui.animals
 
+import io.github.tomsadeh.puki.data.content.FEMININE_ANIMALS
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,8 +53,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Animals whose Hebrew name is feminine ("מה הפרה אומרת?"). */
-private val FEMININE_ANIMALS = setOf("cow", "chicken", "sheep", "goat", "giraffe")
-
 @Composable
 fun AnimalGardenScreen(
     onBack: () -> Unit,

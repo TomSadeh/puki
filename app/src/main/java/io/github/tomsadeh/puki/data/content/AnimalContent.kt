@@ -23,6 +23,12 @@ data class FoodDef(
     @DrawableRes val drawableRes: Int = 0
 )
 
+/** Animals Hebrew speaks of as feminine (הפרה אומרת, הכלב אומר). */
+val FEMININE_ANIMALS = setOf("cow", "chicken", "sheep", "goat", "giraffe")
+
+/** All of them, for games that don't go by level. */
+val allAnimals get() = level1Animals + level2Animals + level3Animals
+
 val level1Animals = listOf(
     AnimalDef(
         id = "cow",

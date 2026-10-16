@@ -45,7 +45,7 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
    - Bedtime as a bedroom scene, like the other routines.
    - More variety in My Day: items drawn from a bigger pool each visit.
 5. **Small new toys** (S–M each, from the research below)
-   - **Peekaboo barn:** animals pop out from behind doors and bushes. Nothing to get wrong.
+   - ~~**Peekaboo barn:** animals pop out from behind doors and bushes.~~ Done in 0.6.
    - **Big and small:** "who gets the big apple?", with two choices.
    - **Sort it:** socks to the drawer, balls to the box.
    - **A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves.

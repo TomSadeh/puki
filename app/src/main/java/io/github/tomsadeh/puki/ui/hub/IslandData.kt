@@ -65,6 +65,16 @@ val allIslands = listOf(
         fractionalY = 0.43f
     ),
     IslandDef(
+        id = "peekaboo",
+        name = BilingualText("מחבואים", "Peekaboo"),
+        route = Routes.PEEKABOO,
+        color = Color(0xFFFFCC80),
+        emoji = "👀",
+        drawableRes = R.drawable.ic_island_peekaboo,
+        fractionalX = 0.88f,
+        fractionalY = 0.37f
+    ),
+    IslandDef(
         id = "music",
         name = BilingualText("מוזיקה", "Music"),
         route = Routes.MUSIC,
