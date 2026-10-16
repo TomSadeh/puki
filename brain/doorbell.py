@@ -37,6 +37,7 @@ import hmac
 import json
 import os
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
@@ -145,18 +146,42 @@ GUARD = Guard()
 EVENTS = dashboard.Events()  # what the dashboard's log shows; memory only
 
 
+GPU = {"error": None, "lock": threading.Lock()}  # why nvidia-smi fails, while it does
+
+
 def free_vram_mb():
-    """Free GPU memory in MiB, or 0 if there's no usable NVIDIA GPU."""
-    try:
-        out = subprocess.run(
-            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=10,
-            # Without a console (pythonw), each call would flash a terminal window
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        ).stdout
-        return int(out.strip().splitlines()[0])
-    except Exception:
-        return 0
+    """Free GPU memory in MiB, or 0 if there's no usable NVIDIA GPU.
+
+    No nvidia-smi means no NVIDIA driver. An nvidia-smi that fails (most often: the driver was
+    updated and the PC not restarted) also gives 0, so the brain wakes on the CPU, but it goes to
+    the log and the dashboard when it starts and when it clears."""
+    free, error, found = 0, None, shutil.which("nvidia-smi")
+    if found:
+        try:
+            r = subprocess.run(
+                ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=10,
+                # Without a console (pythonw), each call would flash a terminal window
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except subprocess.TimeoutExpired:
+            error = "no answer within 10 seconds"
+        else:
+            lines = r.stdout.strip().splitlines()
+            if r.returncode != 0:
+                error = ((r.stdout + r.stderr).strip().splitlines() or [f"exit code {r.returncode}"])[0]
+            elif not lines or not lines[0].strip().isdigit():
+                error = f"unexpected answer {r.stdout.strip()!r}"
+            else:
+                free = int(lines[0])
+    with GPU["lock"]:
+        if error != GPU["error"]:
+            GPU["error"] = error
+            text = (f"nvidia-smi fails ({error}), so the brain uses the CPU" if error
+                    else "nvidia-smi works again" if found else "nvidia-smi is gone, so there's no NVIDIA GPU")
+            log(text)
+            EVENTS.add("gpu", text=text)
+    return free
 
 
 def http_ok(url, timeout=2):
@@ -484,6 +509,7 @@ class DashboardApp:
             "sleeps_in_s": sleeps_in,
             "idle_minutes": CFG["idle_minutes"],
             "free_vram_mb": self.free_vram(),
+            "gpu_error": GPU["error"],
             "min_free_vram_mb": CFG["min_free_vram_mb"],
             "code": pretty_code(PAIRING_CODE),
             "address": f"{lan_address()}:{CFG['port']}",

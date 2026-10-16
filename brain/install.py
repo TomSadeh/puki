@@ -22,6 +22,7 @@ download resumes where it stopped. Standard library only, so any Python 3.10+ ca
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -150,19 +151,55 @@ def hf_url(repo, path):
 
 # ---------- Checks ----------
 
-def nvidia():
-    """(name, VRAM MB, driver's CUDA version) of the NVIDIA GPU, or None."""
-    try:
-        q = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True, timeout=15)
-        head = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=15).stdout
-        name, mem = [x.strip() for x in q.stdout.strip().splitlines()[0].split(",")]
-        cuda = 0.0
-        if "CUDA Version:" in head:
-            cuda = float(head.split("CUDA Version:")[1].split()[0])
-        return name, int(mem), cuda
-    except Exception:
+def nvidia(interactive=False):
+    """(name, VRAM MB, driver's CUDA version) of the NVIDIA GPU, or None when there's no NVIDIA driver.
+
+    A driver that's there but not working (most often: updated, and the PC not restarted since)
+    stops the setup, so it doesn't quietly pick the CPU build on a PC that has a GPU. When someone
+    is at the keyboard ([interactive]), they can choose to go on without the GPU instead."""
+    if shutil.which("nvidia-smi") is None:
         return None
+    try:
+        return _query_nvidia()
+    except DriverProblem as problem:
+        retry = "Restart the PC (after a driver update, that's usually it) and run the setup again" + \
+                ("." if FROZEN else ", or add --cpu to skip the GPU.")
+        if not interactive:
+            fail(f"{problem}\n    {retry}")
+        say(f"\n  ! {problem}")
+        say(f"    {retry}")
+        if input("    Continue without the GPU instead (everything on the CPU, slower)? [y/N] ").strip().lower() in ("y", "yes"):
+            return None
+        sys.exit(1)
+
+
+class DriverProblem(Exception):
+    """The NVIDIA driver is there, but nvidia-smi doesn't give a usable answer."""
+
+
+def _query_nvidia():
+    def smi(*args):
+        try:
+            r = subprocess.run(["nvidia-smi", *args], capture_output=True, text=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            raise DriverProblem("nvidia-smi didn't answer within 15 seconds, so the NVIDIA driver seems stuck.")
+        if r.returncode != 0:
+            why = (r.stdout + r.stderr).strip().splitlines() or [f"exit code {r.returncode}"]
+            raise DriverProblem(f"there's an NVIDIA driver, but nvidia-smi fails: {why[0]}")
+        return r.stdout
+
+    rows = smi("--query-gpu=name,memory.total", "--format=csv,noheader,nounits").strip().splitlines()
+    head = smi()
+    # The CUDA version picks llama.cpp's build, so it can't be guessed. Newer drivers print it as
+    # "CUDA UMD Version: 13.4" (next to a separate KMD version) instead of "CUDA Version: 13.4".
+    cuda = re.search(r"CUDA (?:UMD )?Version:\s*([\d.]+)", head)
+    if not rows or not cuda:
+        raise DriverProblem(f"nvidia-smi answered without the GPU or its CUDA version:\n{head.strip()}")
+    try:
+        name, mem = [x.strip() for x in rows[0].split(",")]
+        return name, int(mem), float(cuda.group(1))
+    except ValueError:  # e.g. memory reported as [N/A]
+        raise DriverProblem(f"nvidia-smi gave an answer Puki can't read: {rows[0]!r}")
 
 
 def long_paths_ok(root):
@@ -756,7 +793,7 @@ def main():
         fail("macOS isn't supported by this installer yet; follow brain/README.md by hand.")
     if sys.version_info < (3, 10) and not FROZEN:
         fail(f"Python 3.10 or newer is needed (this is {sys.version.split()[0]}).")
-    gpu = None if args.cpu else nvidia()
+    gpu = None if args.cpu else nvidia(interactive=not (args.yes or dry))
     say(f"  Folder:  {root}")
     if gpu:
         say(f"  GPU:     {gpu[0]}, {gpu[1] / 1024:.0f} GB (CUDA {gpu[2]:g})"

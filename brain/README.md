@@ -38,7 +38,9 @@ python brain\install.py
 It shows what it will do, then:
 
 1. downloads llama.cpp: the CUDA build if there's an NVIDIA GPU (matched to the driver),
-   otherwise the CPU build;
+   otherwise the CPU build. If the NVIDIA driver is there but `nvidia-smi` fails (most often
+   after a driver update without a restart), it stops and says so instead of picking the CPU
+   build: restart and run it again, or add `--cpu`;
 2. asks which Gemma to use: **E4B** (lighter, faster), **12B** (smarter, sees drawings better;
    needs about 9 GB of free GPU memory) or **both** (12B when the GPU has room, E4B when a
    game or a training run is using it), then downloads it with its vision part, the ivrit.ai Hebrew Whisper, Parakeet for English,
@@ -176,7 +178,9 @@ While the doorbell runs, **http://127.0.0.1:8793** on the PC shows:
   can), plus a button that makes a new code;
 - how many idle minutes before it sleeps (saved to `config.json`);
 - a live log: what each game asked, what Whisper heard, what Puki said and how long it took,
-  and any wrong pairing codes.
+  and any wrong pairing codes. If `nvidia-smi` starts failing (so the brain wakes on the CPU
+  next to a GPU), the log says so, and again when it works; the free GPU memory line shows the
+  error meanwhile.
 
 The dashboard is served on 127.0.0.1 only, never to the home network, because the log holds
 the child's words. The log lives in memory and disappears when the doorbell stops. Pages from
