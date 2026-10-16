@@ -1,5 +1,7 @@
 package io.github.tomsadeh.puki.ui.components
 
+import io.github.tomsadeh.puki.ui.common.LocalLanguage
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -50,13 +52,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * פוקי sitting in the corner of a game. Shows up once the brain server is ready,
- * flaps its beak while it talks. A tap makes it say something; holding it records
- * the child talking (Whisper on the PC listens) and it answers when let go.
+ * פוקי sitting in the corner of a game. With his brain ready, he flaps his beak while he talks:
+ * a tap makes him say something, and holding him records the child talking (Whisper listens)
+ * and he answers when let go. Without a brain he's still there, with his recorded lines.
  */
 @Composable
 fun CompanionParrot(modifier: Modifier = Modifier) {
-    val companion = LocalCompanion.current ?: return
+    val companion = LocalCompanion.current
+    if (companion == null) {
+        OfflineParrot(modifier)
+        return
+    }
     val voicePlayer = LocalVoicePlayer.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -74,6 +80,11 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
         PackageManager.PERMISSION_GRANTED
 
     LaunchedEffect(Unit) { companion.wake() }
+    // Until his brain is ready (or if it never is), the recorded Puki keeps the corner warm
+    if (status != CompanionStatus.READY) {
+        OfflineParrot(modifier)
+        return
+    }
 
     // Beak opens and closes while talking
     var beakOpen by remember { mutableStateOf(false) }
@@ -159,5 +170,56 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
                     }
             )
         }
+    }
+}
+
+/** What Puki says when tapped without his brain: a few recorded lines, never the same twice in a row. */
+private val offlineLines = listOf("voice_puki_hi", "voice_puki_tickle", "voice_puki_fun", "voice_puki_here", "voice_puki_dance")
+
+/** Puki with recorded lines only: he bobs in the corner, and a tap makes him talk and dance. */
+@Composable
+private fun OfflineParrot(modifier: Modifier = Modifier) {
+    val voicePlayer = LocalVoicePlayer.current
+    val language = LocalLanguage.current
+    val scope = rememberCoroutineScope()
+    var talking by remember { mutableStateOf(false) }
+    var last by remember { mutableStateOf(-1) }
+    var beakOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(talking) {
+        beakOpen = false
+        while (talking) {
+            beakOpen = !beakOpen
+            delay(140)
+        }
+        beakOpen = false
+    }
+    val bob by rememberInfiniteTransition(label = "offline_parrot").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(if (talking) 260 else 1400), RepeatMode.Reverse),
+        label = "offline_bob"
+    )
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Image(
+            painter = painterResource(if (beakOpen) R.drawable.ic_companion_parrot_talk else R.drawable.ic_companion_parrot),
+            contentDescription = null,
+            modifier = Modifier
+                .size(140.dp)
+                .graphicsLayer {
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                    translationY = -bob * (if (talking) 14.dp.toPx() else 4.dp.toPx())
+                    rotationZ = if (talking) (bob - 0.5f) * 14f else 0f  // a little dance while he talks
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        if (talking) return@detectTapGestures
+                        val next = (offlineLines.indices - last).random()
+                        last = next
+                        talking = true
+                        scope.launch { delay(4000); talking = false }  // in case the line never ends
+                        voicePlayer.play(offlineLines[next], language) { talking = false }
+                    })
+                }
+        )
     }
 }
