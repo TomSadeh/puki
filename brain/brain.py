@@ -171,7 +171,7 @@ def clean(text, lang):
 # sound and lists the last few lines to avoid.
 FOOD_WORDS = ("האכיל", "אוכל", "fed ", "food")
 OPENERS = {
-    "he": {"food": ["יאמי", "מממ", "אמממ"], "other": ["הופ", "יש", "אוהו", "יופי", "טה-דה", "הידד", ""]},
+    "he": {"food": ["יאמי", "מממ", "אמממ"], "other": ["הופ", "יש", "אוהו", "יופי", "טה-דה", ""]},
     "en": {"food": ["Yum", "Mmm", "Munch munch"], "other": ["Hooray", "Yay", "Ooh", "Ta-da", "Woohoo", ""]},
 }
 recent = deque(maxlen=6)
@@ -337,9 +337,24 @@ def tag_hebrew(text):
     return HEBREW_RUN.sub(lambda m: f"<he>{m.group(0)}</he>", text)
 
 
+# Hebrew words BlueTTS reads wrong, and what Puki says instead. Every spoken line passes here,
+# whatever wrote it (Gemma, the app, a bedtime story).
+MISREAD = {
+    "הידד": "יש",  # comes out as "אהדה"
+}
+
+
+def fix_misreads(text):
+    for word, instead in MISREAD.items():
+        # Whole words, also with a one-letter prefix ("והידד" -> "ויש")
+        text = re.sub(rf"(?<![א-ת])([והבכלמש]?){word}(?![א-ת])", rf"\g<1>{instead}", text)
+    return text
+
+
 def speak(text, lang, speed=0.92):
     # BlueTTS mispronounces text that already has nikud (e.g. a name with nikud came out garbled)
     text = re.sub(r"[\u0591-\u05C7]", "", text)
+    text = fix_misreads(text)
     text = tag_english(text) if lang == "he" else tag_hebrew(text)
     samples, sr = TTS.synthesize(text, lang=lang, total_step=8, speed=speed)
     samples = np.concatenate([samples, np.zeros(int(sr * 0.15), dtype=np.float32)])

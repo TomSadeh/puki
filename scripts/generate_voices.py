@@ -320,6 +320,19 @@ def strip_nikud(text):
     return NIKUD.sub("", text)
 
 
+# Words BlueTTS reads wrong (the brain swaps them too, in brain.py's MISREAD): a recorded line
+# with one of them is refused, so it gets reworded instead of recorded wrong
+MISREAD = {"הידד": "it comes out as 'אהדה'"}
+
+
+def check_misreads(lines):
+    bad = [(name, word, why) for name, _, he in lines for text in (he if isinstance(he, tuple) else (he,))
+           for word, why in MISREAD.items() if word in strip_nikud(text)]
+    if bad:
+        sys.exit("These lines use words BlueTTS misreads; reword them:\n" +
+                 "\n".join(f"  {name}: {word} ({why})" for name, word, why in bad))
+
+
 def outputs_for(name, en_text, he_text, lang):
     """Yield (file_stem, text) pairs to synthesize for one line."""
     if lang == "en":
@@ -356,6 +369,7 @@ def main():
             sys.exit(f"Unknown voice lines: {', '.join(sorted(unknown))}")
         lines = [line for line in lines if line[0] in wanted]
 
+    check_misreads(lines)
     from blue_onnx import BlueTTS
 
     bluetts_dir = os.path.abspath(args.bluetts_dir)
