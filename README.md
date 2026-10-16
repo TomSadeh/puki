@@ -8,21 +8,27 @@ your home.
 
 ## What's inside
 
-**The game (Olam Katan, "a small world")**, an island world with toddler-sized games:
+**The game (Olam Katan, "a small world")**, an island world with toddler-sized games, each in
+its own illustrated scene (a farm, a garden, a playground under a rainbow, a theater stage, a
+cozy house):
 
 - **Animal Garden:** feed each animal the right food. The animal munches and does a happy hop.
-- **Colors, Shapes, Counting, Letters:** tap, drag and count with spoken Hebrew prompts.
+- **Colors, Shapes, Counting, Letters:** pop the right balloon, drag chunky shapes into place,
+  count flowers into a garden bed, find the letter block, all with spoken Hebrew prompts.
 - **Music:** play instruments, then repeat a little melody.
 - **My Day:** a cutaway house with bath time, brushing teeth, getting dressed, setting the
   table, tidying up and bedtime.
-- **Drawing**, with Puki looking at the picture, and a **sticker album** that fills up with stars.
+- **Drawing** on paper taped to an easel, with big paint pots, and Puki looking at the picture.
+  A **sticker album** fills up as stars are earned.
 - **Say it with Puki:** a picture appears, Puki says the word, and the child says it back.
-  Every try earns a star, and Puki then says the word again the right way. Works with the
-  PC off too (the tablet hears that the child spoke); with the PC, saying the word itself
-  gets confetti.
+  With the PC listening, the word itself moves the game on: after another word Puki says
+  "listen well" and the word again, after a near miss "almost", up to three tries, and Puki
+  always closes by saying the word the right way. With the PC off, any try counts.
 
 Toddler-first design: no reading needed, big tap targets, no failure states (wrong answers
-get a gentle shake and "let's try again"), and every line spoken in a warm voice. Hebrew
+get a gentle shake and "let's try again"), and every line spoken in a warm voice. Everything
+answers a touch: pieces squish when pressed, bob while they wait, and burst into stars when
+they're right. Hebrew
 instructions follow the child's gender (תלחצי / תלחץ), set in parent settings. All voice lines
 are generated offline with [BlueTTS](https://github.com/maxmelichov/BlueTTS).
 
@@ -47,8 +53,9 @@ what Puki answered.
 
 | | |
 |---|---|
-| ![Animal Garden](docs/screenshots/animal-garden.png) | ![פוקי in a game](docs/screenshots/companion.png) |
-| ![My Day](docs/screenshots/my-day.png) | ![Sticker album](docs/screenshots/stickers.png) |
+| ![Animal Garden](docs/screenshots/animal-garden.png) | ![Colors, with פוקי in the corner](docs/screenshots/companion.png) |
+| ![Say it with Puki](docs/screenshots/say-it.png) | ![My Day](docs/screenshots/my-day.png) |
+| ![Sticker album](docs/screenshots/stickers.png) | |
 
 ## Why the brain is on a PC
 
