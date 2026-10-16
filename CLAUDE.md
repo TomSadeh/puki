@@ -2,7 +2,7 @@
 
 ## What This Project Is
 
-An Android tablet game for toddlers (ages 2–4), bilingual in Hebrew and English. A hub world with mini-game islands covering animals, colors, shapes, counting, music, letters, and daily routines (brushing teeth, tidying up, getting dressed, etc.). No ads, no tracking, no cloud. An optional talking parrot companion runs on a PC at home (`brain/`).
+An Android tablet game for toddlers (ages 2–4), bilingual in Hebrew and English. A hub world with ten islands: animals, colors, shapes, counting, music, letters, Peekaboo barn, Echo Puki, Say it with Puki, and daily routines (brushing teeth, tidying up, getting dressed, etc.). No ads, no tracking, no cloud. An optional talking parrot companion runs on a PC at home (`brain/`) or on a high-end phone itself.
 
 See `olam-katan-claude-code-prompt.md` for the full game design document.
 
@@ -34,6 +34,8 @@ app/src/main/java/io/github/tomsadeh/puki/
 │   ├── hub/                     # Hub world (islands on the sea)
 │   ├── animals/ colors/ shapes/ counting/ music/ words/   # The islands
 │   ├── say/                     # Say it with Puki (speech, needs the brain)
+│   ├── peekaboo/                # Peekaboo barn (find the hiding animal)
+│   ├── echo/                    # Echo Puki (repeats her, higher and faster; no brain needed)
 │   ├── myday/                   # My Day house + one screen per routine, bedtime story
 │   ├── canvas/                  # Free painting (Puki looks at the drawing)
 │   ├── stickers/  onboarding/  settings/
@@ -43,12 +45,15 @@ app/src/main/java/io/github/tomsadeh/puki/
 │   ├── models/  content/        # Data classes and the static game content
 │   ├── ProgressRepository.kt    # Stars, stickers, levels (and the level rule, nextLevel)
 │   └── SettingsRepository.kt    # Language, gender, sound, time limit, companion
-├── audio/                       # VoicePlayer, SfxPlayer, MusicPlayer, MicRecorder, Companion (talks to a brain)
-├── brain/                       # The brain on a high-end phone: LocalBrain, Persona, Mind (Gemma),
-│                                #   Ears (whisper.cpp JNI), voice/ (BlueTTS port), DeviceModels
+├── audio/                       # VoicePlayer, SfxPlayer, MusicPlayer, MicRecorder, EchoVoice,
+│                                #   Companion (talks to a brain)
+├── brain/                       # Brain, HttpBrain + PinnedTls (the PC, over pinned HTTPS); the brain on a
+│                                #   high-end phone: LocalBrain, Persona, Mind (Gemma), Ears (whisper.cpp
+│                                #   JNI), voice/ (BlueTTS port), DeviceModels
 ├── update/Updater.kt            # In-app updates from GitHub releases
 └── theme/
-brain/                           # The PC brain (Python): doorbell.py, brain.py, persona.py, installer, tray
+brain/                           # The PC brain (Python): doorbell.py (HTTPS), brain.py, persona.py, tls.py,
+                                 #   install.py + pins.json (make_pins.py), tray.py / build_exe.py (Puki.exe)
 scripts/                         # Voices (generate/check), release.py
 native/whisper/                  # Builds libpuki_whisper.so (prebuilt copies are in jniLibs)
 ```
@@ -82,7 +87,7 @@ Build and reuse these across all islands:
 | `Help.kt` | Hints when she's stuck (`rememberHelp`, `hintGlow`) |
 | `Juice.kt`, `Reactions.kt`, `Scatter.kt` | Squish on press, pop-ins, idle bobbing, reactions, scattered layouts |
 | `LongPressGate` | Two-second hold for parent-only actions |
-| `TimeLimitOverlay` | The calm end when the time limit is reached |
+| `TimeLimitOverlay` | The calm goodbye at the time limit: evening falls, Puki yawns and waves (no countdown) |
 | `WigglingItem` | Gently wiggles to attract attention |
 
 Drawing: build Paths once (`drawWithCache`), put still parts in their own layer (`graphicsLayer()`)
@@ -90,7 +95,7 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 
 ### Naming
 
-- Route names: `"hub"`, `"animals"`, `"colors"`, `"shapes"`, `"counting"`, `"music"`, `"words"`, `"myday"`, `"myday/bath"`, `"myday/brush"`, `"myday/tidy"`, `"myday/dress"`, `"myday/table"`, `"myday/bedtime"`, `"canvas"`, `"stickers"`, `"settings"`.
+- Route names: `"hub"`, `"animals"`, `"colors"`, `"shapes"`, `"counting"`, `"music"`, `"words"`, `"say"`, `"peekaboo"`, `"echo"`, `"myday"`, `"myday/bath"`, `"myday/brush"`, `"myday/tidy"`, `"myday/dress"`, `"myday/table"`, `"myday/bedtime"`, `"canvas"`, `"stickers"`, `"settings"`.
 - Resource files: `ic_animal_cow.xml`, `ic_shape_circle.xml`, `snd_tap.ogg`, `snd_success.ogg`. Prefix with `ic_` for icons, `snd_` for sounds, `bg_` for backgrounds.
 - Data classes: `Animal`, `ShapeItem`, `ColorItem`, `Sticker`, `GameProgress`, `AppSettings`.
 - ViewModels: `AnimalGardenViewModel`, `ColorSplashViewModel`, etc.
@@ -143,7 +148,23 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 - CI (`.github/workflows/ci.yml`) runs all of these on every push.
 - Before a release, run it on a real device: the debug build's `SelfTestReceiver`
   (`adb shell am broadcast -n io.github.tomsadeh.puki/.SelfTestReceiver`, then `adb logcat -s PukiSelfTest`).
+  Extras: `-e host <ip:port> -e code <CODE> -e pin <fingerprint>` checks the HTTPS connection to a PC;
+  `-e timelimit <minutes>` sets the time limit (0 = off; put it back after testing); `-e echotest 1`
+  plays a tone through Echo Puki's voice.
 - Keep composables "dumb" — they render state and emit events, nothing else.
+
+### Security and privacy
+
+- **The PC connection** is HTTPS only, pinned to the PC's own certificate (`brain/tls.py` makes it;
+  the pairing QR code carries its fingerprint; `PinnedTls` refuses any other). Never add a cleartext
+  fallback.
+- **The child's name and words** never go in git, logs or crash reports: personal voice lines and
+  `brain/config.json` are git-ignored, and errors are logged by type, not message.
+- **Installer downloads** are pinned in `brain/pins.json`; regenerate with `brain/make_pins.py` after
+  changing a version or model.
+- **Releases** are signed with the key in `~/keys`; `release.py` won't publish a debug-signed APK.
+- **Puki.exe** freezes the PC brain's code inside the exe: PC-side changes need a new exe on the
+  release. In it there's no stdout and no console, so every subprocess uses `CREATE_NO_WINDOW`.
 
 ---
 
@@ -183,5 +204,6 @@ never in git); without it they fall back to the debug key, which release.py won'
 
 ## Where things stand
 
-The original build plan is done (all islands, My Day, canvas, stickers, bedtime, levels). What's
-next is in ROADMAP.md.
+The original build plan is done (all islands, My Day, canvas, stickers, bedtime, levels), and so
+are the security pass and the first new toys (0.6: Peekaboo barn, Echo Puki, the calm goodbye).
+What's next is in ROADMAP.md.

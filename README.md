@@ -23,13 +23,20 @@ your home.
   wardrobe, put the toys away around a room, brush teeth, and bedtime.
 - **Drawing** on paper taped to an easel, with big paint pots, and Puki looking at the picture.
   A **sticker album** fills up as stars are earned.
+- **Peekaboo barn:** an animal hides on the farm (in the barn, behind the bush or the haystack,
+  in a tree stump) and its sound gives it away. Tapping the right spot brings it out; any other
+  spot sends out a butterfly and the animal peeks and calls again.
+- **Echo Puki:** the child says anything and Puki says it back in a silly parrot voice (her own
+  recording, played higher and faster). No PC needed, and nothing is kept.
 - **Say it with Puki:** a picture appears, Puki says the word, and the child says it back.
   With the PC listening, the word itself moves the game on: after another word Puki says
   "listen well" and the word again, after a near miss "almost", up to three tries, and Puki
   always closes by saying the word the right way. With the PC off, any try counts.
 
 Toddler-first design: no reading needed, big tap targets, no failure states (wrong answers
-get a gentle shake and "let's try again"), and every line spoken in a warm voice. Everything
+get a gentle shake and "let's try again"), and every line spoken in a warm voice. When the
+parent's time limit is up there's no countdown: evening falls over the game, Puki yawns and
+waves goodbye, and the music fades. Everything
 answers a touch: pieces squish when pressed, bob while they wait, and burst into stars when
 they're right. Hebrew
 instructions follow the child's gender (תלחצי / תלחץ), set in parent settings. All voice lines
@@ -71,7 +78,8 @@ can think, talk and listen on the device itself, away from home too. In parent s
 "Puki on this phone" downloads the models once (about 5.9 GB: Gemma 4 E4B for LiteRT-LM, the
 BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs on the GPU
 (the first word in under a second), the voice takes about 0.6 s for a line, and Whisper about
-2 s for a word. For now it speaks Hebrew only there; English falls back to the recorded lines.
+2 s for a word. For now it speaks Hebrew only there; English falls back to the recorded lines
+(the plan is Android's own offline voices, see the [roadmap](ROADMAP.md)).
 
 ## Privacy and security
 
@@ -80,8 +88,8 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
   once a day the app asks GitHub whether there's a newer version (a plain list request,
   with nothing about the child in it).
 - **A pairing code** keeps other devices on the network out. The PC makes the code on first
-  start, and you type it once in the app. Requests without it are refused, and a device that
-  keeps guessing is locked out.
+  start, and the app gets it by scanning the QR code on the PC's dashboard (or you type it
+  once). Requests without it are refused, and a device that keeps guessing is locked out.
 - **The child's name** lives only on the tablet and your PC, and the files that hold it are
   git-ignored.
 - **The live log** of what the child said is kept in the PC's memory only, and is gone when
@@ -93,6 +101,11 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
   `a799cab5bcf83c20c754490f8d0eb271cf844e2b7e69518760789f2a96eb3c3d`. Android only installs an
   update signed with the same key as the installed app, so a changed Puki can't come in as an
   update. To check a download: `apksigner verify --print-certs Puki-<version>.apk`.
+- **Pinned downloads:** the PC installer downloads only files listed in `brain/pins.json`
+  (Hugging Face files at a fixed commit, and every file's SHA-256), and refuses anything that
+  doesn't match, so a file changed upstream never reaches your PC.
+- **Echo Puki's recordings** go straight to the speaker a moment later and are never stored or
+  sent anywhere.
 - **Encrypted:** the tablet and PC talk over HTTPS. The PC makes its own certificate on first
   start, and the pairing QR code carries its fingerprint, so the app talks only to that PC:
   another machine on the network can neither read the child's voice and name nor pose as the
@@ -109,7 +122,8 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
 
 - Minimum Android 8 (API 26). Built for tablets in landscape.
 - On first launch, a short welcome screen asks for the language, the child's name, girl/boy,
-  and the companion's PC address and pairing code (optional).
+  and (optionally) the companion: scan the QR code on the PC's dashboard, or type its address
+  and pairing code.
 - Parent settings: long-press the gear on the hub. There you can change all of the above,
   plus separate volumes for music, voices (and Puki) and sound effects, and a time limit.
 - Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
@@ -129,8 +143,8 @@ repo); on Linux, `python3 brain/install.py`. It downloads
 everything (about 9 GB), sets up the firewall and autostart, and shows the pairing code; see
 [brain/README.md](brain/README.md). Ideally the PC has an NVIDIA GPU with about 6 GB of free
 VRAM (it falls back to the CPU otherwise).
-When it starts, it prints a pairing code (also on the dashboard and in
-`brain/pairing_code.txt`). Enter it in the app with the PC's address.
+Pair the app by scanning the QR code on the PC's dashboard (http://127.0.0.1:8793). The code
+is also in `brain/pairing_code.txt`, to type in with the PC's address instead.
 
 **Personal voice lines:** the game can say the child's name ("כל הכבוד, ___!"). The first time
 the companion is reachable, Puki records these lines onto the tablet, so they also play when
@@ -145,7 +159,11 @@ python scripts/generate_voices.py --bluetts-dir ~/puki-brain/BlueTTS --child-nam
 
 ```
 app/                       Android app (Kotlin, Jetpack Compose)
-brain/                     companion server for the PC (doorbell.py, brain.py, dashboard)
+brain/                     companion server for the PC: doorbell.py (HTTPS front door),
+                           brain.py + persona.py (Gemma, the voice, Whisper), tls.py
+                           (its certificate), dashboard, install.py, pins.json (pinned
+                           downloads; make_pins.py), tray.py / build_exe.py (Puki.exe)
+native/whisper/            builds whisper.cpp for the phone (prebuilt in app/src/main/jniLibs)
 scripts/generate_voices.py all voice lines, generated with BlueTTS
 scripts/check_voices.py    checks every voice line the app plays has audio
 scripts/generate_instruments.py  the music game's instrument sounds
@@ -166,7 +184,18 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
   in `app/src/main/jniLibs`; rebuild it with `python native/whisper/build.py` (needs the NDK).
 - **Releasing:** bump `pukiVersion` in `app/build.gradle.kts`, commit, then run
   `python scripts/release.py --publish` from this checkout. It refuses if personal voice lines
-  (`voice_*_name*`) are in `res/raw`, so a release never carries a child's name.
+  (`voice_*_name*`) are in `res/raw`, so a release never carries a child's name, and if the APK
+  is signed with the debug key (releases use the key in `~/keys`, see `app/build.gradle.kts`).
+  When the PC side changed, also build Puki.exe (`python brain/build_exe.py`) and attach it:
+  it carries its own copy of the brain's code.
+- **Tests:** `./gradlew testDebugUnitTest`, `python -m pytest brain/tests` and
+  `python scripts/check_voices.py` (CI runs all three). On a device, the debug build's
+  self-test: `adb shell am broadcast -n io.github.tomsadeh.puki/.SelfTestReceiver`
+  (`adb logcat -s PukiSelfTest`), with `-e host <ip:port> -e code <CODE> -e pin <fingerprint>`
+  to check the HTTPS connection to a PC, `-e timelimit 1` to see the goodbye after a minute
+  (`0` turns it off again), or `-e echotest 1` for the parrot voice.
+- **Changing an installer download:** after a version or model change in `brain/install.py`, run
+  `python brain/make_pins.py` and commit the new `pins.json`.
 - **Adding a voice line:** add it to `voice_lines` in `scripts/generate_voices.py`, generate it,
   then run `scripts/check_voices.py`.
 
@@ -190,10 +219,9 @@ Models are downloaded separately and are not part of this repository.
 
 ## What's next
 
-Finishing the security, performance and tidy-up pass; polish for the phone brain (English,
-a faster start); a sticker moment and a progress page for the parent; and a few small new
-toys. Later, a memory that stays in your home, so Puki remembers yesterday. See
-[ROADMAP.md](ROADMAP.md).
+A sticker moment and a progress page for the parent; English and a faster start for the
+phone brain; games that feel better; a few more small toys. Later, a memory that stays in your
+home, so Puki remembers yesterday. See [ROADMAP.md](ROADMAP.md).
 
 ## Contributing
 

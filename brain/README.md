@@ -154,9 +154,10 @@ Everything goes in `~/puki-brain` by default. You can change any path in the con
    pythonw.exe "C:\path\to\puki\brain\doorbell.py"
    ```
 9. **In the app:** open parent settings (long-press the gear), turn on **התוכי פוקי**, and
-   enter the PC's address, for example `192.168.1.20:8790`, and the
-   [pairing code](#pairing-code). A DHCP reservation in your router keeps that address from
-   changing.
+   scan the QR code on the [dashboard](#dashboard): it carries the PC's address, the
+   [pairing code](#pairing-code) and the certificate's fingerprint. (Or type the address, for
+   example `192.168.1.20:8790`, and the code.) A DHCP reservation in your router keeps that
+   address from changing.
 
 ## Pairing code
 
@@ -166,9 +167,10 @@ the network (a guest's phone, a smart TV) can't make Puki talk or send it record
 - The code is made the first time the doorbell starts, printed in its console
   (`pairing code: K7M2-QX9P`), and kept in `brain/pairing_code.txt` (git-ignored). With
   `pythonw` there's no console, so open that file, or the [dashboard](#dashboard).
-- Type it once in the app's parent settings, under the PC address. Case and the dash don't
-  matter. Below the field, the app shows whether it's connected, the code is wrong, or the
-  PC can't be found.
+- Scan the dashboard's QR code in the app (welcome screen or parent settings), or type it once
+  under the PC address; case and the dash don't matter. Below the field, the app shows whether
+  it's connected, the code is wrong, the PC can't be found, or something answered that isn't
+  the paired PC (then scan the QR code again).
 - Wrong codes are answered after a 1-second delay, and an address that sends 10 wrong codes
   within 10 minutes is shut out for 15 minutes.
 - `python doorbell.py --new-code` makes a new code, for example if it leaked. Every tablet
