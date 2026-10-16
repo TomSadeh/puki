@@ -25,10 +25,10 @@ See `olam-katan-claude-code-prompt.md` for the full game design document.
 ## Project Structure
 
 ```
-app/src/main/java/com/olamkatan/
+app/src/main/java/io/github/tomsadeh/puki/
 ├── MainActivity.kt              # Single activity, sets up Compose + audio players
-├── OlamKatanApp.kt              # Top-level composable, NavHost, the companion's brain choice
-├── OlamKatanApplication.kt      # App-wide objects: repositories, Companion, the device brain
+├── PukiApp.kt              # Top-level composable, NavHost, the companion's brain choice
+├── PukiApplication.kt      # App-wide objects: repositories, Companion, the device brain
 ├── navigation/NavGraph.kt       # All routes
 ├── ui/
 │   ├── hub/                     # Hub world (islands on the sea)
@@ -142,7 +142,7 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 - `python scripts/check_voices.py`: every voice line the app plays has audio.
 - CI (`.github/workflows/ci.yml`) runs all of these on every push.
 - Before a release, run it on a real device: the debug build's `SelfTestReceiver`
-  (`adb shell am broadcast -n com.olamkatan/.SelfTestReceiver`, then `adb logcat -s PukiSelfTest`).
+  (`adb shell am broadcast -n io.github.tomsadeh.puki/.SelfTestReceiver`, then `adb logcat -s PukiSelfTest`).
 - Keep composables "dumb" — they render state and emit events, nothing else.
 
 ---

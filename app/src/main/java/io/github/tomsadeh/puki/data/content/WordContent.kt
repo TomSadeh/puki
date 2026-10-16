@@ -1,0 +1,32 @@
+package io.github.tomsadeh.puki.data.content
+
+import androidx.annotation.DrawableRes
+import io.github.tomsadeh.puki.R
+import io.github.tomsadeh.puki.data.models.BilingualText
+
+data class LetterDef(
+    val id: String,
+    val hebrewLetter: String,
+    val englishLetter: String,
+    val name: BilingualText,
+    val exampleWord: BilingualText,
+    @DrawableRes val exampleIcon: Int
+)
+
+val hebrewLetters = listOf(
+    LetterDef("alef", "א", "A", BilingualText("אָלֶף", "Alef"), BilingualText("אריה", "Lion"), R.drawable.ic_animal_lion),
+    LetterDef("bet", "ב", "B", BilingualText("בֵּית", "Bet"), BilingualText("בית", "House"), R.drawable.ic_word_house),
+    LetterDef("gimel", "ג", "G", BilingualText("גִּימֶל", "Gimel"), BilingualText("גמל", "Camel"), R.drawable.ic_word_camel),
+    LetterDef("dalet", "ד", "D", BilingualText("דָּלֶת", "Dalet"), BilingualText("דג", "Fish"), R.drawable.ic_food_fish),
+    LetterDef("he", "ה", "H", BilingualText("הֵא", "He"), BilingualText("הר", "Mountain"), R.drawable.ic_word_mountain),
+    LetterDef("vav", "ו", "V", BilingualText("וָו", "Vav"), BilingualText("ורד", "Rose"), R.drawable.ic_word_rose)
+)
+
+val englishLetters = listOf(
+    LetterDef("a", "א", "A", BilingualText("אֵי", "A"), BilingualText("תפוח", "Apple"), R.drawable.ic_word_apple),
+    LetterDef("b", "ב", "B", BilingualText("בִּי", "B"), BilingualText("כדור", "Ball"), R.drawable.ic_word_ball),
+    LetterDef("c", "ג", "C", BilingualText("סִי", "C"), BilingualText("חתול", "Cat"), R.drawable.ic_animal_cat),
+    LetterDef("d", "ד", "D", BilingualText("דִי", "D"), BilingualText("כלב", "Dog"), R.drawable.ic_animal_dog),
+    LetterDef("e", "ה", "E", BilingualText("אִי", "E"), BilingualText("פיל", "Elephant"), R.drawable.ic_animal_elephant),
+    LetterDef("f", "ו", "F", BilingualText("אֶף", "F"), BilingualText("דג", "Fish"), R.drawable.ic_food_fish)
+)

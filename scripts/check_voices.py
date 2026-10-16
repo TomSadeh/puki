@@ -41,7 +41,7 @@ TEMPLATE_SOURCES = {
 }
 
 # Files whose voice keys are optional by design (e.g. praise variants picked at random)
-OPTIONAL_KEY_FILES = {os.path.join("app", "src", "main", "java", "com", "olamkatan", "audio", "VoicePlayer.kt")}
+OPTIONAL_KEY_FILES = {os.path.join("app", "src", "main", "java", "io", "github", "tomsadeh", "puki", "audio", "VoicePlayer.kt")}
 
 KEY_RE = re.compile(r'"(voice_[a-z0-9_]*)(\$\{?[^"]*)?"')
 

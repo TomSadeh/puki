@@ -1,0 +1,24 @@
+package io.github.tomsadeh.puki.ui.common
+
+import io.github.tomsadeh.puki.audio.Companion
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import io.github.tomsadeh.puki.audio.MusicPlayer
+import io.github.tomsadeh.puki.audio.SfxPlayer
+import io.github.tomsadeh.puki.audio.VoicePlayer
+import io.github.tomsadeh.puki.data.models.AppSettings
+import io.github.tomsadeh.puki.data.models.BilingualText
+import io.github.tomsadeh.puki.data.models.Gender
+import io.github.tomsadeh.puki.data.models.Language
+
+val LocalLanguage = compositionLocalOf { Language.HEBREW }
+val LocalGender = compositionLocalOf { Gender.GIRL }
+val LocalAppSettings = compositionLocalOf { AppSettings() }
+val LocalSfxPlayer = compositionLocalOf<SfxPlayer> { error("No SfxPlayer provided") }
+val LocalMusicPlayer = compositionLocalOf<MusicPlayer> { error("No MusicPlayer provided") }
+val LocalCompanion = compositionLocalOf<Companion?> { null }
+val LocalVoicePlayer = compositionLocalOf<VoicePlayer> { error("No VoicePlayer provided") }
+
+/** Resolves to the current language, and to the child's gender for Hebrew lines that have one. */
+@Composable
+fun BilingualText.localized(): String = resolve(LocalLanguage.current, LocalGender.current)

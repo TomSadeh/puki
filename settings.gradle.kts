@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OlamKatan"
+rootProject.name = "Puki"
 include(":app")

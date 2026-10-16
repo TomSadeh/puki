@@ -8,8 +8,8 @@
 -keep class com.google.ai.edge.litertlm.** { *; }
 -dontwarn com.google.ai.edge.litertlm.**
 
-# whisper.cpp: the JNI functions are named after this class (Java_com_olamkatan_brain_WhisperNative_...)
--keep class com.olamkatan.brain.WhisperNative { *; }
+# whisper.cpp: the JNI functions are named after this class (Java_io_github_tomsadeh_puki_brain_WhisperNative_...)
+-keep class io.github.tomsadeh.puki.brain.WhisperNative { *; }
 -keepclasseswithmembernames class * { native <methods>; }
 
 # The QR scanner (pairing with the PC)

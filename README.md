@@ -151,7 +151,7 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 - **BlueTTS and nikud:** BlueTTS's Hebrew pronunciation model garbles text that already has
   nikud, so all text is fed to it plain. Words plain spelling can't disambiguate (letter
   names, animal sounds) are given as phonemes in `generate_voices.py`.
-- **The brain on the phone** (`app/src/main/java/com/olamkatan/brain/`): `LocalBrain` answers the
+- **The brain on the phone** (`app/src/main/java/io/github/tomsadeh/puki/brain/`): `LocalBrain` answers the
   same requests as the PC brain, with `Persona` (a port of brain.py's prompts and line filter),
   `voice/` (a Kotlin port of BlueTTS's pipeline, checked to match Python sample for sample),
   `Mind` (Gemma through LiteRT-LM) and `Ears` (whisper.cpp). The whisper.cpp library is prebuilt

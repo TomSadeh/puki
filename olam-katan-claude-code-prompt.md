@@ -1,3 +1,5 @@
+> The original design document, from when the app was called Olam Katan (it's Puki now). Kept as it was; CLAUDE.md describes the app as it is.
+
 # Olam Katan (עולם קטן) — "Little World"
 
 ## Claude Code Prompt

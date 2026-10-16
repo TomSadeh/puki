@@ -12,14 +12,14 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
-        android:name=".OlamKatanApplication"
+        android:name=".PukiApplication"
         android:usesCleartextTraffic="true"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.OlamKatan"
+        android:theme="@style/Theme.Puki"
         tools:targetApi="34">
 
         <!-- The phone brain runs Gemma on the GPU through OpenCL; Android 12+ hides the phone's
@@ -33,7 +33,7 @@
             android:exported="true"
             android:screenOrientation="landscape"
             android:configChanges="orientation|screenSize|locale"
-            android:theme="@style/Theme.OlamKatan">
+            android:theme="@style/Theme.Puki">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

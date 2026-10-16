@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the voice lines for Olam Katan with BlueTTS (offline, free).
+"""Generate the voice lines for Puki with BlueTTS (offline, free).
 
 Writes OGG Vorbis files to app/src/main/res/raw, named <key>_<lang>.ogg, or
 <key>_he_f.ogg / <key>_he_m.ogg for lines that address the child by gender

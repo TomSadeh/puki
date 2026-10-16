@@ -1,5 +1,5 @@
 // Puki's ears on the device: a small JNI wrapper around whisper.cpp (MIT) for the app's
-// WhisperNative (app/src/main/java/com/olamkatan/brain/Ears.kt). Built by native/whisper/build.py.
+// WhisperNative (app/src/main/java/io/github/tomsadeh/puki/brain/Ears.kt). Built by native/whisper/build.py.
 
 #include <jni.h>
 #include <string>
@@ -22,20 +22,20 @@ static std::string str(JNIEnv * env, jstring s) {
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_olamkatan_brain_WhisperNative_init(JNIEnv * env, jclass, jstring model) {
+Java_io_github_tomsadeh_puki_brain_WhisperNative_init(JNIEnv * env, jclass, jstring model) {
     whisper_context_params cparams = whisper_context_default_params();
     cparams.use_gpu = false;
     return (jlong) whisper_init_from_file_with_params(str(env, model).c_str(), cparams);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_olamkatan_brain_WhisperNative_free(JNIEnv *, jclass, jlong ctx) {
+Java_io_github_tomsadeh_puki_brain_WhisperNative_free(JNIEnv *, jclass, jlong ctx) {
     if (ctx) whisper_free((whisper_context *) ctx);
 }
 
 // 16 kHz mono samples in, text out. [prompt]: words to expect (names, game words).
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_olamkatan_brain_WhisperNative_transcribe(JNIEnv * env, jclass, jlong ctx, jfloatArray samples,
+Java_io_github_tomsadeh_puki_brain_WhisperNative_transcribe(JNIEnv * env, jclass, jlong ctx, jfloatArray samples,
                                                   jstring lang, jstring prompt, jint audio_ctx, jint threads) {
     std::string language = str(env, lang);
     std::string initial = str(env, prompt);
@@ -66,7 +66,7 @@ Java_com_olamkatan_brain_WhisperNative_transcribe(JNIEnv * env, jclass, jlong ct
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_olamkatan_brain_WhisperNative_quantizeQ8(JNIEnv * env, jclass, jstring in, jstring out) {
+Java_io_github_tomsadeh_puki_brain_WhisperNative_quantizeQ8(JNIEnv * env, jclass, jstring in, jstring out) {
     struct ggml_init_params params = { 0, NULL, false };  // initializes ggml's f16 tables
     ggml_free(ggml_init(params));
     return whisper_model_quantize(str(env, in), str(env, out), GGML_FTYPE_MOSTLY_Q8_0) ? JNI_TRUE : JNI_FALSE;

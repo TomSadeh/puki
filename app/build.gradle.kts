@@ -6,14 +6,14 @@ plugins {
 
 // The game's version. Bump it for each release; scripts/release.py reads it from here, and the
 // game updates itself to a newer one found in the GitHub releases.
-val pukiVersion = "0.3.2"
+val pukiVersion = "0.4.0"
 
 android {
-    namespace = "com.olamkatan"
+    namespace = "io.github.tomsadeh.puki"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.olamkatan"
+        applicationId = "io.github.tomsadeh.puki"
         minSdk = 26
         targetSdk = 34
         versionCode = pukiVersion.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
