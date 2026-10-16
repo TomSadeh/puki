@@ -6,7 +6,7 @@ plugins {
 
 // The game's version. Bump it for each release; scripts/release.py reads it from here, and the
 // game updates itself to a newer one found in the GitHub releases.
-val pukiVersion = "0.3.1"
+val pukiVersion = "0.3.2"
 
 android {
     namespace = "com.olamkatan"
