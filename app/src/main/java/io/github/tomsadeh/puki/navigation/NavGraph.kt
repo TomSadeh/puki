@@ -81,6 +81,12 @@ fun PukiNavGraph(navController: NavHostController) {
         }
     }
 
+    // Puki's brain hears which game she's in (safety word lists allow a game its own words)
+    val companion = io.github.tomsadeh.puki.ui.common.LocalCompanion.current
+    androidx.compose.runtime.LaunchedEffect(navController, companion) {
+        navController.currentBackStackEntryFlow.collect { companion?.game = it.destination.route ?: "" }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.HUB

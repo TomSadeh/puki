@@ -4,11 +4,16 @@ Two nets before the model writes anything, both measured in a stress test of tri
 toddler says (hurt, danger, big questions, secrets, attachment):
 - guard(): word lists in Hebrew and English. A match gets a fixed, kind reply that points to
   mommy or daddy, and the model never sees it. Fast and certain, but it only knows the words it
-  lists (12 of 35 new phrasings in the held-out test, no false alarms).
+  lists (14 of 35 new phrasings in the held-out test). Most stems are whole words or listed
+  forms, Hebrew prefixes are stripped (up to three), parents count only as phrases ("want
+  mommy"), and a game may use its own words (ALLOWED_IN_GAME): no false alarms in 936 ordinary
+  sentences built from the games' own vocabulary.
 - The gate in brain.py (classify_prompt() here): the model reads what the child said and picks
   one digit; P(ordinary) from the first token's probabilities is compared with
-  CFG["safety_threshold"] (higher catches more and alarms more). The two together caught 32-34
-  of the 35 new phrasings with 1-2 false alarms in 18 ordinary ones.
+  CFG["safety_threshold"] (higher catches more and alarms more). It fails closed: a first token
+  that isn't mostly a digit counts as "unclear". Measured on Gemma 4 E4B: with the word lists
+  it caught 32 of 35 new phrasings at 0.8, 0.9 and 0.95 alike, while false alarms on 400
+  ordinary game sentences were 2% at 0.8, 6.5% at 0.9 and 14% at 0.95; hence 0.8.
 After the model writes, reply_ok() drops lines that promise or bond in ways a playmate shouldn't.
 
 The phone brain has the same nets in app/.../brain/Safety.kt; keep the two in step. Its gate is one
@@ -23,13 +28,27 @@ def _words(text):
     return re.findall(r"[\w']+", text.lower())
 
 
-def _has(text, stems, lang):
+def _forms(word, lang):
+    """[word] and, in Hebrew, the word with up to three prefix letters taken off (they stack:
+    "מהתרופות", "וכשנפלתי"), as long as at least three letters are left."""
+    forms = [word]
+    if lang == "he":
+        k = 0
+        while k < 3 and len(word) - k > 3 and word[k] in PREFIXES:
+            k += 1
+            forms.append(word[k:])
+    return forms
+
+
+def _has(text, stems, lang, allowed=()):
     """True if a phrase appears, or a word starts with a stem (=stem: the whole word only).
-    Short or ambiguous stems are whole-word: "מת" (dead) must not match "מתוק" (sweet), nor
-    "war" "warm"."""
+    Most Hebrew stems are whole words or listed forms: as prefixes they collide ("נפל" in
+    "נפלא", "סוד" in "סודה", "מספרי" in "מספרים"). [allowed]: stems this game uses itself."""
     t = text.lower()
     words = _words(text)
     for s in stems:
+        if s.lstrip("=") in allowed:
+            continue
         if " " in s:
             if s in t:
                 return True
@@ -37,8 +56,7 @@ def _has(text, stems, lang):
         exact = s.startswith("=")
         s = s.lstrip("=")
         for w in words:
-            cands = [w] + ([w[1:]] if lang == "he" and len(w) > 2 and w[0] in PREFIXES else [])
-            if any(c == s if exact else c.startswith(s) for c in cands):
+            if any(f == s if exact else f.startswith(s) for f in _forms(w, lang)):
                 return True
     return False
 
@@ -50,30 +68,38 @@ RULES = [
      ["be quiet", "stop talking", "=shush", "=shh", "=hush"]),
     ("bedtime",
      ["לא רוצה לישון", "לא רוצה ללכת לישון", "לא הולכת לישון", "לא הולך לישון"],
-     ["don't want to sleep", "don't want to go to bed", "not going to bed", "no bed"]),
+     ["don't want to sleep", "don't want to go to bed", "not going to bed"]),
     ("danger",
-     ["סכין", "סכינ", "מספרי", "=אש", "גפרור", "מצית", "להדליק", "נדליק", "חלון", "מרפסת", "תרופ", "כביש",
-      "חשמל", "שקע", "החוצה לבד", "לבד בחוץ", "הולכת החוצה", "הולך החוצה", "לקפוץ מה"],
-     ["knife", "knives", "scissor", "=fire", "=matches", "lighter", "window", "balcony", "medicine", "=pill", "pills",
-      "outside alone", "go outside", "going outside", "=road", "street", "plug", "socket", "jump off"]),
+     ["=סכין", "=סכינים", "=מספריים", "עם אש", "בוא נדליק", "בואי נדליק", "להדליק אש", "מדליק אש", "מדליקה אש",
+      "=גפרור", "=גפרורים", "=מצית", "לקפוץ מה", "קופצת מה", "קופץ מה", "מטפס על החלון", "מטפסת על החלון",
+      "תרופ", "רצה לכביש", "רץ לכביש", "הולכת לכביש", "הולך לכביש", "=שקע", "=שקעים", "נוגע בחשמל",
+      "נוגעת בחשמל", "החוצה לבד", "לבד בחוץ", "יוצאת לבד", "יוצא לבד", "נוגעת בתנור", "נוגע בתנור"],
+     ["=knife", "=knives", "scissors", "=matches", "=lighter", "play with fire", "make a fire", "light a fire",
+      "jump out the window", "jump off", "climb the window", "medicine", "=pills", "outside alone",
+      "go outside by myself", "run to the road", "run to the street", "=socket", "=outlet", "touch the stove",
+      "touching the stove"]),
     ("hurt",
-     ["כואב", "כאב", "נפלתי", "נפלה", "נפל", "=דם", "נשרט", "=מכה", "בוכה", "בוכ", "מפחד", "=פחד", "עזרה", "הצילו"],
-     ["hurt", "ouch", "fell", "blood", "bleed", "scared", "afraid", "=cry", "crying", "=help", "boo boo"]),
+     ["כואב", "כואבת", "=כאב", "נפלתי", "=דם", "נשרטתי", "עשיתי מכה", "קיבלתי מכה", "=בוכה", "=בוכים", "=בכיתי",
+      "=מפחד", "=מפחדת", "=פוחד", "=פוחדת", "=עזרה", "=הצילו"],
+     ["hurt", "ouch", "i fell", "i fall", "blood", "bleed", "scared", "afraid", "=cry", "crying", "=help",
+      "boo boo", "owie"]),
     ("needs",
-     ["רעב", "צמא", "עייפ", "פיפי", "קקי", "שירותים", "=סיר"],
-     ["hungry", "thirsty", "tired", "sleepy", "pee", "poo", "potty", "=toilet"]),
+     ["=רעב", "=רעבה", "=צמא", "=צמאה", "עייפ", "פיפי", "קקי", "שירותים"],
+     ["hungry", "thirsty", "tired", "sleepy", "=pee", "=poo", "potty", "=toilet"]),
     ("feelings",
-     ["כועס", "כועסת", "הרביץ", "הרביצה", "עצוב", "עצובה", "בודד", "בודדה"],
+     ["=כועס", "=כועסת", "הרביץ", "הרביצה", "=עצוב", "=עצובה", "=בודד", "=בודדה"],
      ["angry", "hit me", "=sad", "lonely", "mad at me"]),
     ("big_question",
-     ["=מת", "=מתה", "מוות", "למות", "מלחמה", "אלוהים", "גן עדן", "איפה סבא", "איפה סבתא"],
-     ["dead", "=die", "died", "death", "=war", "=god", "heaven", "where is grandpa", "where is grandma"]),
+     ["=מת", "=מתה", "=מתו", "=מוות", "=למות", "מלחמה", "אלוהים", "גן עדן", "איפה סבא", "איפה סבתא"],
+     ["dead", "=die", "died", "death", "=war", "=god", "heaven", "where is grandpa", "where's grandpa",
+      "where is grandma", "where's grandma"]),
     ("secrets",
-     ["סוד", "להסתיר", "נסתיר", "תסתיר", "אל תגיד", "כתובת", "איפה אתה גר", "טלפון"],
-     ["secret", "hide from", "hide it", "don't tell", "address", "where do you live", "phone"]),
+     ["=סוד", "=סודות", "=סודי", "להסתיר", "נסתיר", "תסתיר", "אל תגיד", "אל תספר", "כתובת", "איפה אתה גר",
+      "מספר טלפון", "מספר הטלפון"],
+     ["secret", "hide from", "hide it from", "don't tell", "address", "where do you live", "phone number"]),
     ("buying",
-     ["לקנות", "תקנה", "קנה לי", "חנות", "כסף"],
-     ["=buy", "=store", "=shop", "money", "=pay"]),
+     ["לקנות", "=תקנה", "=תקני", "קנה לי", "=כסף"],
+     ["=buy", "buy me", "=pay", "money"]),
     ("bad_words",
      ["מילה גסה", "מילים גסות", "קללה"],
      ["bad word", "swear", "curse"]),
@@ -83,11 +109,20 @@ RULES = [
     ("love",
      ["אוהב אותי", "אוהבת אותי", "החבר הכי טוב", "החברה הכי טובה", "הכי טוב שלי"],
      ["love me", "best friend"]),
-    # Last: a parent named in a secret or a big question gets that rule's answer instead
+    # Last, and only as phrases: mommy and daddy come up in ordinary play all the time
     ("parent",
-     ["אמא", "אבא", "איננו", "נעלם", "=הלך"],
-     ["mommy", "mummy", "=mama", "=mom", "daddy", "=dada", "=dad", "=gone"]),
+     ["רוצה את אמא", "רוצה אמא", "רוצה לאמא", "איפה אמא", "אמא איפה", "רוצה את אבא", "רוצה אבא", "רוצה לאבא",
+      "איפה אבא", "אבא איפה", "אמא איננה", "אבא איננו", "קוראת לאמא", "קורא לאמא", "מתגעגעת לאמא",
+      "מתגעגע לאמא", "מתגעגעת לאבא", "מתגעגע לאבא"],
+     ["want mommy", "want my mommy", "where is mommy", "where's mommy", "want daddy", "want my daddy",
+      "where is daddy", "where's daddy", "want mama", "where's mama", "mommy is gone", "daddy is gone",
+      "miss mommy", "miss daddy"]),
 ]
+
+# What a game says itself, so it isn't a warning there (by the app's screen route, ?game=)
+ALLOWED_IN_GAME = {
+    "myday/kitchen": {"סכין", "סכינים", "knife", "knives"},
+}
 
 
 def replies(lang, girl):
@@ -107,6 +142,7 @@ def replies(lang, girl):
             "bad_words": "Puki only says nice words! Let's play.",
             "unkind": "Oops! Kind words, please. Let's play.",
             "love": "I love playing with you! And mommy and daddy love you the most.",
+            "unclear": "Hmm, Puki didn't quite hear. Let's play!",
         }
     come = "בואי" if girl else "בוא"
     return {
@@ -123,13 +159,16 @@ def replies(lang, girl):
         "bad_words": f"אצל פוקי רק מילים יפות! {come} נשחק.",
         "unkind": f"אופס! מילים נעימות, בבקשה. {come} נשחק.",
         "love": "אני אוהב לשחק איתך! ואמא ואבא אוהבים אותך הכי הכי.",
+        "unclear": f"הממ, פוקי לא שמע טוב. {come} נשחק!",
     }
 
 
-def guard(heard, lang, girl):
-    """(category, reply) when the word lists recognize what the child said, else None."""
+def guard(heard, lang, girl, game=""):
+    """(category, reply) when the word lists recognize what the child said, else None. [game]:
+    the screen she's on (the app's route), for words that game uses itself."""
+    allowed = ALLOWED_IN_GAME.get(game, ())
     for cat, he, en in RULES:
-        if _has(heard, he if lang == "he" else en, lang):
+        if _has(heard, he if lang == "he" else en, lang, allowed):
             return cat, replies(lang, girl)[cat]
     return None
 
@@ -145,12 +184,17 @@ def classify_prompt(heard):
             "a secret, or wants to buy something. Wanting more play, a game or a toy is 0. Answer with one digit.")
 
 
+MIN_DIGIT_MASS = 0.5
+
+
 def gate_category(digit_probs, threshold):
-    """From P(digit) for "0".."3" (any scale): the category to answer with, or None when
-    P(ordinary) is at least [threshold]."""
+    """From P(digit) for "0".."3" (real probabilities): the category to answer with, or None when
+    P(ordinary) is at least [threshold]. It fails closed: when the first token wasn't mostly a
+    digit (a space, a word, a template artifact), the split between digits means little, so
+    it's "unclear" (a neutral line, not the model)."""
     total = sum(digit_probs.get(d, 0.0) for d in "0123")
-    if total <= 0:
-        return None
+    if total < MIN_DIGIT_MASS:
+        return "unclear"
     if digit_probs.get("0", 0.0) / total >= threshold:
         return None
     worst = max("123", key=lambda d: digit_probs.get(d, 0.0))
@@ -159,7 +203,8 @@ def gate_category(digit_probs, threshold):
 
 # What the model must not say, whatever it was asked: promises, and bonding a playmate shouldn't do
 BANNED_PHRASES = ["אוהב אותך", "אוהבת אותך", "החבר הכי טוב", "החברה הכי טובה", "תמיד איתך", "תמיד כאן",
-                  "בדרך", "תגיע בקרוב", "יגיע בקרוב",
+                  "אמא בדרך", "אבא בדרך", "היא בדרך", "הוא בדרך", "הם בדרך", "בדרך אלייך", "בדרך אליך",
+                  "תגיע בקרוב", "יגיע בקרוב",
                   "love you", "best friend", "always with you", "always here", "on her way", "on his way",
                   "coming soon", "be here soon"]
 

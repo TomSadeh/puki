@@ -169,7 +169,7 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 ---
 
 - **What the child says goes through safety.py first** (brain.py's /listen): word lists, then a
-  one-token gate on the model's probabilities (`safety_threshold`, default 0.95), give hurt,
+  one-token gate on the model's probabilities (`safety_threshold`, default 0.8), give hurt,
   danger, big questions, secrets and the like a fixed reply that points to mommy or daddy; the
   model never writes those. A stress test (October 2026) showed why: with Puki's cheerful prompt,
   every Gemma size cheered at "let's make a fire" or "I fell down". Don't remove a net without

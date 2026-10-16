@@ -102,14 +102,15 @@ def gate(heard):
         d = t["token"].strip()
         if d in ("0", "1", "2", "3"):
             probs[d] = probs.get(d, 0.0) + math.exp(t["logprob"])
-    return safety.gate_category(probs, CFG.get("safety_threshold", 0.95))
+    return safety.gate_category(probs, CFG.get("safety_threshold", 0.8))
 
 
-def guarded_reply(heard, lang):
-    """(category, fixed reply) when what the child said needs a careful answer, else None."""
+def guarded_reply(heard, lang, game=""):
+    """(category, fixed reply) when what the child said needs a careful answer, else None.
+    [game]: the app's screen, for words that game uses itself (a knife in the kitchen)."""
     if not heard:
         return None
-    caught = safety.guard(heard, lang, persona.GIRL)
+    caught = safety.guard(heard, lang, persona.GIRL, game)
     if caught:
         return caught
     try:
@@ -458,7 +459,7 @@ class Handler(BaseHTTPRequestHandler):
                 log(f"whisper failed: {e}")
                 return self._fail(400)
             # Hurt, danger, big questions and the like get a fixed, kind reply (safety.py)
-            caught = guarded_reply(heard, lang)
+            caught = guarded_reply(heard, lang, query.get("game", [""])[0][:40])
             if caught:
                 log(f"heard {heard!r} -> [{caught[0]}] {caught[1]}")
                 return self._reply(caught[1], lang, heard)

@@ -45,9 +45,33 @@ def test_catches(heard, lang, cat):
     ("I love the pillow", "en"),     # not "pill"
     ("let us match colors", "en"),   # not "matches"
     ("the doggy says woof", "en"),
+    # From a review: words in Puki's own games, and Hebrew prefixes of other words
+    ("בוא נספור מספרים", "he"),      # not "מספריים" (scissors)
+    ("פוקי נפלא", "he"),             # not "נפל"
+    ("אני רוצה סודה", "he"),          # not "סוד"
+    ("שמים את העוגה בסיר", "he"),     # a pot in the kitchen
+    ("החתול נעלם", "he"),            # peekaboo
+    ("אמא שלי אוהבת תפוזים", "he"),  # mommy mentioned, not called for
+    ("הכלב הלך", "he"),
+    ("the tower fell", "en"),
+    ("fire truck", "en"),
+    ("play store", "en"),
+    ("out the window, a bird", "en"),
+    ("all gone!", "en"),
 ])
 def test_ordinary_play_passes(heard, lang):
     assert safety.guard(heard, lang, girl=True) is None
+
+
+@pytest.mark.parametrize("heard", ["מהתרופות", "והסכין", "בהשקע", "וכשנפלתי"])
+def test_stacked_hebrew_prefixes(heard):
+    assert safety.guard(heard, "he", girl=True) is not None
+
+
+def test_a_game_may_use_its_own_words():
+    knife = "בוא נחתוך את העוגה עם סכין"
+    assert safety.guard(knife, "he", girl=True, game="myday/kitchen") is None
+    assert safety.guard(knife, "he", girl=True)[0] == "danger"
 
 
 def test_replies_follow_the_childs_gender():
@@ -67,6 +91,7 @@ def test_every_category_has_a_reply_in_both_languages():
 def test_banned_phrases():
     assert not safety.reply_ok("Hooray! I love you so much!")
     assert not safety.reply_ok("אמא בדרך!")
+    assert safety.reply_ok("בדרך כלל הפרה אוכלת עשב")  # "usually", not "on her way"
     assert not safety.reply_ok("אני החבר הכי טוב שלך")
     assert safety.reply_ok("יש! ירוק כמו העשב!")
 
@@ -76,4 +101,6 @@ def test_gate_threshold():
     assert safety.gate_category(ordinary, 0.95) is None
     assert safety.gate_category(ordinary, 0.99) == "hurt"   # a stricter threshold catches more
     assert safety.gate_category({"0": 0.2, "2": 0.7, "1": 0.1}, 0.9) == "danger"
-    assert safety.gate_category({}, 0.9) is None              # no digits: leave it to the model
+    # Fails closed: when the first token wasn't mostly a digit, it's "unclear", not ordinary
+    assert safety.gate_category({}, 0.9) == "unclear"
+    assert safety.gate_category({"0": 0.3, "1": 0.05}, 0.9) == "unclear"

@@ -75,6 +75,10 @@ class Companion(
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
     private var scene = ""
 
+    /** The screen the child is on (its route), sent with what she says: the brain's safety
+     *  word lists let a game use its own words (a knife in the kitchen). */
+    var game = ""
+
     fun setScene(he: String, en: String) {
         scene = pick(he, en)
     }
@@ -286,7 +290,8 @@ class Companion(
 
     private suspend fun postListen(wav: ByteArray, context: String): ByteArray? = withContext(Dispatchers.IO) {
         val ctx = if (context.isEmpty()) "" else "&context=" + URLEncoder.encode(context, "UTF-8")
-        request("POST", "/listen?lang=${lang()}$ctx", body = wav, contentType = "audio/wav", timeoutMs = 15000)
+        val where = if (game.isEmpty()) "" else "&game=" + URLEncoder.encode(game, "UTF-8")
+        request("POST", "/listen?lang=${lang()}$ctx$where", body = wav, contentType = "audio/wav", timeoutMs = 15000)
     }
 
     private suspend fun say(situation: String): Boolean {
