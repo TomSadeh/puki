@@ -1,42 +1,59 @@
 package com.olamkatan.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
-import kotlinx.coroutines.android.awaitFrame
+import androidx.compose.ui.graphics.drawscope.scale
+import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.random.Random
 
-private data class Particle(
-    var x: Float,
-    var y: Float,
-    var vx: Float,
-    var vy: Float,
-    var rotation: Float,
-    var rotationSpeed: Float,
-    var alpha: Float,
-    var size: Float,
-    var color: Color
+private enum class Bit { PAPER, DOT, STAR, RIBBON }
+
+/** One piece of confetti. Positions are in screen heights so the burst looks the same on any screen. */
+private class Piece(
+    val x0: Float,          // start, as a fraction of the width
+    val y0: Float,          // start, as a fraction of the height
+    val vx: Float,          // heights per second
+    val vy: Float,
+    val delay: Float,       // seconds before it fires
+    val spin: Float,        // degrees per second
+    val flip: Float,        // radians per second (paper turning over)
+    val phase: Float,
+    val size: Float,        // dp
+    val kind: Bit,
+    val color: Color
 )
 
 private val confettiColors = listOf(
     Color(0xFFFF6B6B), Color(0xFF4ECDC4), Color(0xFFFFE66D),
     Color(0xFF95E1D3), Color(0xFFF38181), Color(0xFFAA96DA),
-    Color(0xFFFCBF49), Color(0xFF2EC4B6)
+    Color(0xFFFCBF49), Color(0xFF2EC4B6), Color(0xFFFF8FAB)
 )
 
+private const val DURATION = 3.4f
+private const val GRAVITY = 1.5f    // heights / s²
+private const val DRAG = 0.7f       // seconds; air slows the pieces and they flutter down
+
+/**
+ * A party: two confetti cannons fire from the bottom corners, then paper, stars and ribbons
+ * flutter down over the whole screen.
+ */
 @Composable
 fun ConfettiOverlay(
     show: Boolean,
@@ -45,68 +62,88 @@ fun ConfettiOverlay(
 ) {
     if (!show) return
 
-    var particles by remember { mutableStateOf(emptyList<Particle>()) }
-    var frameTime by remember { mutableLongStateOf(0L) }
+    val pieces = remember { makePieces() }
+    val time = remember { Animatable(0f) }
 
     LaunchedEffect(show) {
-        // Initialize particles
-        particles = List(60) {
-            val angle = Random.nextFloat() * Math.PI.toFloat() * 2
-            val speed = Random.nextFloat() * 800f + 200f
-            Particle(
-                x = 0.5f,
-                y = 0.3f,
-                vx = cos(angle) * speed,
-                vy = sin(angle) * speed - 400f,
-                rotation = Random.nextFloat() * 360f,
-                rotationSpeed = Random.nextFloat() * 360f - 180f,
-                alpha = 1f,
-                size = Random.nextFloat() * 12f + 6f,
-                color = confettiColors.random()
-            )
-        }
-
-        val startTime = System.nanoTime()
-        var lastFrame = startTime
-
-        while (true) {
-            awaitFrame()
-            val now = System.nanoTime()
-            val dt = (now - lastFrame) / 1_000_000_000f
-            lastFrame = now
-            val elapsed = (now - startTime) / 1_000_000_000f
-
-            if (elapsed > 2.5f) {
-                onFinished()
-                break
-            }
-
-            particles = particles.map { p ->
-                p.copy(
-                    x = p.x + p.vx * dt / 1000f,
-                    y = p.y + p.vy * dt / 1000f,
-                    vy = p.vy + 600f * dt,
-                    rotation = p.rotation + p.rotationSpeed * dt,
-                    alpha = (1f - (elapsed / 2.5f)).coerceIn(0f, 1f)
-                )
-            }
-            frameTime = now
-        }
+        time.snapTo(0f)
+        time.animateTo(DURATION, tween((DURATION * 1000).toInt(), easing = LinearEasing))
+        onFinished()
     }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        particles.forEach { p ->
-            if (p.alpha > 0.01f) {
-                rotate(p.rotation, pivot = Offset(p.x * w, p.y * h)) {
-                    drawRect(
-                        color = p.color.copy(alpha = p.alpha),
-                        topLeft = Offset(p.x * w - p.size / 2, p.y * h - p.size / 2),
-                        size = Size(p.size, p.size * 0.6f)
-                    )
-                }
+        val now = time.value
+        val fade = if (now < DURATION - 0.8f) 1f else ((DURATION - now) / 0.8f).coerceIn(0f, 1f)
+        pieces.forEach { drawPiece(it, now - it.delay, fade) }
+    }
+}
+
+private fun makePieces(): List<Piece> {
+    val r = Random(System.nanoTime())
+    val list = ArrayList<Piece>()
+    fun piece(x0: Float, y0: Float, angleDeg: Float, speed: Float, delay: Float) {
+        val a = angleDeg * PI.toFloat() / 180f
+        val kind = when (r.nextInt(10)) {
+            in 0..4 -> Bit.PAPER
+            5, 6 -> Bit.DOT
+            7, 8 -> Bit.STAR
+            else -> Bit.RIBBON
+        }
+        list += Piece(
+            x0, y0, cos(a) * speed, sin(a) * speed, delay,
+            spin = r.nextFloat() * 500f - 250f,
+            flip = 4f + r.nextFloat() * 8f,
+            phase = r.nextFloat() * 6.28f,
+            size = if (kind == Bit.STAR) 9f + r.nextFloat() * 7f else 6f + r.nextFloat() * 6f,
+            kind = kind,
+            color = confettiColors[r.nextInt(confettiColors.size)]
+        )
+    }
+    // Two cannons, aimed up and inwards
+    repeat(55) { piece(-0.02f, 1.02f, -62f + r.nextFloat() * 26f - 13f, 1.7f + r.nextFloat() * 1.1f, r.nextFloat() * 0.25f) }
+    repeat(55) { piece(1.02f, 1.02f, -118f + r.nextFloat() * 26f - 13f, 1.7f + r.nextFloat() * 1.1f, r.nextFloat() * 0.25f) }
+    // And a gentle shower from above
+    repeat(40) { piece(r.nextFloat(), -0.05f, 90f, 0.1f + r.nextFloat() * 0.2f, 0.3f + r.nextFloat() * 0.9f) }
+    return list
+}
+
+private fun DrawScope.drawPiece(p: Piece, t: Float, fade: Float) {
+    if (t <= 0f) return
+    val h = size.height
+    // Motion with air drag: v(t) = gτ + (v0 - gτ)·e^(-t/τ)
+    val decay = 1f - exp(-t / DRAG)
+    val terminal = GRAVITY * DRAG
+    val flutter = sin(t * 3f + p.phase) * 0.025f * kotlin.math.min(t, 1f)
+    val x = p.x0 * size.width + (p.vx * DRAG * decay + flutter) * h
+    val y = p.y0 * h + (terminal * t + (p.vy - terminal) * DRAG * decay) * h
+    if (y > h + 40f || x < -40f || x > size.width + 40f) return
+    val c = Offset(x, y)
+    val s = p.size * density
+    val color = p.color.copy(alpha = fade)
+    val turn = cos(t * p.flip + p.phase)
+    rotate(p.phase * 57f + p.spin * t, pivot = c) {
+        when (p.kind) {
+            Bit.PAPER -> scale(scaleX = turn, scaleY = 1f, pivot = c) {
+                drawRect(color, Offset(x - s / 2, y - s * 0.35f), Size(s, s * 0.7f))
+            }
+            Bit.DOT -> drawCircle(color, s * 0.45f, c)
+            Bit.STAR -> scale(scaleX = 0.6f + 0.4f * kotlin.math.abs(turn), scaleY = 1f, pivot = c) {
+                drawPath(confettiStar(c, s * 0.6f), color)
+            }
+            Bit.RIBBON -> scale(scaleX = 1f, scaleY = turn, pivot = c) {
+                drawRoundRect(color, Offset(x - s * 0.18f, y - s * 1.2f), Size(s * 0.36f, s * 2.4f), CornerRadius(s * 0.18f))
             }
         }
     }
+}
+
+private fun confettiStar(c: Offset, r: Float): Path = Path().apply {
+    for (k in 0 until 10) {
+        val rad = if (k % 2 == 0) r else r * 0.45f
+        val a = (k * 36f - 90f) * PI.toFloat() / 180f
+        val px = c.x + cos(a) * rad
+        val py = c.y + sin(a) * rad
+        if (k == 0) moveTo(px, py) else lineTo(px, py)
+    }
+    close()
 }
