@@ -17,6 +17,8 @@ Endpoints (port from config, default 8790):
   POST /story    -> JSON {"played", "icons": {name: label}, "lang"} -> JSON {"sentences": [{"text", "icon"}]}
   POST /listen?lang=he[&context=...] -> body: WAV recording of the child; Whisper transcribes it and the
                    parrot answers. Same response, plus X-Heard (what Whisper heard).
+  POST /repeat?lang=he&target=כלב[&alt=הב] -> body: WAV of the child saying a word (Say it with Puki)
+                   -> JSON {"heard", "match": "word" | "close" | "tried"}
 
 Every request must carry the pairing code in an X-Puki-Code header. The code is
 made on first start, kept in pairing_code.txt next to this file, and printed at
@@ -299,7 +301,7 @@ class Handler(BaseHTTPRequestHandler):
             BRAIN.wake()
             BRAIN.touch()
             self._json(200, {"brain": BRAIN.state})
-        elif path in ("/say", "/listen", "/speak", "/look", "/story"):
+        elif path in ("/say", "/listen", "/speak", "/look", "/story", "/repeat"):
             BRAIN.wake()
             BRAIN.touch()
             deadline = time.time() + CFG["startup_timeout_s"]
@@ -361,6 +363,8 @@ def describe_request(path, full_path, body):
         return {"text": "bedtime story: " + str(req.get("played", "")), "lang": req.get("lang", "he")}
     if path == "/look":
         return {"text": f"looked at a drawing ({len(body) // 1024} KB)", "lang": query.get("lang", ["he"])[0]}
+    if path == "/repeat":
+        return {"text": "say it: " + query.get("target", [""])[0], "lang": query.get("lang", ["he"])[0]}
     if path == "/listen":
         context = query.get("context", [""])[0]
         return {"text": "listened" + (f" ({context})" if context else ""), "lang": query.get("lang", ["he"])[0]}
@@ -373,6 +377,13 @@ def describe_reply(path, headers, data):
     if path == "/story":
         try:
             return " ".join(s.get("text", "") for s in json.loads(data).get("sentences", []))
+        except ValueError:
+            pass
+    if path == "/repeat":
+        try:
+            r = json.loads(data)
+            said = {"word": "said the word", "close": "close enough", "tried": "tried"}.get(r.get("match"), "?")
+            return f"{said} (heard: {r.get('heard') or 'nothing clear'})"
         except ValueError:
             pass
     return ""

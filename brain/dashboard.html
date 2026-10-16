@@ -54,7 +54,7 @@
   .time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
   .kind { justify-self: start; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 6px; background: var(--chip); color: var(--muted); height: fit-content; }
   .kind.denied, .kind.lockout { color: var(--bad); }
-  .kind.say, .kind.listen, .kind.look, .kind.story, .kind.speak { color: var(--accent); }
+  .kind.say, .kind.listen, .kind.look, .kind.story, .kind.speak, .kind.repeat { color: var(--accent); }
   .entry > div { overflow-wrap: anywhere; }
   .asked { color: var(--muted); }
   .heard::before { content: "heard: "; color: var(--muted); }
@@ -117,7 +117,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = { say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke",
+const LABELS = { say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke", repeat: "say it",
                  brain: "brain", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
 const QUIET = new Set(["brain", "pairing", "settings"]);
 let lastId = 0, events = [], code = null, idleEdited = false;

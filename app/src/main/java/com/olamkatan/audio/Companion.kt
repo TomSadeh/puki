@@ -26,6 +26,9 @@ import kotlin.math.sqrt
 
 enum class CompanionStatus { OFF, WAKING, READY }
 
+/** How a try at saying a word went (Say it with Puki). Every try but SILENT is a win. */
+enum class WordTry { SILENT, TRIED, CLOSE, WORD }
+
 /** Result of checking the PC from parent settings. */
 enum class Connection { OK, WRONG_CODE, LOCKED_OUT, NOT_FOUND }
 
@@ -216,6 +219,36 @@ class Companion(
         return true
     }
 
+    /**
+     * Say it with Puki: listens for a few seconds while the child says [word]. Whether they
+     * spoke is decided here on the tablet, so tries count even with the PC off; when the PC is
+     * there, it also says whether the word was heard ([alsoCounts]: related words, like the
+     * animal's sound). Returns null if there's no microphone permission.
+     */
+    suspend fun listenForWord(word: String, alsoCounts: List<String>): WordTry? {
+        if (!hasMic()) return null
+        _listening.value = true
+        val wav = try {
+            if (!recorder.start()) return null
+            delay(WORD_LISTEN_MILLIS)
+            recorder.stop()
+        } finally {
+            _listening.value = false
+        }
+        if (!hasSpeech(wav)) return WordTry.SILENT
+        if (!isReady) return WordTry.TRIED
+        val path = "/repeat?lang=${lang()}&target=" + URLEncoder.encode(word, "UTF-8") +
+            alsoCounts.joinToString("") { "&alt=" + URLEncoder.encode(it, "UTF-8") }
+        val body = withContext(Dispatchers.IO) {
+            request("POST", path, body = wav, contentType = "audio/wav", timeoutMs = 8000)
+        } ?: return WordTry.TRIED
+        return when (runCatching { JSONObject(String(body)).getString("match") }.getOrNull()) {
+            "word" -> WordTry.WORD
+            "close" -> WordTry.CLOSE
+            else -> WordTry.TRIED
+        }
+    }
+
     private fun hasMic() =
         ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
@@ -393,6 +426,7 @@ class Companion(
 
     private companion object {
         const val LISTEN_MILLIS = 3500L
+        const val WORD_LISTEN_MILLIS = 4000L  // toddlers take a moment to start
         const val NAME_LINES_VERSION = 1
     }
 }

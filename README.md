@@ -16,6 +16,10 @@ your home.
 - **My Day:** a cutaway house with bath time, brushing teeth, getting dressed, setting the
   table, tidying up and bedtime.
 - **Drawing**, with Puki looking at the picture, and a **sticker album** that fills up with stars.
+- **Say it with Puki:** a picture appears, Puki says the word, and the child says it back.
+  Every try earns a star, and Puki then says the word again the right way. Works with the
+  PC off too (the tablet hears that the child spoke); with the PC, saying the word itself
+  gets confetti.
 
 Toddler-first design: no reading needed, big tap targets, no failure states (wrong answers
 get a gentle shake and "let's try again"), and every line spoken in a warm voice. Hebrew

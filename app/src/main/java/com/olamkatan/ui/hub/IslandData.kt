@@ -92,6 +92,17 @@ val allIslands = listOf(
         fractionalY = 0.80f
     ),
     IslandDef(
+        id = "say",
+        name = BilingualText("מדברים עם פוקי", "Say it with Puki"),
+        route = Routes.SAY,
+        color = GrassGreen,
+        emoji = "\uD83E\uDD9C",
+        drawableRes = R.drawable.ic_companion_parrot_talk,
+        starsToUnlock = 0,
+        fractionalX = 0.15f,
+        fractionalY = 0.80f
+    ),
+    IslandDef(
         id = "myday",
         name = BilingualText("היום שלי", "My Day"),
         route = Routes.MY_DAY,

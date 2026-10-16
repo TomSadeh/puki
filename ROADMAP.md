@@ -40,8 +40,9 @@ favorite animals, and something they did today ("היום האכלת את הפי
 
 ## 3. Talking games 🗣️
 
-**Status: questions and answers with hands-free listening are done in Animal Garden (every
-other round). The rest is open.**
+**Status: Say it with Puki is done (22 everyday words, Hebrew and English), and questions and
+answers with hands-free listening are done in Animal Garden. English words and two-word
+phrases are open.**
 
 - **Say it with Puki:** a picture appears, Puki says the word, and the child repeats it.
   Reward attempts, not accuracy. Matching is lenient (first sound, syllable count, known

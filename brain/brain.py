@@ -11,6 +11,7 @@ llama-server with Gemma (the doorbell starts both).
 """
 
 import base64
+import difflib
 import io
 import json
 import os
@@ -415,18 +416,20 @@ def hotwords():
     ]))
 
 
-def transcribe(wav_bytes, lang):
+def transcribe(wav_bytes, lang, hints=None, whisper=False):
+    """[hints]: words to expect instead of the usual ones (Whisper only). [whisper]: use Whisper
+    even for English (Parakeet is weak on a single word said alone)."""
     # Decode the WAV ourselves (Whisper wants 16 kHz mono float samples)
     audio, sr = sf.read(io.BytesIO(wav_bytes), dtype="float32", always_2d=True)
     audio = audio.mean(axis=1)
     if sr != 16000:
         import librosa
         audio = librosa.resample(audio, orig_sr=sr, target_sr=16000)
-    if lang == "en" and has_parakeet():
+    if lang == "en" and has_parakeet() and not whisper:
         heard = parakeet_transcribe(audio)
     else:
         segments, _ = WHISPER.transcribe(
-            audio, language=lang, beam_size=1, vad_filter=True, hotwords=hotwords() if lang == "he" else None,
+            audio, language=lang, beam_size=1, vad_filter=True, hotwords=(hints or hotwords()) if lang == "he" else hints,
             condition_on_previous_text=False,
         )
         heard = " ".join(seg.text.strip() for seg in segments).strip()
@@ -445,6 +448,37 @@ def parakeet_transcribe(audio):
         return ""
     pad = 16000 // 5
     return PARAKEET.transcribe(audio[max(0, speech[0]["start"] - pad):speech[-1]["end"] + pad], 16000).strip()
+
+
+# ---------- Say it with Puki: did the child say the word? ----------
+
+_FINALS = str.maketrans("ךםןףץ", "כמנפצ")
+
+
+def _words(text):
+    text = _plain(text).lower().translate(_FINALS)
+    return re.sub(r"[^\w\s]", " ", text).split()
+
+
+def word_match(heard, target, alts=()):
+    """'word' if the child said the word, 'close' for a near miss ("פה" for "פרה") or a related
+    word (the animal's sound), 'tried' for anything else. Generous on purpose: at two, any try
+    is a win, and Puki says the word back either way."""
+    words = _words(heard)
+    goal = "".join(_words(target))
+    if not words or not goal:
+        return "tried"
+    joined = "".join(words)
+    if goal in words or goal in joined:  # also "הכלב", "the dog"
+        return "word"
+    if any(a and a in joined for a in ("".join(_words(alt)) for alt in alts)):
+        return "close"
+    for w in words:
+        if difflib.SequenceMatcher(None, w, goal).ratio() >= 0.5:
+            return "close"
+        if w[0] == goal[0] and len(w) <= len(goal) + 1:  # the first sound is there
+            return "close"
+    return "tried"
 
 
 def listen_situation(heard, lang):
@@ -557,6 +591,29 @@ class Handler(BaseHTTPRequestHandler):
             text = self._line(situation, lang)
             log(f"heard {heard!r} -> {text}")
             self._reply(text, lang, heard)
+        elif url.path == "/repeat":
+            # Say it with Puki. Body: a WAV of the child trying to say ?target= (with ?alt= for
+            # related words like the animal's sound). Just speech recognition, no Gemma.
+            target = query.get("target", [""])[0][:40]
+            alts = [a[:40] for a in query.get("alt", []) if a][:4]
+            try:
+                heard = transcribe(body, lang, hints=" ".join([target] + alts))
+            except Exception as e:
+                log(f"whisper failed: {e}")
+                return self._fail(400)
+            match = word_match(heard, target, alts)
+            if lang == "en" and match != "word" and has_parakeet():
+                # Parakeet often misses one short word on its own; ask Whisper too, keep the better
+                try:
+                    heard2 = transcribe(body, lang, hints=" ".join([target] + alts), whisper=True)
+                except Exception as e:
+                    log(f"whisper failed: {e}")
+                    heard2 = ""
+                match2 = word_match(heard2, target, alts)
+                if heard2 and ["tried", "close", "word"].index(match2) > ["tried", "close", "word"].index(match):
+                    heard, match = heard2, match2
+            log(f"say {target!r}: heard {heard!r} -> {match}")
+            self._json({"heard": heard, "match": match})
         elif url.path == "/look":
             # Body: PNG of the child's drawing
             try:

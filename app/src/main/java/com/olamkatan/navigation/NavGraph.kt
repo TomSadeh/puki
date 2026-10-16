@@ -11,6 +11,7 @@ import com.olamkatan.ui.shapes.ShapePlaygroundScreen
 import com.olamkatan.ui.counting.CountingGardenScreen
 import com.olamkatan.ui.music.MusicMeadowScreen
 import com.olamkatan.ui.words.WordGardenScreen
+import com.olamkatan.ui.say.SayItScreen
 import com.olamkatan.ui.myday.MyDayScreen
 import com.olamkatan.ui.myday.bath.BathTimeScreen
 import com.olamkatan.ui.myday.brush.BrushyBrushyScreen
@@ -30,6 +31,7 @@ object Routes {
     const val COUNTING = "counting"
     const val MUSIC = "music"
     const val WORDS = "words"
+    const val SAY = "say"
     const val MY_DAY = "myday"
     const val MY_DAY_BATH = "myday/bath"
     const val MY_DAY_BRUSH = "myday/brush"
@@ -88,6 +90,9 @@ fun OlamKatanNavGraph(navController: NavHostController) {
         }
         composable(Routes.WORDS) {
             WordGardenScreen(onBack = safeBack)
+        }
+        composable(Routes.SAY) {
+            SayItScreen(onBack = safeBack)
         }
         composable(Routes.MY_DAY) {
             MyDayScreen(

@@ -127,6 +127,7 @@ Every request needs the `X-Puki-Code` header; without it the doorbell answers 40
 |---|---|---|
 | `POST /say` | `{"situation": "...", "lang": "he"}` | a short spoken reaction: OGG audio, with the line in `X-Text` |
 | `POST /listen?lang=he[&context=...]` | a WAV recording of the child | the same, plus `X-Heard` with what Whisper heard |
+| `POST /repeat?lang=he&target=כלב[&alt=הב]` | a WAV of the child saying a word | `{"heard", "match": "word" \| "close" \| "tried"}` for Say it with Puki; no Gemma, just speech recognition |
 | `POST /look?lang=he` | a PNG of a drawing | a spoken reaction to the drawing (Gemma vision) |
 | `POST /story` | `{"played": "...", "icons": {"ic_animal_cow": "פרה", ...}, "lang": "he"}` | `{"sentences": [{"text", "icon"}]}`, a short bedtime story with one picture per sentence |
 | `POST /speak` | `{"text": "...", "lang": "he", "speed": 0.9}` | the text spoken in the parrot's voice |

@@ -42,6 +42,8 @@ fun GameBackground(
     colors: List<Color>,
     modifier: Modifier = Modifier,
     withBubbles: Boolean = true,
+    /** False where the game shows Puki itself (Say it with Puki). */
+    withCompanion: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
@@ -104,7 +106,7 @@ fun GameBackground(
         content()
 
         // פוקי the parrot, when the companion server is reachable
-        CompanionParrot(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
+        if (withCompanion) CompanionParrot(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
     }
 }
 
