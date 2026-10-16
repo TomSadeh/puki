@@ -88,6 +88,11 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
   the server stops. The dashboard is never served to the network.
 - **Firewall:** the setup opens one port (8790) for home networks only. Keep your home Wi-Fi
   set to *Private* in Windows, and don't give Python itself a firewall exception.
+- **Signed releases:** every APK on the releases page (from 0.4.1) is signed with Puki's release
+  key, certificate SHA-256
+  `a799cab5bcf83c20c754490f8d0eb271cf844e2b7e69518760789f2a96eb3c3d`. Android only installs an
+  update signed with the same key as the installed app, so a changed Puki can't come in as an
+  update. To check a download: `apksigner verify --print-certs Puki-<version>.apk`.
 - The tablet and PC talk over plain HTTP inside your network. The pairing code keeps out
   guests' devices; it isn't meant to stop someone who already controls your network.
 

@@ -176,6 +176,8 @@ python -m pytest brain/tests
 
 Test on a real tablet or phone over adb; the x86 emulator is very heavy. Releases: `python scripts/release.py --publish`
 (builds the shrunk release APK and uploads it as a GitHub pre-release; installed apps offer the update).
+All builds are signed with the release key in `~/keys` (puki-release.jks + puki-signing.properties,
+never in git); without it they fall back to the debug key, which release.py won't publish.
 
 ---
 

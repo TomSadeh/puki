@@ -5,7 +5,8 @@
 
 The version comes from app/build.gradle.kts (pukiVersion): bump it first. Publishing only works
 from the public puki checkout, and stops if any personal voice lines (voice_*_name*, which say
-the child's name) are in res/raw, so a release never carries them.
+the child's name) are in res/raw, so a release never carries them. It also refuses to publish an
+APK signed with the debug key: releases are signed with the key in ~/keys (see app/build.gradle.kts).
 """
 import argparse
 import glob
@@ -24,6 +25,28 @@ REPO = "TomSadeh/puki"
 def run(cmd, **kw):
     print("  $", " ".join(cmd))
     return subprocess.run(cmd, cwd=ROOT, check=True, **kw)
+
+
+def sdk_dir():
+    for env in ("ANDROID_HOME", "ANDROID_SDK_ROOT"):
+        if os.environ.get(env):
+            return os.environ[env]
+    props = os.path.join(ROOT, "local.properties")
+    if os.path.exists(props):
+        for line in open(props, encoding="utf-8"):
+            if line.startswith("sdk.dir="):
+                return line.split("=", 1)[1].strip().replace("\\:", ":").replace("\\\\", "\\")  # local.properties escapes them
+    return os.path.join(os.path.expanduser("~"), "AppData", "Local", "Android", "Sdk")
+
+
+def signer(apk):
+    """The APK's signing certificate: (subject line, SHA-256 fingerprint)."""
+    tools = sorted(glob.glob(os.path.join(sdk_dir(), "build-tools", "*")))
+    exe = os.path.join(tools[-1], "apksigner.bat" if os.name == "nt" else "apksigner")
+    out = subprocess.run([exe, "verify", "--print-certs", apk], capture_output=True, text=True, check=True).stdout
+    dn = re.search(r"certificate DN: (.*)", out).group(1).strip()
+    fp = re.search(r"certificate SHA-256 digest: ([0-9a-f]+)", out).group(1)
+    return dn, fp
 
 
 def main():
@@ -55,6 +78,13 @@ def main():
     shutil.copyfile(apk, out)
     sha = hashlib.sha256(open(out, "rb").read()).hexdigest()
     print(f"  {out}  {os.path.getsize(out) / 1e6:.1f} MB  sha256 {sha}")
+    dn, fp = signer(out)
+    print(f"  signed by {dn}  (certificate SHA-256 {fp})")
+    if "Android Debug" in dn:
+        if args.publish:
+            sys.exit("Stopping: this APK is signed with the debug key. Put the release key in ~/keys first "
+                     "(puki-release.jks and puki-signing.properties, see app/build.gradle.kts).")
+        print("  (debug key: fine for testing, but it can't be published)")
     if not args.publish:
         return
 

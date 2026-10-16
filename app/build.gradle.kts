@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,7 +8,16 @@ plugins {
 
 // The game's version. Bump it for each release; scripts/release.py reads it from here, and the
 // game updates itself to a newer one found in the GitHub releases.
-val pukiVersion = "0.4.0"
+val pukiVersion = "0.4.1"
+
+// The release key lives outside the repo, in ~/keys (puki-release.jks, and its password in
+// puki-signing.properties as storePassword=...). Without it (CI, contributors) builds use the
+// debug key, and scripts/release.py refuses to publish them.
+val keysDir = File(System.getProperty("user.home"), "keys")
+val signingProps = Properties().apply {
+    File(keysDir, "puki-signing.properties").takeIf { it.isFile }?.inputStream()?.use { load(it) }
+}
+val hasReleaseKey = File(keysDir, "puki-release.jks").isFile && signingProps.getProperty("storePassword") != null
 
 android {
     namespace = "io.github.tomsadeh.puki"
@@ -27,14 +38,25 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseKey) create("puki") {
+            storeFile = File(keysDir, "puki-release.jks")
+            storePassword = signingProps.getProperty("storePassword")
+            keyAlias = "puki"
+            keyPassword = signingProps.getProperty("storePassword")
+        }
+    }
+    // Debug builds get the same key, so a test build installs over the real one without losing
+    // the child's progress (Android refuses an update signed with a different key)
+    val pukiSigning = if (hasReleaseKey) signingConfigs.getByName("puki") else signingConfigs.getByName("debug")
+
     buildTypes {
         debug {
             ndk { abiFilters += listOf("x86_64") }
+            signingConfig = pukiSigning
         }
         release {
-            // Signed like the builds Android Studio installs from this PC, so a release installs
-            // over one of those without losing the child's progress
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = pukiSigning
             // Shrunk: a smaller download and faster start (keep rules for native code in proguard-rules.pro)
             isMinifyEnabled = true
             isShrinkResources = true
