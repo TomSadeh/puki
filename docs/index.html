@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puki · פוקי</title>
+<meta name="description" content="A Hebrew/English game for toddlers with Puki, a talking parrot whose brain runs on your own PC. No cloud, no ads, no tracking.">
+<link rel="icon" href="puki.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #bfe6f7; --sky-deep: #87ceeb; --sea: #29b6f6; --sand: #fff3e0; --grass: #43a047;
+    --coral: #ff7043; --sun: #ffca28; --ink: #3e2723; --muted: #6d5d57; --card: #ffffff;
+    --line: #f0e4d6; --shadow: 0 8px 24px rgba(62, 39, 35, 0.10);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: "Rubik", system-ui, "Segoe UI", Arial, sans-serif;
+    color: var(--ink); background: var(--sand); line-height: 1.6; font-size: 17px;
+  }
+  html[data-lang="he"] [lang="en"], html[data-lang="en"] [lang="he"] { display: none !important; }
+  a { color: #0277bd; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  /* Top: sky, sun and sea, like the game's hub */
+  header {
+    background: linear-gradient(180deg, var(--sky-deep) 0%, var(--sky) 55%, #e1f5fe 100%);
+    padding: 18px 0 0; overflow: hidden; position: relative;
+  }
+  header::before {
+    content: ""; position: absolute; width: 180px; height: 180px; border-radius: 50%;
+    background: radial-gradient(circle, #fff59d 0 38%, rgba(255, 245, 157, 0.35) 39% 60%, transparent 61%);
+    top: -40px; inset-inline-end: 18%;
+  }
+  .bar { display: flex; justify-content: space-between; align-items: center; position: relative; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; text-decoration: none; color: var(--ink); }
+  .brand img { width: 44px; height: 44px; }
+  .lang {
+    font: inherit; font-size: 15px; font-weight: 500; border: 2px solid rgba(62, 39, 35, 0.15);
+    background: rgba(255, 255, 255, 0.7); color: var(--ink); border-radius: 999px; padding: 6px 16px; cursor: pointer;
+  }
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 36px; align-items: center; padding: 34px 0 46px; position: relative; }
+  .hero h1 { font-size: clamp(30px, 4.4vw, 48px); line-height: 1.15; margin: 0 0 14px; }
+  .hero p.lead { font-size: 19px; color: var(--muted); margin: 0 0 22px; }
+  .parrot { width: 112px; height: 112px; display: block; margin-bottom: 8px; filter: drop-shadow(0 6px 10px rgba(0,0,0,.12)); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 999px;
+    font-weight: 700; text-decoration: none; font-size: 17px; box-shadow: var(--shadow);
+  }
+  .btn.primary { background: var(--grass); color: #fff; }
+  .btn.ghost { background: #fff; color: var(--ink); }
+  .btn small { font-weight: 400; opacity: 0.85; }
+  .shot { width: 100%; border-radius: 22px; box-shadow: 0 18px 40px rgba(2, 119, 189, 0.25); border: 6px solid #fff; display: block; }
+  .waves { height: 26px; background:
+    radial-gradient(circle at 20px -6px, transparent 22px, var(--sand) 23px) repeat-x;
+    background-size: 40px 26px; margin-top: -1px; }
+
+  section { padding: 46px 0; }
+  h2 { font-size: clamp(24px, 3vw, 32px); margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 26px; max-width: 760px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .card { background: var(--card); border-radius: 22px; padding: 18px 20px; box-shadow: var(--shadow); border: 1px solid var(--line); }
+  .card h3 { margin: 4px 0 6px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); }
+  .card .tag { display: inline-block; font-size: 13px; background: #e8f5e9; color: #2e7d32; border-radius: 999px; padding: 1px 10px; margin-top: 8px; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 26px; }
+  .gallery figure { margin: 0; background: #fff; border-radius: 18px; padding: 8px; box-shadow: var(--shadow); }
+  .gallery img { width: 100%; border-radius: 12px; display: block; }
+  .gallery figcaption { font-size: 15px; color: var(--muted); padding: 6px 6px 2px; }
+
+  .band { background: #fff; }
+  ul.points { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  ul.points li { background: var(--sand); border-radius: 16px; padding: 12px 16px; }
+  ul.points li b { display: block; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+  ol.steps li { counter-increment: s; background: #fff; border-radius: 18px; padding: 16px 18px 16px 18px; box-shadow: var(--shadow); position: relative; padding-inline-start: 64px; }
+  ol.steps li::before {
+    content: counter(s); position: absolute; inset-inline-start: 16px; top: 14px; width: 34px; height: 34px;
+    border-radius: 50%; background: var(--sun); color: var(--ink); font-weight: 700; display: grid; place-items: center;
+  }
+  code { background: #f3ece4; border-radius: 6px; padding: 1px 6px; font-size: 0.92em; direction: ltr; unicode-bidi: embed; }
+  .fp { word-break: break-all; font-size: 13px; }
+  footer { padding: 30px 0 40px; color: var(--muted); font-size: 15px; text-align: center; }
+
+  @media (max-width: 820px) {
+    .hero, .two { grid-template-columns: 1fr; }
+    .hero { padding-top: 20px; }
+    body { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <a class="brand" href="#"><img src="puki.svg" alt=""> <span lang="he">פוקי</span><span lang="en">Puki</span></a>
+      <button class="lang" id="lang" type="button"><span lang="he">English</span><span lang="en">עברית</span></button>
+    </div>
+    <div class="hero">
+      <div>
+        <img class="parrot" src="puki.svg" alt="">
+        <h1>
+          <span lang="he">משחק לפעוטות, עם תוכי שמדבר איתם</span>
+          <span lang="en">A game for toddlers, with a parrot who talks back</span>
+        </h1>
+        <p class="lead">
+          <span lang="he">משחק אנדרואיד בעברית ובאנגלית לגילאי 2–4, עם פוקי, תוכי מדבר שהמוח שלו רץ על המחשב שלכם בבית. בלי ענן, בלי פרסומות ובלי מעקב: שום דבר לא יוצא מהבית.</span>
+          <span lang="en">A Hebrew/English Android game for ages 2–4, with Puki, a talking parrot whose brain runs on your own PC at home. No cloud, no ads, no tracking: nothing ever leaves your home.</span>
+        </p>
+        <div class="buttons">
+          <a class="btn primary" data-apk href="https://github.com/TomSadeh/puki/releases">
+            <span lang="he">הורדה לאנדרואיד</span><span lang="en">Download for Android</span>
+            <small data-version-label></small>
+          </a>
+          <a class="btn ghost" href="https://github.com/TomSadeh/puki">
+            <span lang="he">קוד פתוח ב-GitHub</span><span lang="en">Open source on GitHub</span>
+          </a>
+        </div>
+      </div>
+      <img class="shot" src="screenshots/hub.png" data-alt-he="מסך הבית: איים בים, אי לכל משחק" data-alt-en="The hub: islands on a sea, one per game" alt="">
+    </div>
+  </div>
+  <div class="waves"></div>
+</header>
+
+<main>
+  <section id="games">
+    <div class="wrap">
+      <h2><span lang="he">מה יש בפנים</span><span lang="en">What's inside</span></h2>
+      <p class="sub">
+        <span lang="he">עשרה איים, כל אחד עם משחק בסצנה מצוירת משלו: חווה, גן, מגרש משחקים מתחת לקשת, במה, ובית חמים.</span>
+        <span lang="en">Ten islands, each with a game in its own illustrated scene: a farm, a garden, a playground under a rainbow, a stage, a cozy house.</span>
+      </p>
+      <div class="grid">
+        <div class="card"><h3><span lang="he">גן החיות</span><span lang="en">Animal Garden</span></h3>
+          <p><span lang="he">מאכילים כל חיה באוכל הנכון. היא לועסת וקופצת משמחה.</span><span lang="en">Feed each animal the right food. It munches and does a happy hop.</span></p></div>
+        <div class="card"><h3><span lang="he">צבעים, צורות, ספירה ואותיות</span><span lang="en">Colors, shapes, counting, letters</span></h3>
+          <p><span lang="he">מפוצצים את הבלון הנכון, גוררים צורות למקום, סופרים פרחים ומוצאים את האות.</span><span lang="en">Pop the right balloon, drag shapes into place, count flowers, find the letter.</span></p></div>
+        <div class="card"><h3><span lang="he">מחבואים</span><span lang="en">Peekaboo barn</span></h3>
+          <p><span lang="he">חיה מתחבאת בחווה, והקול שלה מסגיר אותה. ברפת, מאחורי השיח, בערמת החציר או בגזע העץ.</span><span lang="en">An animal hides on the farm and its sound gives it away: in the barn, behind the bush, the haystack or the tree stump.</span></p></div>
+        <div class="card"><h3><span lang="he">תוכי מחקה</span><span lang="en">Echo Puki</span></h3>
+          <p><span lang="he">אומרים לפוקי משהו, והוא חוזר על זה בקול של תוכי מצחיק.</span><span lang="en">Say anything, and Puki says it back in a silly parrot voice.</span></p>
+          <span class="tag"><span lang="he">בלי מחשב</span><span lang="en">No PC needed</span></span></div>
+        <div class="card"><h3><span lang="he">מדברים עם פוקי</span><span lang="en">Say it with Puki</span></h3>
+          <p><span lang="he">פוקי אומר מילה, והילדים אומרים אותה בחזרה. המחשב מקשיב ועוזר בעדינות.</span><span lang="en">Puki says a word and the child says it back; the PC listens and helps gently.</span></p></div>
+        <div class="card"><h3><span lang="he">מוזיקה</span><span lang="en">Music</span></h3>
+          <p><span lang="he">תוף, קסילופון, טמבורין ומרקס על במה, ואז חוזרים על מנגינה קטנה.</span><span lang="en">A drum, a xylophone, a tambourine and maracas on a stage, then a little tune to repeat.</span></p></div>
+        <div class="card"><h3><span lang="he">היום שלי</span><span lang="en">My Day</span></h3>
+          <p><span lang="he">אמבטיה, ארוחה, התלבשות, סידור החדר, צחצוח שיניים ושינה, כל אחד בחדר משלו.</span><span lang="en">Bath, table, dressing, tidying, teeth and bedtime, each in its own room.</span></p></div>
+        <div class="card"><h3><span lang="he">ציור ומדבקות</span><span lang="en">Drawing and stickers</span></h3>
+          <p><span lang="he">מציירים על כן ציור, ופוקי מסתכל על הציור. אלבום המדבקות מתמלא בכוכבים.</span><span lang="en">Paint on an easel and Puki looks at the picture; the sticker album fills up with stars.</span></p></div>
+      </div>
+      <div class="gallery">
+        <figure><img src="screenshots/animal-garden.png" alt="" loading="lazy" data-alt-he="גן החיות" data-alt-en="Animal Garden"><figcaption><span lang="he">גן החיות</span><span lang="en">Animal Garden</span></figcaption></figure>
+        <figure><img src="screenshots/peekaboo.png" alt="" loading="lazy" data-alt-he="מחבואים" data-alt-en="Peekaboo barn"><figcaption><span lang="he">מחבואים</span><span lang="en">Peekaboo barn</span></figcaption></figure>
+        <figure><img src="screenshots/companion.png" alt="" loading="lazy" data-alt-he="צבעים, ופוקי בפינה" data-alt-en="Colors, with Puki in the corner"><figcaption><span lang="he">צבעים, ופוקי בפינה</span><span lang="en">Colors, with Puki in the corner</span></figcaption></figure>
+        <figure><img src="screenshots/echo.png" alt="" loading="lazy" data-alt-he="תוכי מחקה" data-alt-en="Echo Puki"><figcaption><span lang="he">תוכי מחקה</span><span lang="en">Echo Puki</span></figcaption></figure>
+        <figure><img src="screenshots/my-day.png" alt="" loading="lazy" data-alt-he="היום שלי" data-alt-en="My Day"><figcaption><span lang="he">היום שלי</span><span lang="en">My Day</span></figcaption></figure>
+        <figure><img src="screenshots/stickers.png" alt="" loading="lazy" data-alt-he="אלבום המדבקות" data-alt-en="The sticker album"><figcaption><span lang="he">אלבום המדבקות</span><span lang="en">The sticker album</span></figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="design">
+    <div class="wrap two">
+      <div>
+        <h2><span lang="he">בנוי לפעוטות</span><span lang="en">Built for toddlers</span></h2>
+        <ul class="points">
+          <li><b><span lang="he">בלי קריאה</span><span lang="en">No reading</span></b><span lang="he">הכול בתמונות ובקול חם. ההוראות בעברית פונות בלשון של הילד או הילדה (תלחצי / תלחץ).</span><span lang="en">Everything is pictures and a warm voice; Hebrew instructions follow the child's gender.</span></li>
+          <li><b><span lang="he">אין "טעות"</span><span lang="en">No failure</span></b><span lang="he">תשובה לא נכונה מקבלת ניעור עדין ו"ננסה שוב". אחרי רגע של שקט השאלה חוזרת, ואחרי שני ניסיונות התשובה זוהרת.</span><span lang="en">A wrong answer gets a gentle shake and "let's try again"; after a quiet moment the question repeats, and after two tries the answer glows.</span></li>
+          <li><b><span lang="he">גדל עם הילד</span><span lang="en">Grows with the child</span></b><span lang="he">כל משחק עולה רמה אחרי משחקים קלים ויורד אחרי קשים.</span><span lang="en">Every game moves up a level after easy sessions and back down after hard ones.</span></li>
+          <li><b><span lang="he">פרידה רגועה</span><span lang="en">A calm goodbye</span></b><span lang="he">כשנגמר הזמן שההורים קבעו, אין ספירה לאחור: יורד ערב, פוקי מפהק ומנופף לשלום.</span><span lang="en">When the parent's time limit is up there's no countdown: evening falls, Puki yawns and waves goodbye.</span></li>
+        </ul>
+      </div>
+      <div>
+        <h2><span lang="he">פוקי, התוכי</span><span lang="en">Puki, the parrot</span></h2>
+        <ul class="points">
+          <li><b><span lang="he">מגיב למה שקורה</span><span lang="en">Reacts to what happens</span></b><span lang="he">כותב משפט חדש על מה שהילד עשה, מסתכל על הציורים, מספר סיפור לפני השינה על היום, ועונה כשמדברים איתו.</span><span lang="en">Writes a fresh line about what the child did, looks at drawings, tells a bedtime story about the day, and answers when spoken to.</span></li>
+          <li><b><span lang="he">המוח במחשב בבית</span><span lang="en">His brain is on your PC</span></b><span lang="he">Gemma 4 של Google, Whisper של ivrit.ai ו-BlueTTS, כולם מקומיים. תשובה תוך שנייה בערך, עדיף עם כרטיס NVIDIA.</span><span lang="en">Google's Gemma 4, ivrit.ai's Whisper and BlueTTS, all local; about a second per reply, best with an NVIDIA GPU.</span></li>
+          <li><b><span lang="he">או בטלפון חזק</span><span lang="en">Or on a high-end phone</span></b><span lang="he">בטלפון עם כ-12GB זיכרון (נבדק על Galaxy S25) פוקי חושב, מדבר ומקשיב על המכשיר עצמו, גם מחוץ לבית.</span><span lang="en">On a phone with about 12 GB of memory (tested on a Galaxy S25) Puki thinks, talks and listens on the device, away from home too.</span></li>
+          <li><b><span lang="he">בלי מחשב?</span><span lang="en">No PC?</span></b><span lang="he">המשחק עובד מצוין גם בלעדיו, עם הקולות המוקלטים.</span><span lang="en">The game works fine without one, with its recorded voices.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <h2><span lang="he">פרטיות</span><span lang="en">Privacy</span></h2>
+      <p class="sub"><span lang="he">נבנה בשביל ילדה אחת, בבית אחד. הכללים בהתאם.</span><span lang="en">Built for one child, in one home. The rules follow from that.</span></p>
+      <div class="grid">
+        <div class="card"><h3><span lang="he">שום דבר לא יוצא מהבית</span><span lang="en">Nothing leaves your home</span></h3><p><span lang="he">בלי חשבונות, פרסומות, אנליטיקה או ענן. פעם ביום האפליקציה רק בודקת ב-GitHub אם יש גרסה חדשה.</span><span lang="en">No accounts, ads, analytics or cloud. Once a day the app only asks GitHub whether there's a new version.</span></p></div>
+        <div class="card"><h3><span lang="he">חיבור מוצפן</span><span lang="en">Encrypted</span></h3><p><span lang="he">הטאבלט והמחשב מדברים ב-HTTPS עם תעודה של המחשב עצמו. קוד ה-QR נושא את טביעת האצבע שלה, כך שאף מכשיר אחר ברשת לא יכול להתחזות.</span><span lang="en">Tablet and PC talk over HTTPS with the PC's own certificate; the QR code carries its fingerprint, so no other device can pose as the PC.</span></p></div>
+        <div class="card"><h3><span lang="he">השם נשאר בבית</span><span lang="en">The name stays home</span></h3><p><span lang="he">שם הילד שמור רק בטאבלט ובמחשב שלכם. ההקלטות של התוכי המחקה לא נשמרות.</span><span lang="en">The child's name lives only on your tablet and PC. Echo Puki's recordings are never kept.</span></p></div>
+        <div class="card"><h3><span lang="he">גרסאות חתומות</span><span lang="en">Signed releases</span></h3><p><span lang="he">כל APK חתום במפתח של פוקי, ומתקין המחשב בודק כל קובץ שהוא מוריד מול טביעה ידועה.</span><span lang="en">Every APK is signed with Puki's key, and the PC installer checks every download against a known fingerprint.</span></p>
+          <p class="fp"><code>a799cab5bcf83c20c754490f8d0eb271cf844e2b7e69518760789f2a96eb3c3d</code></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="start">
+    <div class="wrap">
+      <h2><span lang="he">איך מתחילים</span><span lang="en">Getting started</span></h2>
+      <ol class="steps">
+        <li><b><span lang="he">מתקינים את המשחק בטאבלט</span><span lang="en">Install the game on the tablet</span></b><br>
+          <span lang="he">מורידים את ה-<a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (אנדרואיד 8 ומעלה) ומאשרים התקנה. אחר כך המשחק מתעדכן לבד מההגדרות של ההורים.</span>
+          <span lang="en">Download the <a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (Android 8 or newer) and allow the install. After that the game updates itself from the parent settings.</span></li>
+        <li><b><span lang="he">מתקינים את המוח של פוקי במחשב (לא חובה)</span><span lang="en">Set up Puki's brain on a PC (optional)</span></b><br>
+          <span lang="he">בווינדוס מריצים את <a data-exe href="https://github.com/TomSadeh/puki/releases">Puki.exe</a>; בלינוקס <code>python3 brain/install.py</code>. ההתקנה מורידה כ-9GB ומגדירה הכול.</span>
+          <span lang="en">On Windows run <a data-exe href="https://github.com/TomSadeh/puki/releases">Puki.exe</a>; on Linux <code>python3 brain/install.py</code>. It downloads about 9 GB and sets everything up.</span></li>
+        <li><b><span lang="he">סורקים את קוד ה-QR</span><span lang="en">Scan the QR code</span></b><br>
+          <span lang="he">בהגדרות של ההורים (לחיצה ארוכה על גלגל השיניים) סורקים את הקוד שבלוח הבקרה של המחשב. זהו, פוקי מחובר.</span>
+          <span lang="en">In the parent settings (long-press the gear), scan the code on the PC's dashboard. That's it: Puki is connected.</span></li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span lang="he">קוד פתוח ברישיון MIT · <a href="https://github.com/TomSadeh/puki">GitHub</a> · <a href="https://tomsadeh.github.io/">תום שדה</a></span>
+    <span lang="en">Open source, MIT license · <a href="https://github.com/TomSadeh/puki">GitHub</a> · <a href="https://tomsadeh.github.io/">Tom Sadeh</a></span>
+  </div>
+</footer>
+
+<script>
+  // Language: what the visitor picked last time, else the browser's language
+  const root = document.documentElement;
+  function setLang(lang) {
+    root.dataset.lang = lang;
+    root.lang = lang;
+    root.dir = lang === "he" ? "rtl" : "ltr";
+    document.querySelectorAll("[data-alt-he]").forEach(img => { img.alt = img.dataset["alt" + (lang === "he" ? "He" : "En")]; });
+    try { localStorage.setItem("puki-lang", lang); } catch (e) {}
+  }
+  let saved = null;
+  try { saved = localStorage.getItem("puki-lang"); } catch (e) {}
+  setLang(saved || ((navigator.language || "").toLowerCase().startsWith("he") ? "he" : "en"));
+  document.getElementById("lang").addEventListener("click", () => setLang(root.dataset.lang === "he" ? "en" : "he"));
+
+  // Download links: the newest release's APK and Puki.exe (all releases are pre-releases,
+  // which GitHub's "latest" link skips). Without an answer, the links stay on the releases page.
+  fetch("https://api.github.com/repos/TomSadeh/puki/releases?per_page=20")
+    .then(r => r.ok ? r.json() : [])
+    .then(releases => {
+      const find = test => releases.find(r => !r.draft && r.assets.some(a => test(a.name)));
+      const apkRelease = find(n => n.endsWith(".apk"));
+      if (apkRelease) {
+        const apk = apkRelease.assets.find(a => a.name.endsWith(".apk"));
+        document.querySelectorAll("[data-apk]").forEach(el => { el.href = apk.browser_download_url; });
+        document.querySelectorAll("[data-version-label]").forEach(el => { el.textContent = apkRelease.tag_name.replace(/^v/, ""); });
+      }
+      const exeRelease = find(n => n === "Puki.exe");
+      if (exeRelease) {
+        const exe = exeRelease.assets.find(a => a.name === "Puki.exe");
+        document.querySelectorAll("[data-exe]").forEach(el => { el.href = exe.browser_download_url; });
+      }
+    })
+    .catch(() => {});
+</script>
+</body>
+</html>
