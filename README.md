@@ -4,6 +4,8 @@ A Hebrew/English Android game for toddlers (ages 2–4), with **פוקי**, a ta
 whose brain runs on your own PC. No cloud, no ads, no tracking, and nothing ever leaves
 your home.
 
+**Website:** [tomsadeh.github.io/puki](https://tomsadeh.github.io/puki/) (Hebrew and English, with the latest download)
+
 ![The hub: islands on a sea, one per game](docs/screenshots/hub.png)
 
 ## What's inside
