@@ -101,6 +101,8 @@ From play-testing and a research pass on what helps at two:
   back to her family.
 - **The parent stays in the loop.**
 - **Nothing leaves the home:** no accounts, ads, analytics or cloud.
+- **Free, forever:** no price, no purchases, no subscriptions, no ads, ever. Nothing in the
+  game stops to ask for money; the only end to play is the parent's time limit.
 
 ## Design notes: Puki remembers
 

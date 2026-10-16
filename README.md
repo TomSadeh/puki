@@ -8,6 +8,18 @@ your home.
 
 ![The hub: islands on a sea, one per game](docs/screenshots/hub.png)
 
+## Why Puki exists
+
+I made Puki because I got tired of toddler games that stop in the middle to ask for money. My
+daughter would get into a game, love it, and then a screen would pop up: pay, watch an ad,
+unlock the next level. A two-year-old can't understand any of that. All she learns is that the
+fun suddenly ends.
+
+So Puki is **free, forever**: no price, no in-app purchases, no subscriptions, no "full
+version", no ads. It will never ask for money, and there's no payment code in it at all. The
+only thing that ends the fun is the time limit the parents set, and even that ends with a calm
+goodbye. It's open source (MIT), so nobody can ever lock it behind a payment.
+
 ## What's inside
 
 **The game:** an island world with toddler-sized games, each in its own illustrated scene

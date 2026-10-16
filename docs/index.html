@@ -54,6 +54,13 @@
   .btn.primary { background: var(--grass); color: #fff; }
   .btn.ghost { background: #fff; color: var(--ink); }
   .btn small { font-weight: 400; opacity: 0.85; }
+  .free { margin: 16px 0 0; font-weight: 500; color: #2e7d32; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .free span { display: inline-flex; align-items: center; gap: 6px; }  /* a row, so the check comes first in either direction */
+  .free span::before { content: "\2713"; }
+  .why { background: linear-gradient(180deg, #fffaf2, var(--sand)); }
+  .why .story { font-size: 19px; max-width: 780px; margin: 0 0 22px; }
+  .promise { background: #fff; border-radius: 22px; padding: 18px 22px; box-shadow: var(--shadow); border: 2px solid #c8e6c9; }
+  .promise h3 { margin: 0 0 6px; color: #2e7d32; }
   .shot { width: 100%; border-radius: 22px; box-shadow: 0 18px 40px rgba(2, 119, 189, 0.25); border: 6px solid #fff; display: block; }
   .waves { height: 26px; background:
     radial-gradient(circle at 20px -6px, transparent 22px, var(--sand) 23px) repeat-x;
@@ -122,6 +129,8 @@
             <span lang="he">קוד פתוח ב-GitHub</span><span lang="en">Open source on GitHub</span>
           </a>
         </div>
+        <p class="free" lang="he"><span>חינם לתמיד</span><span>בלי רכישות</span><span>בלי פרסומות</span></p>
+        <p class="free" lang="en"><span>Free forever</span><span>No purchases</span><span>No ads</span></p>
       </div>
       <img class="shot" src="screenshots/hub.png" data-alt-he="מסך הבית: איים בים, אי לכל משחק" data-alt-en="The hub: islands on a sea, one per game" alt="">
     </div>
@@ -130,6 +139,24 @@
 </header>
 
 <main>
+  <section class="why" id="why">
+    <div class="wrap">
+      <h2><span lang="he">למה פוקי</span><span lang="en">Why Puki exists</span></h2>
+      <p class="story">
+        <span lang="he">בניתי את פוקי כי נמאס לי ממשחקים לפעוטות שעוצרים באמצע ומבקשים כסף. הבת שלי הייתה נכנסת למשחק, נהנית, ואז קופץ מסך: לשלם, לצפות בפרסומת, לפתוח את השלב הבא. בגיל שנתיים לא מבינים את זה. מבינים רק שהכיף נגמר פתאום.</span>
+        <span lang="en">I made Puki because I got tired of toddler games that stop in the middle to ask for money. My daughter would get into a game, love it, and then a screen would pop up: pay, watch an ad, unlock the next level. A two-year-old can't understand any of that. All she learns is that the fun suddenly ends.</span>
+      </p>
+      <div class="grid">
+        <div class="promise"><h3><span lang="he">חינם, לתמיד</span><span lang="en">Free, forever</span></h3>
+          <p><span lang="he">בלי מחיר, בלי רכישות בתוך המשחק, בלי מנויים, בלי "המשחק המלא" ובלי פרסומות. פוקי לעולם לא יבקש כסף, ואין בו בכלל קוד של תשלום.</span><span lang="en">No price, no in-app purchases, no subscriptions, no "full version" and no ads. Puki will never ask for money, and there's no payment code in it at all.</span></p></div>
+        <div class="promise"><h3><span lang="he">שום דבר לא עוצר את הכיף</span><span lang="en">Nothing stops the fun</span></h3>
+          <p><span lang="he">חוץ ממגבלת הזמן שההורים קובעים, וגם היא נגמרת בפרידה רגועה, לא בחומת תשלום.</span><span lang="en">Except the time limit the parents set, and even that ends with a calm goodbye, not a paywall.</span></p></div>
+        <div class="promise"><h3><span lang="he">קוד פתוח</span><span lang="en">Open source</span></h3>
+          <p><span lang="he">כל הקוד פתוח ברישיון MIT, כך שאף אחד לא יוכל לסגור אותו מאחורי תשלום.</span><span lang="en">All the code is open under the MIT license, so nobody can ever lock it behind a payment.</span></p></div>
+      </div>
+    </div>
+  </section>
+
   <section id="games">
     <div class="wrap">
       <h2><span lang="he">מה יש בפנים</span><span lang="en">What's inside</span></h2>

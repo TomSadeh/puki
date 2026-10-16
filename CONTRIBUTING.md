@@ -19,6 +19,9 @@ A PR that breaks any of these won't be merged, however good it is otherwise.
 - **Big targets.** Anything tappable or draggable is at least 100 dp (120 dp preferred).
 - **Calm, not compulsive.** No timers that pressure, no streaks, no "come back tomorrow"
   hooks, no flashing for its own sake. The parent's time limit must keep working.
+- **Free, forever.** No payments, in-app purchases, subscriptions, ads, "premium" content or
+  anything else that stops play to ask for money, now or later. Puki exists because toddler
+  games do that.
 - **Both languages.** Every new line or prompt exists in Hebrew and English, and Hebrew lines
   that address the child have both a girl and a boy form (`heGirl`, `_he_f` / `_he_m`).
 
