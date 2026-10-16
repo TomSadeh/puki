@@ -107,11 +107,17 @@ fun DanceScreen(
     // The music is the game: make sure it's the lively track, and never leave it paused
     LaunchedEffect(Unit) {
         companion?.setScene("ריקוד ועצירה: רוקדים עם החיות, וכשהמוזיקה נעצרת עושים מה שפוקי אומר.", "Dance and freeze: dancing with the animals, and when the music stops doing what Puki says.")
-        musicPlayer.playTrack("music_hub")
+        // The dance track (res/raw/music_dance.mp3) once there is one; until then the main theme plays on
+        musicPlayer.playTrack("music_dance")
         delay(500)
         voicePlayer.play("voice_dance_intro", language)
     }
-    DisposableEffect(Unit) { onDispose { musicPlayer.resume() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            musicPlayer.resume()
+            musicPlayer.playTrack("music_hub")
+        }
+    }
 
     // One dance: play for a while, stop, call a move, hold it, and again
     LaunchedEffect(started) {

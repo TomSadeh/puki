@@ -142,8 +142,9 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
 - Parent settings: long-press the gear on the hub. There you can change all of the above,
   plus separate volumes for music, voices (and Puki) and sound effects, and a time limit.
 - Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
-  bedtime routine, dipping under the bedtime story. To use your own, replace
-  `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.
+  bedtime routine, dipping under the bedtime story. Dance and Freeze plays `music_dance.mp3`
+  when it's there (otherwise the main theme). To use your own, replace
+  `app/src/main/res/raw/music_hub.mp3`, `music_night.mp3` and `music_dance.mp3`.
 
 **Updates:** the app updates itself from this repo's
 [releases](https://github.com/TomSadeh/puki/releases). When there's a newer version, a red dot
@@ -216,7 +217,7 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 
 ## Credits
 
-- Music ("Puki main theme", "Puki nights") by the project's author: piano, produced with Suno
+- Music ("Puki main theme", "Puki nights" and the Dance and Freeze track) by the project's author: piano, produced with Suno
 - [BlueTTS](https://github.com/maxmelichov/BlueTTS) by Max Melichov: Hebrew/English text-to-speech, with
   [RenikudPlus](https://huggingface.co/notmax123/RenikudPlus) (Apache-2.0) for Hebrew pronunciation
 - [ivrit.ai](https://huggingface.co/ivrit-ai): Hebrew fine-tuned Whisper
