@@ -26,6 +26,34 @@ tablet ──Wi-Fi──▶ doorbell.py :8790 ──starts on demand──▶ ll
 ideally, an NVIDIA GPU with about 6 GB of free VRAM. Gemma and Whisper together use about
 5.6 GB. Without a GPU everything runs on the CPU, just slower.
 
+## Quick setup (Windows)
+
+With [Python 3.12](https://www.python.org/downloads/) installed (or `winget install Python.Python.3.12`),
+run this from the repo folder:
+
+```
+python brain\install.py
+```
+
+It shows what it will do, then:
+
+1. downloads llama.cpp: the CUDA build if there's an NVIDIA GPU (matched to the driver),
+   otherwise the CPU build;
+2. downloads Gemma and its vision part, the ivrit.ai Hebrew Whisper, Parakeet for English,
+   and BlueTTS with its voice models (about 9 GB in all, into `~/puki-brain`);
+3. creates the Python environment (without the NVIDIA libraries on PCs without a GPU);
+4. writes `brain/config.json` with all the paths;
+5. adds the home-network-only firewall rule (Windows asks for permission once), and tells
+   you if your Wi-Fi is set to *Public*;
+6. makes Puki start at login, starts it, and opens the [dashboard](#dashboard) with the
+   pairing code and QR code.
+
+Downloads show progress and resume if interrupted, and running it again only does what's
+missing. Options: `--dry-run` (just show the plan), `--dir D:\puki-brain`, `--cpu`,
+`--only firewall,autostart` (repeat single steps), `--no-firewall`, `--no-autostart`.
+
+The steps below are the same thing by hand (for Linux and macOS too).
+
 ## Setup
 
 Everything goes in `~/puki-brain` by default. You can change any path in the config.

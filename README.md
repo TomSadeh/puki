@@ -90,8 +90,10 @@ tablet the whole stack could run on the device; contributions welcome.
   bedtime routine, dipping under the bedtime story. To use your own, replace
   `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.
 
-**The companion:** see [brain/README.md](brain/README.md). You'll need a PC with Python, and
-ideally an NVIDIA GPU with about 6 GB of free VRAM (it falls back to the CPU otherwise).
+**The companion:** on a Windows PC with Python, run `python brain\install.py`. It downloads
+everything (about 9 GB), sets up the firewall and autostart, and shows the pairing code; see
+[brain/README.md](brain/README.md). Ideally the PC has an NVIDIA GPU with about 6 GB of free
+VRAM (it falls back to the CPU otherwise).
 When it starts, it prints a pairing code (also on the dashboard and in
 `brain/pairing_code.txt`). Enter it in the app with the PC's address.
 
