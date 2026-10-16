@@ -1,37 +1,22 @@
 package io.github.tomsadeh.puki.ui.counting
 
-import io.github.tomsadeh.puki.ui.components.RoundPrompt
-import io.github.tomsadeh.puki.ui.components.rememberSessionSeed
-import io.github.tomsadeh.puki.ui.components.Scatter
-import androidx.compose.ui.graphics.ColorFilter
-import io.github.tomsadeh.puki.ui.components.popIn
-import io.github.tomsadeh.puki.ui.components.idleBob
-import io.github.tomsadeh.puki.ui.components.Scene
-import io.github.tomsadeh.puki.ui.common.LocalCompanion
-import io.github.tomsadeh.puki.ui.components.reaction
-import io.github.tomsadeh.puki.ui.components.ReactionState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.alpha
-import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -49,24 +34,43 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.tomsadeh.puki.audio.Sfx
+import io.github.tomsadeh.puki.ui.common.LocalCompanion
 import io.github.tomsadeh.puki.ui.common.LocalLanguage
 import io.github.tomsadeh.puki.ui.common.LocalSfxPlayer
 import io.github.tomsadeh.puki.ui.common.LocalVoicePlayer
 import io.github.tomsadeh.puki.ui.components.ConfettiOverlay
 import io.github.tomsadeh.puki.ui.components.GameBackground
 import io.github.tomsadeh.puki.ui.components.GameTopBar
+import io.github.tomsadeh.puki.ui.components.ReactionState
 import io.github.tomsadeh.puki.ui.components.RoundCompleteSheet
+import io.github.tomsadeh.puki.ui.components.RoundPrompt
+import io.github.tomsadeh.puki.ui.components.Scatter
+import io.github.tomsadeh.puki.ui.components.Scene
+import io.github.tomsadeh.puki.ui.components.hintGlow
+import io.github.tomsadeh.puki.ui.components.idleBob
+import io.github.tomsadeh.puki.ui.components.noticeTouches
+import io.github.tomsadeh.puki.ui.components.popIn
+import io.github.tomsadeh.puki.ui.components.reaction
+import io.github.tomsadeh.puki.ui.components.rememberHelp
+import io.github.tomsadeh.puki.ui.components.rememberSessionSeed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Counting: one touch, one number. Each thing in the garden counts once, hops and keeps its
+ * number. At the end the last number is said again (that's how many there are), and from level 2
+ * the child answers "how many?" herself, from three numbers.
+ */
 @Composable
 fun CountingGardenScreen(
     onBack: () -> Unit,
@@ -84,19 +88,53 @@ fun CountingGardenScreen(
 
     if (state.isLoading) return
 
+    val round = state.currentRound
+    val target = round.targetNumber
+    val itemReactions = remember(state.roundIndex) { List(target) { ReactionState() } }
+
     RoundPrompt(
         state.roundIndex,
-        scene = "במשחק הספירה: סופרים ${state.currentRound.itemName.he}.",
-        sceneEn = "In the counting game: we're counting ${state.currentRound.itemName.en.lowercase()}.",
+        scene = "במשחק הספירה: סופרים ${round.itemName.he}, נוגעים בכל אחד.",
+        sceneEn = "In the counting game: we're counting ${round.itemName.en.lowercase()}, touching each one.",
         "voice_prompt_count_along"
     )
 
+    // Stuck? Ask again after a quiet moment; then the next thing to count (or the answer) glows
+    val help = rememberHelp(state.roundIndex to state.phase, active = !showRoundSuccess && !state.roundComplete) {
+        voicePlayer.play(if (state.phase == CountingPhase.HOW_MANY) "voice_prompt_how_many" else "voice_prompt_count_along", language)
+    }
+
+    // All the things hop one after another, the number is said once more, and on to the next round
+    fun celebrate() {
+        sfxPlayer.play(Sfx.SUCCESS)
+        showRoundSuccess = true
+        itemReactions.forEachIndexed { i, r -> scope.launch { delay(i * 90L); r.celebrate() } }
+        val counted = "ספרו $target ${round.itemName.he}!"
+        val countedEn = "The child counted $target ${round.itemName.en.lowercase()}!"
+        voicePlayer.play("voice_number_$target", language) {
+            if (companion != null) companion.react(counted, countedEn) { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+        }
+        scope.launch {
+            delay(if (companion?.isReady == true) 4200 else 3000)
+            showRoundSuccess = false
+            viewModel.nextRound()
+        }
+    }
+
+    // Counting done, from level 2: "how many?" once the last number has been said
+    LaunchedEffect(state.roundIndex, state.phase) {
+        if (state.phase == CountingPhase.HOW_MANY) {
+            delay(1100)
+            voicePlayer.play("voice_prompt_how_many", language)
+        }
+    }
+
     GameBackground(
-            scene = Scene.GARDEN,
+        scene = Scene.GARDEN,
         colors = listOf(Color(0xFFC8E6C9), Color(0xFFA5D6A7), Color(0xFF81C784))
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().noticeTouches(help).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             GameTopBar(
@@ -106,13 +144,13 @@ fun CountingGardenScreen(
                 starsEarned = state.totalStarsEarned
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Big number in a sun; it bounces with every count
+            // The count so far in a sun; "?" while asking how many
             Box(
                 modifier = Modifier
                     .popIn(key = state.currentCount)
-                    .size(110.dp)
+                    .size(96.dp)
                     .shadow(8.dp, CircleShape)
                     .clip(CircleShape)
                     .background(Brush.radialGradient(listOf(Color(0xFFFFF59D), Color(0xFFFFCA28))))
@@ -120,8 +158,8 @@ fun CountingGardenScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "${state.currentCount}",
-                    fontSize = 64.sp,
+                    text = if (state.phase == CountingPhase.HOW_MANY) "?" else "${state.currentCount}",
+                    fontSize = 56.sp,
                     color = Color(0xFF5D4037),
                     style = MaterialTheme.typography.headlineLarge
                 )
@@ -129,7 +167,7 @@ fun CountingGardenScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Garden area — shows placed items
+            // The garden bed with the things to count
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -141,98 +179,70 @@ fun CountingGardenScreen(
                     .border(BorderStroke(10.dp, Color(0xFF8BC34A)), RoundedCornerShape(40.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                // A faded outline for every item to count; each tap fills the next one in
-                val target = state.currentRound.targetNumber
-                val itemReactions = remember(state.roundIndex) { List(target) { ReactionState() } }
-                LaunchedEffect(state.roundComplete) {
-                    // All the counted items hop one after another
-                    if (state.roundComplete) itemReactions.forEachIndexed { i, r -> launch { delay(i * 90L); r.celebrate() } }
-                }
-                val itemSize = if (target <= 5) 130.dp else 92.dp
-                // Dotted about the garden, high and low, but still counted one after another
+                val itemSize = if (target <= 5) 120.dp else 88.dp
+                val nextToCount = state.numbers.indexOfFirst { it == 0 }
                 Scatter(seed = sessionSeed + state.roundIndex, modifier = Modifier.fillMaxSize().padding(28.dp)) {
                     repeat(target) { i ->
-                        val filled = i < state.currentCount
-                        val itemScale by animateFloatAsState(
-                            targetValue = if (filled) 1f else 0.75f,
-                            animationSpec = spring(dampingRatio = 0.35f, stiffness = 300f),
-                            label = "item_scale_$i"
-                        )
-                        Image(
-                            painter = painterResource(state.currentRound.itemIcon),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(itemSize)
-                                .reaction(itemReactions[i])
-                                .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
-                                .then(if (filled) Modifier.idleBob(i, 0.6f) else Modifier.alpha(0.55f)),
-                            // Still to count: a soft white silhouette
-                            colorFilter = if (filled) null else ColorFilter.tint(Color.White)
+                        CountedThing(
+                            icon = round.itemIcon,
+                            number = state.numbers[i],
+                            size = itemSize,
+                            index = i,
+                            reaction = itemReactions[i],
+                            hint = help.showHint && state.phase == CountingPhase.COUNT && i == nextToCount,
+                            onTap = {
+                                val number = viewModel.onItemTapped(i)
+                                if (number == 0) {
+                                    // Already counted: a little wiggle, no new number
+                                    if (state.phase == CountingPhase.COUNT) scope.launch { itemReactions[i].shake() }
+                                    return@CountedThing
+                                }
+                                help.touched()
+                                sfxPlayer.play(Sfx.POP)
+                                scope.launch { itemReactions[i].celebrate() }
+                                if (viewModel.state.value.roundComplete) {
+                                    // Level 1: the last one counted is the answer
+                                    voicePlayer.play("voice_number_$number", language) { scope.launch { delay(250); celebrate() } }
+                                } else {
+                                    voicePlayer.play("voice_number_$number", language)
+                                }
+                            }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Tap button to add items
-            if (!state.roundComplete) {
-                val interactionSource = remember { MutableInteractionSource() }
-                val isPressed by interactionSource.collectIsPressedAsState()
-                val tapScale by animateFloatAsState(
-                    targetValue = if (isPressed) 0.85f else 1f,
-                    animationSpec = spring(dampingRatio = 0.4f, stiffness = 300f),
-                    label = "tap_scale"
-                )
-
-                val pulse by rememberInfiniteTransition(label = "tap_pulse").animateFloat(
-                    initialValue = 1f,
-                    targetValue = if (state.currentCount == 0) 1.1f else 1f,
-                    animationSpec = infiniteRepeatable(tween(700), RepeatMode.Reverse),
-                    label = "tap_pulse_scale"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .graphicsLayer { scaleX = tapScale * pulse; scaleY = tapScale * pulse }
-                        .size(150.dp)
-                        .shadow(8.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(state.currentRound.itemColor)
-                        .border(BorderStroke(6.dp, Color.White), CircleShape)
-                        .clickable(interactionSource = interactionSource, indication = null) {
-                            val newCount = viewModel.onItemTapped()
-                            if (newCount == 0) return@clickable  // a second tap after the last one
-                            sfxPlayer.play(Sfx.POP)
-                            if (newCount > 0) {
-                                voicePlayer.play("voice_number_$newCount", language)
-                            } else {
-                                // Round complete
-                                val counted = "ספרו ${state.currentRound.targetNumber} ${state.currentRound.itemName.he}!"
-                                val countedEn = "The child counted ${state.currentRound.targetNumber} ${state.currentRound.itemName.en.lowercase()}!"
-                                voicePlayer.play("voice_number_${state.currentRound.targetNumber}", language) {
-                                    if (companion != null) companion.react(counted, countedEn) { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
-                                }
-                                sfxPlayer.play(Sfx.SUCCESS)
-                                showRoundSuccess = true
-                                scope.launch {
-                                    delay(if (companion?.isReady == true) 3800 else 2600)
-                                    showRoundSuccess = false
-                                    viewModel.nextRound()
+            // "How many?": three numbers (the row keeps its room, so the garden never jumps)
+            Row(
+                modifier = Modifier.height(116.dp),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (state.phase == CountingPhase.HOW_MANY) {
+                    state.choices.forEachIndexed { i, n ->
+                        val cardReaction = remember(state.roundIndex, n) { ReactionState() }
+                        NumberCard(
+                            number = n,
+                            index = i,
+                            reaction = cardReaction,
+                            hint = help.showHint && n == target,
+                            onTap = {
+                                if (viewModel.onAnswer(n)) {
+                                    scope.launch { cardReaction.celebrate() }
+                                    celebrate()
+                                } else {
+                                    sfxPlayer.play(Sfx.WRONG_GENTLE)
+                                    help.missed()
+                                    scope.launch { cardReaction.shake() }
+                                    voicePlayer.playSequence(listOf("voice_number_$n", "voice_prompt_try_again"), language)
                                 }
                             }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(state.currentRound.itemIcon),
-                        contentDescription = null,
-                        modifier = Modifier.size(104.dp)
-                    )
+                        )
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         ConfettiOverlay(show = showRoundSuccess)
@@ -244,5 +254,78 @@ fun CountingGardenScreen(
                 onHome = onBack
             )
         }
+    }
+}
+
+/** One thing in the garden: smaller and still until counted, then full size with its number. */
+@Composable
+private fun CountedThing(
+    icon: Int,
+    number: Int,
+    size: Dp,
+    index: Int,
+    reaction: ReactionState,
+    hint: Boolean,
+    onTap: () -> Unit
+) {
+    val counted = number > 0
+    val scale by animateFloatAsState(
+        targetValue = if (counted) 1f else 0.82f,
+        animationSpec = spring(dampingRatio = 0.35f, stiffness = 300f),
+        label = "thing_scale_$index"
+    )
+    Box(
+        modifier = Modifier
+            .size(size)
+            .reaction(reaction)
+            .hintGlow(hint)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(icon),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .then(if (counted) Modifier.idleBob(index, 0.6f) else Modifier)
+        )
+        if (counted) {
+            // Its number, in a little white badge at the top corner
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 6.dp, y = (-6).dp)
+                    .popIn(key = number)
+                    .size(40.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(BorderStroke(3.dp, Color(0xFFFFCA28)), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("$number", fontSize = 24.sp, color = Color(0xFF5D4037), style = MaterialTheme.typography.titleLarge)
+            }
+        }
+    }
+}
+
+/** A big number to answer "how many?" with. */
+@Composable
+private fun NumberCard(number: Int, index: Int, reaction: ReactionState, hint: Boolean, onTap: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .popIn(index)
+            .reaction(reaction, jumpHeight = 24.dp)
+            .hintGlow(hint)
+            .size(104.dp)
+            .shadow(8.dp, RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color.White)
+            .border(BorderStroke(5.dp, Color(0xFF8BC34A)), RoundedCornerShape(28.dp))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("$number", fontSize = 60.sp, color = Color(0xFF5D4037), style = MaterialTheme.typography.headlineLarge)
     }
 }

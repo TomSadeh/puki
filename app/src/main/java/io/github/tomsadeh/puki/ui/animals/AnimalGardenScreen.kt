@@ -37,7 +37,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.tomsadeh.puki.audio.Sfx
 import io.github.tomsadeh.puki.theme.GrassGreen
+import io.github.tomsadeh.puki.ui.animals.components.AnimalChoice
 import io.github.tomsadeh.puki.ui.animals.components.AnimalDisplay
+import io.github.tomsadeh.puki.ui.animals.components.ShadowStage
+import io.github.tomsadeh.puki.data.content.AnimalDef
+import io.github.tomsadeh.puki.ui.components.ReactionState
 import io.github.tomsadeh.puki.ui.animals.components.FoodItem
 import io.github.tomsadeh.puki.ui.common.LocalLanguage
 import io.github.tomsadeh.puki.ui.common.LocalSfxPlayer
@@ -72,17 +76,54 @@ fun AnimalGardenScreen(
 
     if (state.isLoading) return
 
-    // Stuck? Ask again after a quiet moment; after misses, the right food wiggles
+    val shadowRound = state.kind == AnimalRoundKind.SHADOW
+    val choiceReactions = remember(state.roundIndex) { state.animalChoices.associate { it.id to ReactionState() } }
+
+    // Stuck? Ask again after a quiet moment; after misses, the right food (or animal) wiggles
     val help = rememberHelp(state.roundIndex, active = !state.roundComplete) {
-        voicePlayer.playSequence(listOf("voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"), language)
+        if (shadowRound) voicePlayer.play("voice_prompt_whose_shadow", language)
+        else voicePlayer.playSequence(listOf("voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"), language)
     }
 
-    RoundPrompt(
+    if (shadowRound) RoundPrompt(
+        state.roundIndex,
+        scene = "במשחק החיות: מנחשים של מי הצל.",
+        sceneEn = "In the animal game: guessing whose shadow this is.",
+        "voice_prompt_whose_shadow"
+    ) else RoundPrompt(
         state.roundIndex,
         scene = "במשחק החיות: ${state.currentAnimal.name.he} מחכה לאוכל.",
         sceneEn = "In the animal game: the ${state.currentAnimal.name.en.lowercase()} is waiting for food.",
         "voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"
     )
+
+    // A shadow round: the child put [animal] on the shadow
+    fun onAnimalDropped(animal: AnimalDef, dropTargetId: String?) {
+        if (dropTargetId != SHADOW_ZONE) {
+            sfxPlayer.play(Sfx.WRONG_GENTLE)
+            return
+        }
+        val target = state.currentAnimal
+        if (animalViewModel.onAnimalDropped(animal.id)) {
+            sfxPlayer.play(Sfx.SUCCESS)
+            showRoundSuccess = true
+            scope.launch { animalReaction.celebrate() }
+            // The shadow turns into the animal, which says its name and its sound
+            voicePlayer.playSequence(listOf("voice_animal_${target.id}", "voice_sound_${target.id}"), language) {
+                if (companion != null) companion.react("במשחק הצללים מצאו של מי הצל: ${target.name.he}!", "In the shadow game the child found whose shadow it was: the ${target.name.en.lowercase()}!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+            }
+            scope.launch {
+                delay(if (companion?.isReady == true) 4600 else 3600)
+                showRoundSuccess = false
+                animalViewModel.nextRound()
+            }
+        } else {
+            sfxPlayer.play(Sfx.WRONG_GENTLE)
+            help.missed()
+            scope.launch { choiceReactions[animal.id]?.shake() }
+            voicePlayer.playSequence(listOf("voice_animal_${animal.id}", "voice_prompt_try_again"), language)
+        }
+    }
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(
@@ -111,7 +152,9 @@ fun AnimalGardenScreen(
                     val compact = maxHeight < 440.dp
                     val animal: @Composable (Modifier) -> Unit = { m ->
                         Box(modifier = m, contentAlignment = Alignment.Center) {
-                    DropZone(
+                    if (shadowRound) DropZone(zoneId = SHADOW_ZONE, highlightColor = GrassGreen) {
+                        ShadowStage(animal = state.currentAnimal, revealed = state.roundComplete, reaction = animalReaction, size = if (compact) 200.dp else 280.dp)
+                    } else DropZone(
                         zoneId = state.currentAnimal.id,
                         highlightColor = GrassGreen
                     ) {
@@ -125,7 +168,22 @@ fun AnimalGardenScreen(
                     visible = !state.roundComplete,
                     enter = fadeIn() + scaleIn()
                 ) {
-                    Row(
+                    if (shadowRound) Row(
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        state.animalChoices.forEachIndexed { i, animal ->
+                            AnimalChoice(
+                                animal = animal,
+                                onDropped = { onAnimalDropped(animal, it) },
+                                tapToZone = SHADOW_ZONE,
+                                index = i,
+                                reaction = choiceReactions.getValue(animal.id),
+                                hint = help.showHint && animal.id == state.currentAnimal.id,
+                                size = if (compact) 130.dp else 165.dp
+                            )
+                        }
+                    } else Row(
                         horizontalArrangement = Arrangement.spacedBy(20.dp),
                         modifier = Modifier.padding(bottom = 16.dp)
                     ) {
@@ -207,3 +265,6 @@ fun AnimalGardenScreen(
         }
     }
 }
+
+/** Where the animals go in a shadow round. */
+private const val SHADOW_ZONE = "shadow"

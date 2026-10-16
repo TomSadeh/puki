@@ -155,7 +155,7 @@ voice_lines = [
     ("voice_instrument_drum", "Drum", "זה תוף."),
     ("voice_instrument_xylophone", "Xylophone", "זה קסילופון."),
     ("voice_instrument_tambourine", "Tambourine", "זה תוף מרים."),
-    ("voice_instrument_maracas", "Maracas", "אלה מרקסים."),
+    ("voice_instrument_maracas", "Maracas", "אלה רעשנים."),
 
     # --- Hebrew letters ---
     ("voice_letter_alef", "Alef", "זאת האות אָלֶף."),
@@ -185,6 +185,8 @@ voice_lines = [
     ("voice_prompt_well_done", "Well done!", "יפה מאוד!"),
     ("voice_prompt_new_island", "New island unlocked!", "אי חדש נפתח!"),
     ("voice_prompt_count_along", "Let's count together!", ("בואי נספור ביחד!", "בוא נספור ביחד!")),
+    ("voice_prompt_how_many", "How many are there?", "כמה יש?"),
+    ("voice_prompt_whose_shadow", "Whose shadow is this?", "של מי הצל הזה?"),
 
     # --- My Day prompts ---
     ("voice_prompt_bath", "Let's take a bath!", ("בואי נתרחץ!", "בוא נתרחץ!")),

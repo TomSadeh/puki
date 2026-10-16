@@ -189,7 +189,7 @@ fun MusicMeadowScreen(
     }
 
     LaunchedEffect(Unit) {
-        companion?.setScene("במשחק המוזיקה: יש תוף, קסילופון, תוף מרים ומרקסים.", "In the music game: there's a drum, a xylophone, a tambourine and maracas.")
+        companion?.setScene("במשחק המוזיקה: יש תוף, קסילופון, תוף מרים ורעשנים.", "In the music game: there's a drum, a xylophone, a tambourine and maracas.")
         delay(500)
         voicePlayer.play("voice_music_free", language)
     }

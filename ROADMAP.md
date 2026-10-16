@@ -18,7 +18,7 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
 - A calm goodbye when the parent's time limit is up: evening falls, Puki yawns and waves. No
   countdown.
 - Hebrew and English, girl/boy forms, no reading needed, all voices generated with BlueTTS.
-- The game updates itself from GitHub releases (parent settings).
+- The game updates itself from GitHub releases (parent settings); a Play build is ready.
 
 **Puki, the companion**
 - Comments on what the child does, looks at her drawings, tells a bedtime story about her
@@ -35,10 +35,41 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
   installer downloads is pinned to a SHA-256. The brain can't be left holding the GPU if
   the doorbell is closed abruptly.
 
-## Next up
+## v1.0: the Google Play launch
 
-1. **Rewards and the parent's view** (0.7, M each)
-   - A "new sticker!" moment at the end of a session, and more stickers, spaced further apart.
+v1.0 is meant to be finished: what's below, then bug fixes for a few months, and new features
+only from contributors. Features freeze about a week in; the rest of Play's 14-day closed test
+is for polish and testers' reports.
+
+**New and better games**
+- **Counting, one tap, one number:** each thing counts once, hops and shows its number, and
+  Puki repeats the last one ("three! three apples"), which teaches what the count means.
+  Then "give the bunny 3 carrots".
+- **Shadow match** (in Animal Garden): drag the animal onto its silhouette, 2 choices, then 3.
+- **Drawing modes:** free drawing, stamps and color-in pages.
+- **Cooking:** one recipe, from a picture recipe card: add, stir with a finger, bake, taste.
+- **Car wash:** soap and rinse a muddy car (the bath's rub-to-clean, on wheels).
+- **Offline Puki:** without a brain, the parrot still stays and answers taps with recorded
+  giggles and squawks, so every family meets him.
+- **Dance and Freeze** or **tracing letters and numbers**, whichever is ready.
+
+**Polish**
+- A parent setting to hide islands (fewer choices at two).
+- A hand that shows the gesture the first time each game opens.
+- A short vibration on success.
+- A "new sticker!" moment at the end of a session.
+- The hub at a steady 60 fps on the tablet.
+- An about and credits card in settings.
+
+**Release**
+- The Play build (`play` flavor), its listing and forms (`fastlane/PLAY_CHECKLIST.md`), and
+  regular GitHub releases instead of pre-releases.
+- A project status note in the README, issue templates, and GitHub Discussions for questions.
+
+## After v1: ideas for contributors
+
+1. **Rewards and the parent's view** (M each)
+   - More stickers, spaced further apart.
    - A parent progress page on the PC's dashboard: stars and level per game, words she said,
      games played, reset and level override.
    - **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
@@ -54,13 +85,18 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
    - Check the phone layouts on the S25: the food now sits beside the animal and the hub's
      islands scale down on short screens (0.5.1), but neither has been seen on a phone yet.
 3. **Games that feel better** (S–M each)
-   - Counting by tapping each thing (one tap, one number).
    - Bedtime as a bedroom scene, like the other routines.
    - More variety in My Day: items drawn from a bigger pool each visit.
-   - The hub at a steady 60 fps on the tablet (it's about 44; the waves were the big cost).
 4. **Small new toys** (S–M each, from the research below)
    - **Big and small:** "who gets the big apple?", with two choices.
    - **Sort it:** socks to the drawer, balls to the box.
+   - **More recipes** and **fixing cars** (swap a flat tire, drag the parts into place).
+   - **Tracing** or **Dance and Freeze**, whichever didn't make v1.
+   - **Toy phone:** call Grandma, the cow or Puki; with the brain, a real little chat.
+   - **Teddy doctor:** find where Teddy hurts and put a bandage on it.
+   - **Grow a garden:** seed, water, sun, bloom.
+   - **Little puzzles:** 2 to 4 piece animal jigsaws.
+   - **What do we wear today?** Dress for the weather outside the window.
 
 ## Later
 
@@ -83,7 +119,6 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
 **Easier for other families** (M–L)
 - The app finds the PC by itself (mDNS, `_puki._tcp`), instead of an address or QR code.
 - A signed Puki.exe (no SmartScreen warning), and a macOS brain.
-- Google Play, once the rest is solid (its "Designed for Families" rules mean real paperwork).
 - Compare BlueTTS's English with Kokoro on the PC too.
 
 **Ongoing:** tune Puki's personality from real logs: which lines delight, which fall flat.

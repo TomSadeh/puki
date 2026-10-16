@@ -18,5 +18,5 @@ val instruments = listOf(
     InstrumentDef("drum", BilingualText("תוף", "Drum"), "\uD83E\uDD41", Color(0xFFEF5350), 0, R.drawable.ic_instrument_drum),
     InstrumentDef("xylophone", BilingualText("קסילופון", "Xylophone"), "\uD83C\uDFB5", Color(0xFF42A5F5), 1, R.drawable.ic_instrument_xylophone),
     InstrumentDef("tambourine", BilingualText("תוף מרים", "Tambourine"), "\uD83E\uDE98", Color(0xFFFFEE58), 2, R.drawable.ic_instrument_tambourine),
-    InstrumentDef("maracas", BilingualText("מרקסים", "Maracas"), "\uD83C\uDF89", Color(0xFF66BB6A), 3, R.drawable.ic_instrument_maracas)
+    InstrumentDef("maracas", BilingualText("רעשנים", "Maracas"), "\uD83C\uDF89", Color(0xFF66BB6A), 3, R.drawable.ic_instrument_maracas)
 )
