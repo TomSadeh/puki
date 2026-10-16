@@ -8,7 +8,11 @@ enum class Sfx(val resId: Int) {
     WHOOSH(R.raw.snd_whoosh),
     WRONG_GENTLE(R.raw.snd_wrong_gentle),
     DROP(R.raw.snd_drop),
-    STAR_COLLECT(R.raw.snd_star_collect);
+    STAR_COLLECT(R.raw.snd_star_collect),
+    DRUM(R.raw.snd_drum),
+    XYLOPHONE(R.raw.snd_xylophone),
+    TAMBOURINE(R.raw.snd_tambourine),
+    MARACAS(R.raw.snd_maracas);
 
     companion object {
         fun preloadAll(sfxPlayer: SfxPlayer) {

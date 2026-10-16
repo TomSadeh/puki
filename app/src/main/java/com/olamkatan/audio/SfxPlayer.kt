@@ -27,10 +27,11 @@ class SfxPlayer(private val context: Context) {
     /** The parent's sound-effects volume, 0..1 (parent settings). */
     var level = 1f
 
-    fun play(sfx: Sfx, volume: Float = 1f) {
+    /** [rate] plays it faster or slower (0.5..2), which also raises or lowers its pitch. */
+    fun play(sfx: Sfx, volume: Float = 1f, rate: Float = 1f) {
         if (!enabled || level <= 0f) return
         loadedSounds[sfx.name]?.let { soundId ->
-            soundPool.play(soundId, volume * level, volume * level, 1, 0, 1f)
+            soundPool.play(soundId, volume * level, volume * level, 1, 0, rate)
         }
     }
 

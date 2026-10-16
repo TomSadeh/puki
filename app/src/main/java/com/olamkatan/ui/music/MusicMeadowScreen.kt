@@ -1,5 +1,14 @@
 package com.olamkatan.ui.music
 
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Animatable
 import com.olamkatan.ui.components.popIn
 import com.olamkatan.ui.components.idleBob
 import com.olamkatan.ui.components.PromptBubble
@@ -142,6 +151,22 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
     val companion = LocalCompanion.current
     val sfxPlayer = LocalSfxPlayer.current
     val scope = rememberCoroutineScope()
+    // How many times each instrument has been played (each time, notes float up from it)
+    val plays = remember { mutableStateListOf(0, 0, 0, 0) }
+    var xyloNote by remember { mutableIntStateOf(0) }
+    fun playInstrument(index: Int) {
+        plays[index] = plays[index] + 1
+        when (instruments[index].id) {
+            "drum" -> sfxPlayer.play(Sfx.DRUM)
+            "xylophone" -> {
+                // Up and down a happy scale, one bar at a time
+                sfxPlayer.play(Sfx.XYLOPHONE, rate = XYLO_SCALE[xyloNote % XYLO_SCALE.size])
+                xyloNote++
+            }
+            "tambourine" -> sfxPlayer.play(Sfx.TAMBOURINE)
+            else -> sfxPlayer.play(Sfx.MARACAS)
+        }
+    }
 
     LaunchedEffect(Unit) {
         companion?.setScene("במשחק המוזיקה: יש תוף, קסילופון, תוף מרים ומרקסים.", "In the music game: there's a drum, a xylophone, a tambourine and maracas.")
@@ -161,7 +186,7 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
             delay(1800)
             for (noteIndex in state.pattern) {
                 viewModel.setHighlight(noteIndex)
-                sfxPlayer.play(Sfx.POP)
+                playInstrument(noteIndex)
                 delay(600)
                 viewModel.setHighlight(-1)
                 delay(200)
@@ -199,9 +224,9 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Instruments
+            // The instruments stand on the stage, each in its own soft pool of light
             Row(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 130.dp),  // inside the curtains
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -212,35 +237,33 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
                     val scale by animateFloatAsState(
                         targetValue = when {
                             isHighlighted -> 1.2f
-                            isPressed -> 0.85f
+                            isPressed -> 0.88f
                             else -> 1f
                         },
                         animationSpec = spring(dampingRatio = 0.4f, stiffness = 300f),
                         label = "inst_scale"
                     )
+                    val glow by animateFloatAsState(if (isHighlighted || isPressed) 1f else 0.3f, tween(160), label = "inst_glow")
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.popIn(index).then(if (isHighlighted) Modifier else Modifier.idleBob(index, 0.7f))
+                        modifier = Modifier
+                            .offset(y = if (index % 2 == 0) (-26).dp else 26.dp)  // not all in one line
+                            .popIn(index)
+                            .then(if (isHighlighted) Modifier else Modifier.idleBob(index, 0.7f))
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(180.dp)
-                                .graphicsLayer { scaleX = scale; scaleY = scale }
-                                .shadow(if (isHighlighted) 16.dp else 8.dp, RoundedCornerShape(24.dp))
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            if (isHighlighted) instrument.color else instrument.color.copy(alpha = 0.8f),
-                                            if (isHighlighted) instrument.color.copy(alpha = 0.9f) else instrument.color.copy(alpha = 0.6f)
-                                        )
+                                .size(220.dp)
+                                .drawBehind {
+                                    // A round glow that fades out, so there's no edge to see
+                                    drawCircle(
+                                        Brush.radialGradient(listOf(instrument.color.copy(alpha = 0.8f * glow), Color.Transparent)),
+                                        radius = size.minDimension / 2
                                     )
-                                )
-                                .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                                }
                                 .clickable(interactionSource = interactionSource, indication = null) {
-                                    sfxPlayer.play(Sfx.POP)
-                                    voicePlayer.play("voice_instrument_${instrument.id}", language)
+                                    playInstrument(index)
                                     if (state.phase == MusicPhase.PLAYER_TURN) {
                                         val result = viewModel.onInstrumentTapped(index)
                                         if (result == false) {
@@ -249,21 +272,20 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
                                         } else if (result == true) {
                                             sfxPlayer.play(Sfx.SUCCESS)
                                         }
+                                    } else if (state.phase == MusicPhase.FREE_PLAY) {
+                                        voicePlayer.play("voice_instrument_${instrument.id}", language)
                                     }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (instrument.drawableRes != 0) {
-                                androidx.compose.foundation.Image(
-                                    painter = androidx.compose.ui.res.painterResource(id = instrument.drawableRes),
-                                    contentDescription = instrument.name.en,
-                                    modifier = androidx.compose.ui.Modifier.size(152.dp)
-                                )
-                            } else {
-                                Text(instrument.emoji, fontSize = 52.sp)
-                            }
+                            androidx.compose.foundation.Image(
+                                painter = androidx.compose.ui.res.painterResource(id = instrument.drawableRes),
+                                contentDescription = instrument.name.resolve(language),
+                                modifier = Modifier.size(175.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                            )
+                            NoteBurst(key = plays[index], color = lerp(instrument.color, Color.White, 0.35f))
                         }
-                        Text(instrument.name.resolve(language), style = MaterialTheme.typography.titleMedium, color = CloudWhite, modifier = Modifier.padding(top = 6.dp))
+                        Text(instrument.name.resolve(language), style = MaterialTheme.typography.titleMedium, color = CloudWhite)
                     }
                 }
             }
@@ -295,6 +317,35 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
 
         if (state.phase == MusicPhase.SESSION_COMPLETE) {
             RoundCompleteSheet(starsEarned = state.totalStarsEarned, onContinue = onBack, onHome = onBack)
+        }
+    }
+}
+
+
+/** The xylophone's notes, as playback rates of its one bar: a major pentatonic, up and back down. */
+private val XYLO_SCALE = listOf(1f, 1.122f, 1.26f, 1.498f, 1.682f, 2f, 1.682f, 1.498f, 1.26f, 1.122f)
+
+/** A couple of music notes that float up and fade each time [key] changes. */
+@Composable
+private fun NoteBurst(key: Int, color: Color) {
+    if (key == 0) return
+    val t = remember(key) { Animatable(0f) }
+    LaunchedEffect(key) { t.animateTo(1f, tween(1000, easing = LinearOutSlowInEasing)) }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        listOf(Triple(-0.25f, "\u266A", 0f), Triple(0.27f, "\u266B", 0.15f)).forEach { (dx, glyph, lag) ->
+            Text(
+                glyph,
+                fontSize = 52.sp,
+                color = color,
+                modifier = Modifier.graphicsLayer {
+                    val p = ((t.value - lag) / (1f - lag)).coerceIn(0f, 1f)
+                    translationX = dx * 220.dp.toPx() + kotlin.math.sin(p * 6f) * 8.dp.toPx()
+                    translationY = -40.dp.toPx() - p * 130.dp.toPx()
+                    alpha = if (p <= 0f) 0f else 1f - p
+                    scaleX = 0.7f + p * 0.5f
+                    scaleY = 0.7f + p * 0.5f
+                }
+            )
         }
     }
 }
