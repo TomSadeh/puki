@@ -44,7 +44,8 @@ It shows what it will do, then:
 2. asks which Gemma to use: **E4B** (lighter, faster), **12B** (smarter, sees drawings better;
    needs about 9 GB of free GPU memory) or **both** (12B when the GPU has room, E4B when a
    game or a training run is using it), then downloads it with its vision part, the ivrit.ai Hebrew Whisper, Parakeet for English,
-   and BlueTTS with its voice models (about 9 GB in all, into `~/puki-brain`);
+   and BlueTTS with its voice models and Hebrew pronunciation (about 10 GB in all, into
+   `~/puki-brain`). That's every model Puki uses: the brain never downloads while it runs;
 3. creates the Python environment (without the NVIDIA libraries on PCs without a GPU);
 4. writes `brain/config.json` with all the paths;
 5. adds the home-network-only firewall rule (Windows asks for permission once), and tells
@@ -88,7 +89,10 @@ brain's files inside. The first time it runs, it unpacks them into `%LOCALAPPDAT
 and runs this installer there in a setup window (the model choice, progress bars, and the QR
 code at the end). Python comes along via
 [uv](https://github.com/astral-sh/uv), kept inside that folder, so the PC needs no Python.
-After that it's just the tray icon, and it starts at login. It's unsigned, so Windows
+After that it's just the tray icon, and it starts at login. A newer Puki.exe unpacks its files
+again and runs the installer in an "Updating Puki" window, which only does what changed (as
+`--update` does), before Puki starts; if another version is running, it asks you to quit that
+one first. It's unsigned, so Windows
 SmartScreen may warn the first time; the build prints its SHA-256 to compare against.
 
 **On Linux** (tested for Ubuntu-like systems with an NVIDIA driver), run the same installer
@@ -127,7 +131,10 @@ Everything goes in `~/puki-brain` by default. You can change any path in the con
    loads the first time the app talks to Puki in English. Without it, English uses the Hebrew
    Whisper, which understands English poorly.
 4. **BlueTTS:** clone [BlueTTS](https://github.com/maxmelichov/BlueTTS) into
-   `~/puki-brain/BlueTTS` and download its ONNX models as its README describes.
+   `~/puki-brain/BlueTTS` and download its ONNX models as its README describes. Its Hebrew
+   pronunciation model goes in `models` too: [RenikudPlus `model.onnx`](https://huggingface.co/notmax123/RenikudPlus/blob/679c56ca449d41873fb8ff7711ddf7563d28198f/model.onnx)
+   (1.2 GB) as `~/puki-brain/models/renikud-plus/model.onnx`. The brain runs offline, so
+   without it the brain doesn't start.
 5. **Python environment** for brain.py:
    ```
    python -m venv ~/puki-brain/.venv

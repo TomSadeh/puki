@@ -68,7 +68,7 @@ def load_config():
         with open(local, encoding="utf-8") as f:
             cfg.update(json.load(f))
     # "~" in paths means the user's home folder
-    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "parakeet_model", "model_12b", "mmproj_12b", "bluetts_dir"):
+    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "parakeet_model", "model_12b", "mmproj_12b", "bluetts_dir", "renikud_model"):
         cfg[key] = os.path.expanduser(cfg[key])
     return cfg
 
@@ -273,7 +273,9 @@ class Brain:
             flags |= subprocess.CREATE_NO_WINDOW
         errors = open(ERRORS_FILE, "w", encoding="utf-8") if no_console else None
         # UTF-8 mode: otherwise BlueTTS reads its data files in the Windows code page and crashes
-        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+        # Offline: the installer brings every model, so anything that tries to fetch one fails
+        # instead of quietly downloading
+        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", HF_HUB_OFFLINE="1")
         if os.name != "nt":
             # Linux finds shared libraries through LD_LIBRARY_PATH, set before the process starts:
             # llama.cpp's own (next to llama-server) and the CUDA ones pip put in the brain's venv

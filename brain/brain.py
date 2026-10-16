@@ -192,6 +192,7 @@ TTS = BlueTTS(
     onnx_dir=os.path.join(_bt, "onnx_models"),
     style_json=os.path.join(_bt, "voices", f"{CFG['voice']}.json"),
     config_path=os.path.join(_bt, "config", "tts.json"),
+    renikud_path=CFG["renikud_model"],
 )
 
 

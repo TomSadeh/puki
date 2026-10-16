@@ -8,7 +8,7 @@
 It downloads llama.cpp (the CUDA build when there's an NVIDIA GPU, otherwise the CPU
 one), Gemma and its vision part (E4B, or the smarter 12B on a GPU with 12 GB or more; see
 --model), the ivrit.ai Hebrew Whisper, Parakeet for English, and
-BlueTTS with its voice models (about 9 GB in all). Then it creates the Python environment,
+BlueTTS with its voice models and Hebrew pronunciation (about 10 GB in all). Then it creates the Python environment,
 writes brain/config.json, adds the home-network firewall rule (one Windows admin prompt),
 starts Puki at login, and opens the dashboard with the pairing code.
 
@@ -62,12 +62,16 @@ WHISPER_REPO = "ivrit-ai/whisper-large-v3-turbo-ct2"
 PARAKEET_REPO = "istupakov/parakeet-tdt-0.6b-v2-onnx"
 PARAKEET_FILES = ["encoder-model.int8.onnx", "decoder_joint-model.int8.onnx", "nemo128.onnx", "vocab.txt", "config.json"]
 BLUETTS_ONNX_REPO = "notmax123/BlueTTS2.5-onnx"
+# BlueTTS's Hebrew pronunciation. Left to itself, renikud-plus fetches it from Hugging Face the
+# first time Puki speaks Hebrew; the installer brings it, so the brain never goes online
+RENIKUD_REPO = "notmax123/RenikudPlus"
+RENIKUD_FILE = "model.onnx"
 
 REPO = "TomSadeh/puki"  # where --update gets the latest Puki
 PORT = 8790
 DASHBOARD = "http://127.0.0.1:8793"
 FIREWALL_RULE = "Puki companion"
-NEEDED_GB = 12  # with E4B; 13 with 12B, 19 with both
+NEEDED_GB = 14  # with E4B (13.7 GB measured on Linux); 15 with 12B, 21 with both
 UA = {"User-Agent": "puki-installer"}
 
 
@@ -555,6 +559,8 @@ def install_bluetts(root, dry):
     for path, (size, _) in onnx.items():
         if not path.startswith(".") and path != "README.md" and size:
             hf_download(BLUETTS_ONNX_REPO, onnx, path, os.path.join(dest, "onnx_models", path), dry)
+    hf_download(RENIKUD_REPO, hf_files(RENIKUD_REPO), RENIKUD_FILE,
+                os.path.join(root, "models", "renikud-plus", RENIKUD_FILE), dry)
 
 
 def get_uv(root, dry):
@@ -621,6 +627,7 @@ def write_config(root, py, model, dry):
         "whisper_model": m("models", "whisper-ivrit-turbo"),
         "parakeet_model": m("models", "parakeet-tdt-0.6b-v2-onnx"),
         "bluetts_dir": m("BlueTTS"),
+        "renikud_model": m("models", "renikud-plus", RENIKUD_FILE),
         "model_12b": m("models", GEMMA12_FILE),
         "mmproj_12b": m("models", MMPROJ12_NAME),
     })
