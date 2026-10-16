@@ -177,6 +177,7 @@ voice_lines = [
     ("voice_prompt_whos_hungry", "Who's hungry?", "מי רוצה לאכול?"),
     ("voice_prompt_whos_hiding", "Who's hiding?", "מי מתחבא?"),
     ("voice_peekaboo", "Peekaboo!", "קוקו!"),
+    ("voice_prompt_echo", "Say something to Puki!", ("תגידי משהו לפוקי!", "תגיד משהו לפוקי!")),
     ("voice_prompt_tap_the", "Tap the right one!", ("תלחצי על הנכון!", "תלחץ על הנכון!")),
     ("voice_prompt_drag_it", "Drag it to its place!", ("תזיזי את זה למקום שלו!", "תזיז את זה למקום שלו!")),
     ("voice_prompt_try_again", "Oops, let's try again!", "אופס! ננסה שוב!"),

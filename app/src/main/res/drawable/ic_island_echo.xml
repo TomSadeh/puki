@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Echo Puki: a speech bubble, and a smaller one saying it back -->
+    <!-- The echo, behind -->
+    <path android:fillColor="#FFF59D"
+        android:pathData="M56,52 h28 a8,8 0 0 1 8,8 v14 a8,8 0 0 1 -8,8 h-6 l4,9 l-12,-9 h-14 a8,8 0 0 1 -8,-8 v-14 a8,8 0 0 1 8,-8Z"/>
+    <path android:fillColor="#F57F17"
+        android:pathData="M60,64 A3,3 0 1,1 66,64 A3,3 0 1,1 60,64Z M68,64 A3,3 0 1,1 74,64 A3,3 0 1,1 68,64Z M76,64 A3,3 0 1,1 82,64 A3,3 0 1,1 76,64Z"/>
+    <!-- Her words, in front -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M18,14 h40 a10,10 0 0 1 10,10 v20 a10,10 0 0 1 -10,10 h-22 l-14,11 l4,-11 h-8 a10,10 0 0 1 -10,-10 v-20 a10,10 0 0 1 10,-10Z"/>
+    <!-- Sound waves -->
+    <path android:strokeColor="#8E24AA" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M26,34 q4,-8 8,0 t8,0 t8,0 t8,0"/>
+</vector>

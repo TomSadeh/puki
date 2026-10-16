@@ -21,6 +21,10 @@ class MicRecorder {
 
     val isRecording get() = running
 
+    /** How loud the last moment was, 0 (silence) to about 1 (shouting): for "has she stopped talking?". */
+    @Volatile var level = 0f
+        private set
+
     /** Caller must hold the RECORD_AUDIO permission. */
     @SuppressLint("MissingPermission")
     fun start(): Boolean {
@@ -43,7 +47,10 @@ class MicRecorder {
             val maxBytes = RATE * 2 * MAX_SECONDS
             while (running && pcm.size() < maxBytes) {
                 val n = rec.read(buf, 0, buf.size)
-                if (n > 0) synchronized(pcm) { pcm.write(buf, 0, n) }
+                if (n > 0) {
+                    synchronized(pcm) { pcm.write(buf, 0, n) }
+                    level = rms(buf, n)
+                }
             }
         }
         return true
@@ -58,8 +65,20 @@ class MicRecorder {
             release()
         }
         record = null
+        level = 0f
         val data = synchronized(pcm) { pcm.toByteArray() }
         return if (data.isEmpty()) data else wav(data)
+    }
+
+    private fun rms(b: ByteArray, n: Int): Float {
+        var sum = 0.0
+        var i = 0
+        while (i + 1 < n) {
+            val v = ((b[i + 1].toInt() shl 8) or (b[i].toInt() and 0xFF)).toShort() / 32768.0
+            sum += v * v
+            i += 2
+        }
+        return kotlin.math.sqrt(sum / maxOf(1, n / 2)).toFloat() * 4f  // speech sits around 0.1-0.6
     }
 
     private fun wav(pcmData: ByteArray): ByteArray {

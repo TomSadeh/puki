@@ -50,7 +50,7 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
    - **Sort it:** socks to the drawer, balls to the box.
    - ~~**A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves.~~ Done in 0.6.
    - **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
-   - **Echo parrot:** she says anything, and Puki says it back in a silly parrot voice.
+   - ~~**Echo parrot:** she says anything, and Puki says it back in a silly parrot voice.~~ Done in 0.6.
 
 ## Later
 

@@ -11,6 +11,7 @@ import io.github.tomsadeh.puki.ui.shapes.ShapePlaygroundScreen
 import io.github.tomsadeh.puki.ui.counting.CountingGardenScreen
 import io.github.tomsadeh.puki.ui.music.MusicMeadowScreen
 import io.github.tomsadeh.puki.ui.words.WordGardenScreen
+import io.github.tomsadeh.puki.ui.echo.EchoScreen
 import io.github.tomsadeh.puki.ui.peekaboo.PeekabooScreen
 import io.github.tomsadeh.puki.ui.say.SayItScreen
 import io.github.tomsadeh.puki.ui.myday.MyDayScreen
@@ -34,6 +35,7 @@ object Routes {
     const val WORDS = "words"
     const val SAY = "say"
     const val PEEKABOO = "peekaboo"
+    const val ECHO = "echo"
     const val MY_DAY = "myday"
     const val MY_DAY_BATH = "myday/bath"
     const val MY_DAY_BRUSH = "myday/brush"
@@ -107,6 +109,9 @@ fun PukiNavGraph(navController: NavHostController) {
         }
         composable(Routes.PEEKABOO) {
             PeekabooScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.PEEKABOO))
+        }
+        composable(Routes.ECHO) {
+            EchoScreen(onBack = safeBack)
         }
         composable(Routes.MY_DAY) {
             MyDayScreen(

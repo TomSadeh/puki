@@ -39,6 +39,20 @@ class SelfTestReceiver : BroadcastReceiver() {
             // The whisper library's functions are named after the package: this fails if they don't match
             WhisperNative.load()
             check("whisper binding", WhisperNative.init("/no/such/model.bin"), 0L)
+            // With -e echotest 1: play a short tone through the echo parrot's voice (high and fast)
+            if (intent.getStringExtra("echotest") != null) {
+                val rate = io.github.tomsadeh.puki.audio.MicRecorder.RATE
+                val n = rate / 2
+                val pcm = java.nio.ByteBuffer.allocate(44 + n * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN).apply {
+                    put("RIFF".toByteArray()); putInt(36 + n * 2); put("WAVE".toByteArray()); put("fmt ".toByteArray())
+                    putInt(16); putShort(1); putShort(1); putInt(rate); putInt(rate * 2); putShort(2); putShort(16)
+                    put("data".toByteArray()); putInt(n * 2)
+                    for (i in 0 until n) putShort((8000 * kotlin.math.sin(2 * Math.PI * 330 * i / rate)).toInt().toShort())
+                }.array()
+                val t0 = System.currentTimeMillis()
+                runBlocking { io.github.tomsadeh.puki.audio.EchoVoice.play(pcm, 0.8f) }
+                check("echo played (ms, about 500/1.45 + 150)", (System.currentTimeMillis() - t0) in 300..900, true)
+            }
             // With -e timelimit <minutes>: set the parent's time limit (0 = off), to see the goodbye soon
             intent.getStringExtra("timelimit")?.toIntOrNull()?.let { minutes ->
                 runBlocking { (context.applicationContext as PukiApplication).settingsRepository.updateTimeLimit(minutes) }

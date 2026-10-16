@@ -81,8 +81,8 @@ val allIslands = listOf(
         color = WarmOrange,
         emoji = "\uD83C\uDFB5",
         drawableRes = R.drawable.ic_island_music,
-        fractionalX = 0.87f,
-        fractionalY = 0.63f
+        fractionalX = 0.91f,
+        fractionalY = 0.635f
     ),
     IslandDef(
         id = "words",
@@ -91,17 +91,18 @@ val allIslands = listOf(
         color = CoralPink,
         emoji = "\uD83D\uDCD6",
         drawableRes = R.drawable.ic_island_words,
-        fractionalX = 0.66f,
-        fractionalY = 0.80f
+        fractionalX = 0.77f,
+        fractionalY = 0.81f
     ),
+    // The bottom row, right to left in the order the sea route visits it
     IslandDef(
-        id = "say",
-        name = BilingualText("מדברים עם פוקי", "Say it with Puki"),
-        route = Routes.SAY,
-        color = GrassGreen,
+        id = "echo",
+        name = BilingualText("תוכי מחקה", "Echo Puki"),
+        route = Routes.ECHO,
+        color = Color(0xFFCE93D8),
         emoji = "\uD83E\uDD9C",
-        drawableRes = R.drawable.ic_companion_parrot_talk,
-        fractionalX = 0.15f,
+        drawableRes = R.drawable.ic_island_echo,
+        fractionalX = 0.565f,
         fractionalY = 0.80f
     ),
     IslandDef(
@@ -111,7 +112,17 @@ val allIslands = listOf(
         color = EarthBrown,
         emoji = "\uD83C\uDFE0",
         drawableRes = R.drawable.ic_island_myday,
-        fractionalX = 0.37f,
+        fractionalX = 0.36f,
+        fractionalY = 0.80f
+    ),
+    IslandDef(
+        id = "say",
+        name = BilingualText("מדברים עם פוקי", "Say it with Puki"),
+        route = Routes.SAY,
+        color = GrassGreen,
+        emoji = "\uD83E\uDD9C",
+        drawableRes = R.drawable.ic_companion_parrot_talk,
+        fractionalX = 0.155f,
         fractionalY = 0.80f
     )
 )
