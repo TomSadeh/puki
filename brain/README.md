@@ -54,6 +54,29 @@ Downloads show progress and resume if interrupted, and running it again only doe
 missing. Options: `--dry-run` (just show the plan), `--model e4b|12b|both`, `--dir D:\puki-brain`, `--cpu`,
 `--only firewall,autostart` (repeat single steps), `--no-firewall`, `--no-autostart`.
 
+**Later:** `python brain\install.py --update` gets the latest Puki (with git, or as a zip if
+the folder isn't a clone) and redoes only what changed, including a newer llama.cpp or
+BlueTTS. `python brain\install.py --uninstall` stops Puki and removes the login shortcut,
+the firewall rule it added, and everything it downloaded, asking before each part.
+
+## Tray app and Puki.exe
+
+`brain\tray.py` runs the doorbell with an icon in the Windows tray: grey while Puki sleeps,
+yellow while it wakes, green when it's awake. Its menu opens the dashboard, shows the
+pairing code, puts the brain to sleep, turns "start at login" on or off, and quits. Windows
+first puts new tray icons behind the **^** arrow; drag it onto the taskbar to keep it in view.
+
+```
+.venv\Scripts\pythonw.exe brain\tray.py     (the brain's environment has pystray and pillow)
+```
+
+`python brain\build_exe.py` builds **Puki.exe** (about 17 MB): the same tray app with the
+brain's files inside. The first time it runs, it unpacks them into `%LOCALAPPDATA%\Puki`
+and opens a window that runs this installer there. Python comes along via
+[uv](https://github.com/astral-sh/uv), kept inside that folder, so the PC needs no Python.
+After that it's just the tray icon, and it starts at login. It's unsigned, so Windows
+SmartScreen may warn the first time; the build prints its SHA-256 to compare against.
+
 The steps below are the same thing by hand (for Linux and macOS too).
 
 ## Setup

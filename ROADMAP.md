@@ -136,7 +136,9 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
 **One program for the PC instead of a setup guide (medium).**
 - **Status:** a setup script is done (`brain/install.py`): it downloads everything with
   resume, picks the GPU or CPU build, and sets up the firewall, autostart and pairing. The
-  single .exe with a tray icon is next.
+  single .exe with a tray icon is built too (`brain/build_exe.py`: Puki.exe sets
+  everything up on its first run, Python included via uv), and `--update`/`--uninstall`
+  work. Still open: a signed build on GitHub Releases, and the macOS/Linux versions.
 - **A single brain binary:** doorbell, brain, a Python runtime, onnxruntime, CTranslate2
   and llama.cpp, bundled with Nuitka or PyInstaller into one Windows app with a tray icon.
   The icon shows whether Puki is asleep, awake or busy, and offers pause and settings.

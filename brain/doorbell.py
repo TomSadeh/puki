@@ -49,7 +49,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dashboard
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
+HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
 
 
 def load_config():
@@ -505,13 +506,19 @@ class DashboardApp:
         EVENTS.add("settings", text=f"sleeps after {minutes} idle minutes")
 
 
-def main():
+def start():
+    """Starts everything but the main loop (the tray runs that in a thread); returns the server."""
     threading.Thread(target=BRAIN.idle_watch, daemon=True).start()
     server = ThreadingHTTPServer((CFG["bind"], CFG["port"]), Handler)
     log(f"doorbell listening on {CFG['bind']}:{CFG['port']}")
     log(f"pairing code: {pretty_code(PAIRING_CODE)}  (type it in the app's parent settings)")
     dashboard.serve(DashboardApp(), CFG["dashboard_port"])
     log(f"dashboard: http://127.0.0.1:{CFG['dashboard_port']}  (this PC only)")
+    return server
+
+
+def main():
+    server = start()
     try:
         server.serve_forever()
     finally:

@@ -19,7 +19,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import qr
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
+HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
 
 
 class Events:

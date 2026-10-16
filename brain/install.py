@@ -14,6 +14,9 @@ starts Puki at login, and opens the dashboard with the pairing code.
 
 Safe to run again: finished steps and complete downloads are skipped, and an interrupted
 download resumes where it stopped. Standard library only, so any Python 3.10+ can run it.
+
+    python brain\\install.py --update      # the latest Puki, then only what changed
+    python brain\\install.py --uninstall   # remove it all (asks before each part)
 """
 
 import argparse
@@ -27,10 +30,13 @@ import urllib.error
 import urllib.request
 import zipfile
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
+HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
 
 # The versions Puki was tested with
+FROZEN = getattr(sys, "frozen", False)  # running inside Puki.exe
 LLAMA_TAG = "b11669"
+UV_VERSION = "0.12.21"  # makes the Python environment when there's no Python (Puki.exe)
 BLUETTS_COMMIT = "0e38dbf08ed53f85863d1eab092bd9572c53a503"
 GEMMA_REPO = "unsloth/gemma-4-E4B-it-GGUF"
 GEMMA_FILE = "gemma-4-E4B-it-Q4_0.gguf"
@@ -44,6 +50,7 @@ PARAKEET_REPO = "istupakov/parakeet-tdt-0.6b-v2-onnx"
 PARAKEET_FILES = ["encoder-model.int8.onnx", "decoder_joint-model.int8.onnx", "nemo128.onnx", "vocab.txt", "config.json"]
 BLUETTS_ONNX_REPO = "notmax123/BlueTTS2.5-onnx"
 
+REPO = "TomSadeh/puki"  # where --update gets the latest Puki
 PORT = 8790
 DASHBOARD = "http://127.0.0.1:8793"
 FIREWALL_RULE = "Puki companion"
@@ -177,14 +184,36 @@ def port_open(port):
 
 # ---------- Steps ----------
 
+def read_marker(folder):
+    """The version this installer put in [folder], or None (not installed by it, or older)."""
+    try:
+        with open(os.path.join(folder, "PUKI_VERSION.txt"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def write_marker(folder, version):
+    with open(os.path.join(folder, "PUKI_VERSION.txt"), "w", encoding="utf-8") as f:
+        f.write(version + "\n")
+
+
 def install_llama(root, gpu, dry):
     dest = os.path.join(root, "llama")
-    if os.path.exists(os.path.join(dest, "llama-server.exe")):
-        say("    ✓ llama.cpp (already there)")
-        return
     flavor = "cpu-x64"
     if gpu:
         flavor = "cuda-13.4-x64" if gpu[2] >= 13 else "cuda-12.4-x64"
+    version = f"{LLAMA_TAG} {flavor}"
+    if os.path.exists(os.path.join(dest, "llama-server.exe")):
+        have = read_marker(dest)
+        if have is None or have == version:  # no marker: set up by hand, leave it alone
+            say(f"    ✓ llama.cpp (already there{'' if have is None else ', ' + LLAMA_TAG})")
+            return
+        say(f"    llama.cpp {have} → {version}")
+        if dry:
+            say("    → would replace it")
+        else:
+            shutil.rmtree(dest)
     assets = {a["name"]: (a["browser_download_url"], a["size"])
               for a in http_json(f"https://api.github.com/repos/ggml-org/llama.cpp/releases/tags/{LLAMA_TAG}")["assets"]}
     wanted = [f"llama-{LLAMA_TAG}-bin-win-{flavor}.zip"]
@@ -200,6 +229,7 @@ def install_llama(root, gpu, dry):
             with zipfile.ZipFile(z) as f:
                 f.extractall(dest)
     if not dry:
+        write_marker(dest, version)
         say(f"    ✓ llama.cpp {LLAMA_TAG} ({flavor})")
 
 
@@ -223,6 +253,21 @@ def install_models(root, model, dry):
 
 def install_bluetts(root, dry):
     dest = os.path.join(root, "BlueTTS")
+    have = read_marker(dest)
+    if os.path.exists(os.path.join(dest, "pyproject.toml")) and have not in (None, BLUETTS_COMMIT):
+        say(f"    BlueTTS {have[:7]} → {BLUETTS_COMMIT[:7]}")
+        if not dry:
+            # Keep the downloaded voice models; only the code is replaced
+            keep = os.path.join(root, "downloads", "onnx_models-keep")
+            shutil.rmtree(keep, ignore_errors=True)
+            if os.path.isdir(os.path.join(dest, "onnx_models")):
+                shutil.move(os.path.join(dest, "onnx_models"), keep)
+            shutil.rmtree(dest)
+            install_bluetts(root, dry=False)  # fresh code
+            if os.path.isdir(keep):
+                shutil.rmtree(os.path.join(dest, "onnx_models"), ignore_errors=True)
+                shutil.move(keep, os.path.join(dest, "onnx_models"))
+            return
     if os.path.exists(os.path.join(dest, "pyproject.toml")):
         say("    ✓ BlueTTS code (already there)")
     else:
@@ -235,10 +280,24 @@ def install_bluetts(root, dry):
                 f.extractall(tmp)
             shutil.move(os.path.join(tmp, os.listdir(tmp)[0]), dest)
             shutil.rmtree(tmp, ignore_errors=True)
+            write_marker(dest, BLUETTS_COMMIT)
             say("    ✓ BlueTTS code")
     for path, size in hf_files(BLUETTS_ONNX_REPO).items():
         if not path.startswith(".") and path != "README.md" and size:
             download(hf_url(BLUETTS_ONNX_REPO, path), os.path.join(dest, "onnx_models", path), size, dry)
+
+
+def get_uv(root, dry):
+    """uv: one small program that downloads Python and installs packages (used by Puki.exe)."""
+    uv = os.path.join(root, "uv", "uv.exe")
+    if os.path.exists(uv):
+        return uv
+    z = os.path.join(root, "downloads", f"uv-{UV_VERSION}.zip")
+    download(f"https://github.com/astral-sh/uv/releases/download/{UV_VERSION}/uv-x86_64-pc-windows-msvc.zip", z, None, dry)
+    if not dry:
+        with zipfile.ZipFile(z) as f:
+            f.extractall(os.path.dirname(uv))
+    return uv
 
 
 def install_venv(root, gpu, dry):
@@ -247,9 +306,16 @@ def install_venv(root, gpu, dry):
     if dry:
         say(f"    → would create {venv} and install the Python packages" + ("" if gpu else " (without the NVIDIA ones)"))
         return py
+    uv = get_uv(root, dry) if FROZEN else None
+    # uv keeps its Python and cache in Puki's folder: nothing shared with other projects, gone on uninstall
+    uv_env = dict(os.environ, UV_PYTHON_INSTALL_DIR=os.path.join(root, "uv", "python"),
+                  UV_CACHE_DIR=os.path.join(root, "uv", "cache"))
     if not os.path.exists(py):
         say("    creating the Python environment...")
-        subprocess.run([sys.executable, "-m", "venv", venv], check=True)
+        if uv:  # Puki.exe: no Python on the PC necessarily, so uv brings one
+            subprocess.run([uv, "venv", "--python", "3.12", "--python-preference", "only-managed", venv], check=True, env=uv_env)
+        else:
+            subprocess.run([sys.executable, "-m", "venv", venv], check=True)
     # Without an NVIDIA GPU, skip the CUDA libraries (about 1 GB)
     with open(os.path.join(HERE, "requirements.txt"), encoding="utf-8") as f:
         reqs = [l for l in f.read().splitlines() if gpu or not l.startswith("nvidia-")]
@@ -258,8 +324,11 @@ def install_venv(root, gpu, dry):
     with open(req_file, "w", encoding="utf-8") as f:
         f.write("\n".join(reqs) + "\n")
     say("    installing packages (a few minutes the first time)...")
-    r = subprocess.run([py, "-m", "pip", "install", "--disable-pip-version-check", "-q",
-                        os.path.join(root, "BlueTTS"), "-r", req_file])
+    if uv:
+        r = subprocess.run([uv, "pip", "install", "--python", py, "-q", os.path.join(root, "BlueTTS"), "-r", req_file], env=uv_env)
+    else:
+        r = subprocess.run([py, "-m", "pip", "install", "--disable-pip-version-check", "-q",
+                            os.path.join(root, "BlueTTS"), "-r", req_file])
     if r.returncode != 0:
         fail("pip couldn't install the packages (see above). Fix that and run the installer again.")
     say("    ✓ Python environment")
@@ -346,6 +415,9 @@ def setup_autostart(dry):
     if dry:
         say("    → would make Puki start at login")
         return pythonw, doorbell
+    if FROZEN:
+        say("    ✓ Puki.exe will start at login (it sets that up when it opens)")
+        return pythonw, doorbell
     r = powershell(
         f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{link}'); "
         f"$s.TargetPath = '{pythonw}'; $s.Arguments = '\"{doorbell}\"'; "
@@ -376,11 +448,150 @@ def start_puki(pythonw, doorbell, dry):
     say(f"  The dashboard ({DASHBOARD}) shows it too, with a QR code.")
 
 
+def startup_folder():
+    return os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
+
+
+def puki_shortcuts():
+    """Login shortcuts that start Puki (made by this installer, by Puki.exe, or by hand)."""
+    out = powershell(
+        f"$sh = New-Object -ComObject WScript.Shell; Get-ChildItem '{startup_folder()}' -Filter *.lnk | "
+        "Where-Object { $l = $sh.CreateShortcut($_.FullName); ($l.Arguments + ' ' + $l.TargetPath) -match "
+        "'doorbell[.]py|tray[.]py|Puki[.]exe' } | Select-Object -ExpandProperty FullName").stdout
+    return [l.strip() for l in out.splitlines() if l.strip()]
+
+
+def stop_puki(root, dry):
+    """Stops the doorbell (or tray), the brain and llama-server."""
+    if dry:
+        say("    → would stop Puki if it's running")
+        return
+    powershell(
+        "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'doorbell[.]py|brain[.]py|tray[.]py|Puki[.]exe' "
+        f"-and ($_.CommandLine -like '*{HERE}*' -or $_.Name -eq 'Puki.exe') }} | "
+        "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; "
+        f"Get-Process llama-server -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -like '{root}*' }} | "
+        "Stop-Process -Force -ErrorAction SilentlyContinue")
+    for _ in range(20):
+        if not port_open(PORT):
+            break
+        time.sleep(0.5)
+    say("    ✓ Puki stopped")
+
+
+def installed_model(root):
+    """e4b / 12b / both, from what's in the models folder."""
+    e4b = os.path.exists(os.path.join(root, "models", GEMMA_FILE))
+    big = os.path.exists(os.path.join(root, "models", GEMMA12_FILE))
+    return "both" if e4b and big else "12b" if big else "e4b"
+
+
+def update(args, root):
+    """Fetches the latest Puki, then re-runs the (new) installer, which only does what changed."""
+    repo_dir = os.path.dirname(HERE)
+    say("Puki: update\n")
+    step(1, "Stop Puki")
+    stop_puki(root, args.dry_run)
+    step(2, "The latest Puki")
+    if os.path.isdir(os.path.join(repo_dir, ".git")):
+        if args.dry_run:
+            say("    → would run  git pull --ff-only")
+        else:
+            r = subprocess.run(["git", "-C", repo_dir, "pull", "--ff-only"], capture_output=True, text=True)
+            if r.returncode != 0:
+                fail("git pull didn't work:\n" + (r.stderr or r.stdout).strip())
+            say("    ✓ " + (r.stdout.strip().splitlines() or ["up to date"])[-1])
+    else:
+        z = os.path.join(root, "downloads", "puki-latest.zip")
+        if args.dry_run:
+            say(f"    → would download github.com/{REPO} and update this folder")
+        else:
+            if os.path.exists(z):
+                os.remove(z)
+            download(f"https://github.com/{REPO}/archive/refs/heads/main.zip", z)
+            with zipfile.ZipFile(z) as f:
+                top = f.namelist()[0].split("/")[0] + "/"
+                for member in f.infolist():
+                    rel = member.filename[len(top):]
+                    if not rel or member.is_dir():
+                        continue
+                    target = os.path.join(repo_dir, rel)
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                    with f.open(member) as src, open(target, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+            say("    ✓ updated (your settings and pairing code are kept)")
+    if args.dry_run:
+        say("\n  → would then run the new installer, which only does what changed")
+        return
+    say("\n  Running the new installer...\n")
+    cmd = [sys.executable, os.path.join(HERE, "install.py"), "--dir", root, "--yes",
+           "--model", args.model or installed_model(root)]
+    cmd += ["--cpu"] if args.cpu else []
+    sys.exit(subprocess.run(cmd).returncode)
+
+
+def uninstall(args, root):
+    dry = args.dry_run
+    ask = lambda q: dry or args.yes or input(f"  {q} [y/N] ").strip().lower() in ("y", "yes")  # noqa: E731
+    say("Puki: uninstall\n")
+    step(1, "Stop Puki")
+    stop_puki(root, dry)
+    step(2, "Start at login")
+    links = puki_shortcuts()
+    if not links:
+        say("    nothing to remove")
+    for link in links:
+        if dry:
+            say(f"    → would remove {os.path.basename(link)}")
+        else:
+            os.remove(link)
+            say(f"    ✓ removed {os.path.basename(link)}")
+    step(3, "Firewall rule")
+    mine = powershell(f"Get-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -ErrorAction SilentlyContinue").stdout.strip()
+    other = port_rule()
+    if mine:
+        if dry:
+            say(f"    → would remove '{FIREWALL_RULE}' (asks for admin)")
+        elif ask(f"Remove the firewall rule '{FIREWALL_RULE}'? (Windows asks for permission)"):
+            powershell(f"Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "
+                       f"\"-NoProfile -Command Remove-NetFirewallRule -DisplayName '{FIREWALL_RULE}'\"")
+            gone = not powershell(f"Get-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -ErrorAction SilentlyContinue").stdout.strip()
+            say("    ✓ removed" if gone else "    ! still there (the permission prompt was declined?)")
+    elif other:
+        say(f"    The rule '{other}' opens port {PORT}; it wasn't made by this installer, so it stays. To remove it,")
+        say(f"    in an administrator PowerShell:  Remove-NetFirewallRule -DisplayName '{other}'")
+    else:
+        say("    nothing to remove")
+    step(4, f"Models, llama.cpp, BlueTTS and the Python environment ({root})")
+    if os.path.isdir(root):
+        size = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(root) for f in fs) / 1e9
+        if dry:
+            say(f"    → would delete it ({size:,.1f} GB)")
+        elif ask(f"Delete {root} ({size:,.1f} GB)?"):
+            shutil.rmtree(root, ignore_errors=True)
+            say("    ✓ deleted" if not os.path.exists(root) else "    ! some files couldn't be deleted (in use?)")
+    else:
+        say("    nothing there")
+    step(5, "Settings and pairing code (brain/config.json, brain/pairing_code.txt)")
+    files = [f for f in (os.path.join(HERE, "config.json"), os.path.join(HERE, "pairing_code.txt")) if os.path.exists(f)]
+    if not files:
+        say("    nothing there")
+    elif dry:
+        say("    → would ask, then delete them")
+    elif ask("Delete your settings and the pairing code too?"):
+        for f in files:
+            os.remove(f)
+        say("    ✓ deleted")
+    say("\nDone. The Puki folder itself (the code) is still here; delete it if you like.")
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description="Set up Puki's brain on this PC.")
-    ap.add_argument("--dir", default=os.path.join(os.path.expanduser("~"), "puki-brain"), help="where to put everything")
+    default_dir = (os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "Puki") if FROZEN
+                   else os.path.join(os.path.expanduser("~"), "puki-brain"))
+    ap.add_argument("--dir", default=default_dir, help="where to put everything")
     ap.add_argument("--cpu", action="store_true", help="use the CPU build even if there's an NVIDIA GPU")
     ap.add_argument("--dry-run", action="store_true", help="only show what would happen")
     ap.add_argument("--yes", action="store_true", help="don't ask before starting")
@@ -390,6 +601,8 @@ def main():
     ap.add_argument("--model", choices=["e4b", "12b", "both"],
                     help="which Gemma: e4b (lighter, faster), 12b (smarter, needs ~9 GB free GPU memory) or both "
                          "(12B when the GPU has room, E4B when it's busy). Default: asks, recommending 12b on a 12 GB+ GPU")
+    ap.add_argument("--update", action="store_true", help="get the latest Puki and redo only what changed")
+    ap.add_argument("--uninstall", action="store_true", help="stop Puki and remove everything it installed")
     ap.add_argument("--only", help="run just these steps, e.g. --only firewall,autostart "
                     "(llama, models, bluetts, venv, config, firewall, autostart, start)")
     args = ap.parse_args()
@@ -397,11 +610,15 @@ def main():
     dry = args.dry_run
     only = set(args.only.split(",")) if args.only else None
     run = lambda name: only is None or name in only  # noqa: E731
+    if args.uninstall:
+        return uninstall(args, root)
+    if args.update:
+        return update(args, root)
 
     say("Puki's brain: setup\n")
     if os.name != "nt":
         fail("this installer is for Windows. On Linux or macOS, follow brain/README.md by hand.")
-    if sys.version_info < (3, 10):
+    if sys.version_info < (3, 10) and not FROZEN:
         fail(f"Python 3.10 or newer is needed (this is {sys.version.split()[0]}).")
     gpu = None if args.cpu else nvidia()
     say(f"  Folder:  {root}")

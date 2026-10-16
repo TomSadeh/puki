@@ -17,3 +17,7 @@
 /brain/pairing_code.txt
 /brain/brain_errors.log
 __pycache__/
+
+# Puki.exe builds (brain/build_exe.py)
+/brain/.build/
+/brain/dist/

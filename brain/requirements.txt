@@ -6,3 +6,6 @@ nvidia-cudnn-cu12==9.*
 # Must match the BlueTTS model files: newer renikud-plus expects files the model repo lacks
 renikud-plus==0.3.0
 huggingface_hub==1.10.1
+# The tray icon (tray.py)
+pystray==0.19.5
+pillow
