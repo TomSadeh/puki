@@ -76,7 +76,8 @@ def log(msg):
 
 CODE_FILE = os.path.join(HERE, "pairing_code.txt")
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I to mix up
-MAX_BODY = 25 * 1024 * 1024  # a recording or a drawing is far smaller
+MAX_BODY = 25 * 1024 * 1024
+ERRORS_FILE = os.path.join(HERE, "brain_errors.log")  # the brain's errors when run without a console  # a recording or a drawing is far smaller
 
 
 def normalize_code(code):
@@ -189,6 +190,14 @@ class Brain:
         log(f"waking brain on {self.device}")
         EVENTS.add("brain", text=f"waking up on the {self.device}")
         flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+        # From the login shortcut (pythonw) there's no console: don't pop up console windows,
+        # and keep the brain's errors in a file so a failed start can be explained
+        no_console = sys.stdout is None
+        if no_console and os.name == "nt":
+            flags |= subprocess.CREATE_NO_WINDOW
+        errors = open(ERRORS_FILE, "w", encoding="utf-8") if no_console else None
+        # UTF-8 mode: otherwise BlueTTS reads its data files in the Windows code page and crashes
+        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
         llama = subprocess.Popen(
             [os.path.join(CFG["llama_dir"], "llama-server"), "-m", CFG["model"],
              "--host", "127.0.0.1", "--port", str(CFG["llama_port"]),
@@ -198,7 +207,8 @@ class Brain:
         )
         brain = subprocess.Popen(
             [CFG["brain_python"], os.path.join(HERE, "brain.py")],
-            cwd=HERE, creationflags=flags,
+            cwd=HERE, creationflags=flags, env=env,
+            stdout=subprocess.DEVNULL if no_console else None, stderr=errors,
         )
         self.procs = [llama, brain]
         deadline = time.time() + CFG["startup_timeout_s"]
@@ -215,7 +225,7 @@ class Brain:
                 return
             time.sleep(0.5)
         log("brain failed to start")
-        self.stop("failed to start")
+        self.stop("failed to start; errors are in brain/brain_errors.log" if no_console else "failed to start")
 
     def stop(self, reason=None):
         for p in self.procs:
