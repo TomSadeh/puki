@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Puki · פוקי</title>
-<meta name="description" content="A Hebrew/English game for toddlers with Puki, a talking parrot whose brain runs on your own PC. No cloud, no ads, no tracking.">
+<meta name="description" content="פוקי: משחק לפעוטות בעברית ובאנגלית, חינם לתמיד, בלי פרסומות ובלי מעקב. Puki: a free Hebrew/English toddler game for Android with a parrot friend. No ads, no tracking.">
 <link rel="icon" href="puki.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -102,6 +102,12 @@
   .mock .sw::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #fff; top: 2px; right: 2px; }
   .note { background: #fff8e1; border: 2px solid #ffe082; border-radius: 16px; padding: 12px 16px; margin-top: 16px; }
   @media (max-width: 560px) { .getit { grid-template-columns: 1fr; justify-items: center; text-align: center; } }
+  .platform { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
+  details.tech { margin-top: 22px; background: #fff; border-radius: 18px; padding: 14px 20px; box-shadow: var(--shadow); }
+  details.tech summary { cursor: pointer; font-weight: 700; }
+  details.tech ul { margin: 10px 0 0; padding-inline-start: 22px; }
+  details.tech li { margin: 6px 0; }
+  details.tech code { word-break: break-all; font-size: 13px; }
   footer { padding: 30px 0 40px; color: var(--muted); font-size: 15px; text-align: center; }
 
   @media (max-width: 820px) {
@@ -123,15 +129,15 @@
       <div>
         <img class="parrot" src="puki.svg" alt="">
         <h1>
-          <span lang="he">משחק לפעוטות, עם תוכי שמדבר איתם</span>
-          <span lang="en">A game for toddlers, with a parrot who talks back</span>
+          <span lang="he">משחק לפעוטות, עם פוקי התוכי</span>
+          <span lang="en">A game for toddlers, with Puki the parrot</span>
         </h1>
         <p class="lead">
-          <span lang="he">משחק אנדרואיד בעברית ובאנגלית לגילאי 2–4, עם פוקי, תוכי מדבר שהמוח שלו רץ על המחשב שלכם בבית. בלי ענן, בלי פרסומות ובלי מעקב: שום דבר לא יוצא מהבית.</span>
-          <span lang="en">A Hebrew/English Android game for ages 2–4, with Puki, a talking parrot whose brain runs on your own PC at home. No cloud, no ads, no tracking: nothing ever leaves your home.</span>
+          <span lang="he">משחק אנדרואיד בעברית ובאנגלית לגילאי 2–4, שעובד במלואו על הטאבלט לבד. רוצים יותר? עם מחשב בבית (או טלפון חזק) פוקי ממש משוחח עם הילדים, והמוח שלו רץ אצלכם. בלי פרסומות, בלי מעקב, ושום דבר על הילדים לא יוצא מהבית.</span>
+          <span lang="en">A Hebrew/English Android game for ages 2–4 that works fully on the tablet alone. Want more? With a PC at home (or a high-end phone), Puki the parrot actually converses with your child, with a brain that runs on your own device. No ads, no tracking, and nothing about your child ever leaves your home.</span>
         </p>
         <div class="buttons">
-          <a class="btn primary" data-apk href="https://github.com/TomSadeh/puki/releases">
+          <a class="btn primary" data-apk href="get.html">
             <span lang="he">הורדה לאנדרואיד</span><span lang="en">Download for Android</span>
             <small data-version-label></small>
           </a>
@@ -141,6 +147,7 @@
         </div>
         <p class="free" lang="he"><span>חינם לתמיד</span><span>בלי רכישות</span><span>בלי פרסומות</span></p>
         <p class="free" lang="en"><span>Free forever</span><span>No purchases</span><span>No ads</span></p>
+        <p class="platform"><span lang="he">לטאבלטים וטלפונים עם אנדרואיד 8 ומעלה. לא ל-iPad או ל-iPhone.</span><span lang="en">For Android 8+ tablets and phones. Not for iPad or iPhone.</span></p>
       </div>
       <img class="shot" src="screenshots/hub.png" data-alt-he="מסך הבית: איים בים, אי לכל משחק" data-alt-en="The hub: islands on a sea, one per game" alt="">
     </div>
@@ -171,27 +178,26 @@
     <div class="wrap">
       <h2><span lang="he">מה יש בפנים</span><span lang="en">What's inside</span></h2>
       <p class="sub">
-        <span lang="he">עשרה איים, כל אחד עם משחק בסצנה מצוירת משלו: חווה, גן, מגרש משחקים מתחת לקשת, במה, ובית חמים.</span>
-        <span lang="en">Ten islands, each with a game in its own illustrated scene: a farm, a garden, a playground under a rainbow, a stage, a cozy house.</span>
+        <span lang="he">איים מלאים במשחקים, כל אחד בסצנה מצוירת משלו: חווה, גן, מגרש משחקים מתחת לקשת, במה, ובית עם שמונה חדרים.</span>
+        <span lang="en">Islands full of games, each in its own illustrated scene: a farm, a garden, a playground under a rainbow, a stage, and a house with eight rooms.</span>
       </p>
       <div class="grid">
         <div class="card"><h3><span lang="he">גן החיות</span><span lang="en">Animal Garden</span></h3>
-          <p><span lang="he">מאכילים כל חיה באוכל הנכון. היא לועסת וקופצת משמחה.</span><span lang="en">Feed each animal the right food. It munches and does a happy hop.</span></p></div>
+          <p><span lang="he">מאכילים כל חיה באוכל הנכון, ומנחשים של מי הצל.</span><span lang="en">Feed each animal the right food, and guess whose shadow it is.</span></p></div>
         <div class="card"><h3><span lang="he">צבעים, צורות, ספירה ואותיות</span><span lang="en">Colors, shapes, counting, letters</span></h3>
-          <p><span lang="he">מפוצצים את הבלון הנכון, גוררים צורות למקום, סופרים פרחים ומוצאים את האות.</span><span lang="en">Pop the right balloon, drag shapes into place, count flowers, find the letter.</span></p></div>
+          <p><span lang="he">מפוצצים את הבלון הנכון, גוררים צורות למקום, סופרים אחד-אחד ועונים "כמה יש?", ומוצאים את האות.</span><span lang="en">Pop the right balloon, drag shapes into place, count one by one and answer "how many?", find the letter.</span></p></div>
         <div class="card"><h3><span lang="he">מחבואים</span><span lang="en">Peekaboo barn</span></h3>
           <p><span lang="he">חיה מתחבאת בחווה, והקול שלה מסגיר אותה. ברפת, מאחורי השיח, בערמת החציר או בגזע העץ.</span><span lang="en">An animal hides on the farm and its sound gives it away: in the barn, behind the bush, the haystack or the tree stump.</span></p></div>
         <div class="card"><h3><span lang="he">תוכי מחקה</span><span lang="en">Echo Puki</span></h3>
-          <p><span lang="he">אומרים לפוקי משהו, והוא חוזר על זה בקול של תוכי מצחיק.</span><span lang="en">Say anything, and Puki says it back in a silly parrot voice.</span></p>
-          <span class="tag"><span lang="he">בלי מחשב</span><span lang="en">No PC needed</span></span></div>
+          <p><span lang="he">אומרים לפוקי משהו, והוא חוזר על זה בקול של תוכי מצחיק.</span><span lang="en">Say anything, and Puki says it back in a silly parrot voice.</span></p></div>
         <div class="card"><h3><span lang="he">מדברים עם פוקי</span><span lang="en">Say it with Puki</span></h3>
-          <p><span lang="he">פוקי אומר מילה, והילדים אומרים אותה בחזרה. המחשב מקשיב ועוזר בעדינות.</span><span lang="en">Puki says a word and the child says it back; the PC listens and helps gently.</span></p></div>
+          <p><span lang="he">פוקי אומר מילה, והילדים אומרים אותה בחזרה. עם המוח של פוקי, הוא גם מקשיב ועוזר בעדינות.</span><span lang="en">Puki says a word and the child says it back. With Puki's brain, he also listens and helps gently.</span></p></div>
         <div class="card"><h3><span lang="he">מוזיקה</span><span lang="en">Music</span></h3>
           <p><span lang="he">תוף, קסילופון, תוף מרים ורעשנים על במה, ואז חוזרים על מנגינה קטנה.</span><span lang="en">A drum, a xylophone, a tambourine and maracas on a stage, then a little tune to repeat.</span></p></div>
         <div class="card"><h3><span lang="he">היום שלי</span><span lang="en">My Day</span></h3>
-          <p><span lang="he">אמבטיה, ארוחה, התלבשות, סידור החדר, צחצוח שיניים ושינה, כל אחד בחדר משלו.</span><span lang="en">Bath, table, dressing, tidying, teeth and bedtime, each in its own room.</span></p></div>
+          <p><span lang="he">אמבטיה, ארוחה, התלבשות, סידור החדר, צחצוח שיניים ושינה, ועכשיו גם אופים עוגה במטבח ושוטפים מכונית במוסך.</span><span lang="en">Bath, table, dressing, tidying, teeth and bedtime, and now baking a cake in the kitchen and washing a car in the garage.</span></p></div>
         <div class="card"><h3><span lang="he">ציור ומדבקות</span><span lang="en">Drawing and stickers</span></h3>
-          <p><span lang="he">מציירים על כן ציור, ופוקי מסתכל על הציור. אלבום המדבקות מתמלא בכוכבים.</span><span lang="en">Paint on an easel and Puki looks at the picture; the sticker album fills up with stars.</span></p></div>
+          <p><span lang="he">מציירים על כן ציור, מדביקים חותמות וצובעים דפי צביעה. אלבום המדבקות מתמלא בכוכבים.</span><span lang="en">Paint on an easel, stamp stickers and fill in coloring pages; the sticker album fills up with stars.</span></p></div>
       </div>
       <div class="gallery">
         <figure><img src="screenshots/animal-garden.png" alt="" loading="lazy" data-alt-he="גן החיות" data-alt-en="Animal Garden"><figcaption><span lang="he">גן החיות</span><span lang="en">Animal Garden</span></figcaption></figure>
@@ -219,9 +225,10 @@
         <h2><span lang="he">פוקי, התוכי</span><span lang="en">Puki, the parrot</span></h2>
         <ul class="points">
           <li><b><span lang="he">מגיב למה שקורה</span><span lang="en">Reacts to what happens</span></b><span lang="he">כותב משפט חדש על מה שהילד עשה, מסתכל על הציורים, מספר סיפור לפני השינה על היום, ועונה כשמדברים איתו.</span><span lang="en">Writes a fresh line about what the child did, looks at drawings, tells a bedtime story about the day, and answers when spoken to.</span></li>
-          <li><b><span lang="he">המוח במחשב בבית</span><span lang="en">His brain is on your PC</span></b><span lang="he">Gemma 4 של Google, Whisper של ivrit.ai ו-BlueTTS, כולם מקומיים. תשובה תוך שנייה בערך, עדיף עם כרטיס NVIDIA.</span><span lang="en">Google's Gemma 4, ivrit.ai's Whisper and BlueTTS, all local; about a second per reply, best with an NVIDIA GPU.</span></li>
+          <li><b><span lang="he">המוח במחשב בבית</span><span lang="en">His brain is on your PC</span></b><span lang="he">תוכנה חינמית למחשב עם ווינדוס או לינוקס. עם כרטיס NVIDIA עם 6GB זיכרון ומעלה פוקי עונה תוך שנייה בערך; בלי כרטיס הוא עובד על המעבד, רק לאט יותר.</span><span lang="en">A free program for a Windows or Linux PC. With an NVIDIA graphics card with 6 GB of memory or more, Puki answers in about a second; without one he runs on the processor, just slower.</span></li>
+          <li><b><span lang="he">מילים בטוחות בלבד</span><span lang="en">Kept on a short leash</span></b><span lang="he">המשפטים של פוקי קצרים ונכתבים לפעוטות. מסנן בודק כל משפט (רק אותיות עבריות או אנגליות, בלי מילים לא נעימות), ומשפט שלא עובר נזרק ופוקי אומר במקומו משפט מוקלט. ההורים יכולים לראות כל משפט בזמן אמת במחשב.</span><span lang="en">Puki's lines are short and written for a toddler. A filter checks every line (Hebrew or English letters only, no unkind words); a line that fails is thrown away and Puki says a recorded one instead. Parents can watch every line live on the PC.</span></li>
           <li><b><span lang="he">או בטלפון חזק</span><span lang="en">Or on a high-end phone</span></b><span lang="he">בטלפון עם כ-12GB זיכרון (נבדק על Galaxy S25) פוקי חושב, מדבר ומקשיב על המכשיר עצמו, גם מחוץ לבית.</span><span lang="en">On a phone with about 12 GB of memory (tested on a Galaxy S25) Puki thinks, talks and listens on the device, away from home too.</span></li>
-          <li><b><span lang="he">בלי מחשב?</span><span lang="en">No PC?</span></b><span lang="he">המשחק עובד מצוין גם בלעדיו, עם הקולות המוקלטים.</span><span lang="en">The game works fine without one, with its recorded voices.</span></li>
+          <li><b><span lang="he">בלי מחשב?</span><span lang="en">No PC?</span></b><span lang="he">כל המשחקים עובדים על הטאבלט לבד, ופוקי עדיין יושב בפינה ומדבר בקול המוקלט שלו.</span><span lang="en">Every game works on the tablet alone, and Puki still sits in his corner and talks in his recorded voice.</span></li>
         </ul>
       </div>
     </div>
@@ -232,12 +239,21 @@
       <h2><span lang="he">פרטיות</span><span lang="en">Privacy</span></h2>
       <p class="sub"><span lang="he">נבנה בשביל ילדה אחת, בבית אחד. הכללים בהתאם.</span><span lang="en">Built for one child, in one home. The rules follow from that.</span></p>
       <div class="grid">
-        <div class="card"><h3><span lang="he">שום דבר לא יוצא מהבית</span><span lang="en">Nothing leaves your home</span></h3><p><span lang="he">בלי חשבונות, פרסומות, אנליטיקה או ענן. פעם ביום האפליקציה רק בודקת ב-GitHub אם יש גרסה חדשה.</span><span lang="en">No accounts, ads, analytics or cloud. Once a day the app only asks GitHub whether there's a new version.</span></p></div>
-        <div class="card"><h3><span lang="he">חיבור מוצפן</span><span lang="en">Encrypted</span></h3><p><span lang="he">הטאבלט והמחשב מדברים ב-HTTPS עם תעודה של המחשב עצמו. קוד ה-QR נושא את טביעת האצבע שלה, כך שאף מכשיר אחר ברשת לא יכול להתחזות.</span><span lang="en">Tablet and PC talk over HTTPS with the PC's own certificate; the QR code carries its fingerprint, so no other device can pose as the PC.</span></p></div>
+        <div class="card"><h3><span lang="he">שום דבר על הילדים לא יוצא מהבית</span><span lang="en">Nothing about your child leaves home</span></h3><p><span lang="he">בלי חשבונות, פרסומות, אנליטיקה או ענן. הקול, הציורים והשם עוברים רק למחשב שלכם או נשארים בטאבלט. האפליקציה רק בודקת ב-GitHub אם יש גרסה חדשה, ומורידה את המודלים פעם אחת אם מפעילים את המוח בטלפון. <a href="privacy.html">מדיניות הפרטיות</a></span><span lang="en">No accounts, ads, analytics or cloud. The voice, drawings and name go only to your own PC or stay on the tablet. The app only checks GitHub for a new version, and downloads the models once if you turn on the phone brain. <a href="privacy.html">Privacy policy</a></span></p></div>
+        <div class="card"><h3><span lang="he">חיבור מוצפן</span><span lang="en">Encrypted</span></h3><p><span lang="he">הטאבלט והמחשב מדברים בחיבור מוצפן, ורק המחשב שלכם יכול לענות לטאבלט.</span><span lang="en">The tablet and the PC talk over an encrypted connection that only your own PC can answer.</span></p></div>
         <div class="card"><h3><span lang="he">השם נשאר בבית</span><span lang="en">The name stays home</span></h3><p><span lang="he">שם הילד שמור רק בטאבלט ובמחשב שלכם. ההקלטות של התוכי המחקה לא נשמרות.</span><span lang="en">The child's name lives only on your tablet and PC. Echo Puki's recordings are never kept.</span></p></div>
-        <div class="card"><h3><span lang="he">גרסאות חתומות</span><span lang="en">Signed releases</span></h3><p><span lang="he">כל APK חתום במפתח של פוקי, ומתקין המחשב בודק כל קובץ שהוא מוריד מול טביעה ידועה.</span><span lang="en">Every APK is signed with Puki's key, and the PC installer checks every download against a known fingerprint.</span></p>
-          <p class="fp"><code>a799cab5bcf83c20c754490f8d0eb271cf844e2b7e69518760789f2a96eb3c3d</code></p></div>
+        <div class="card"><h3><span lang="he">גרסאות חתומות</span><span lang="en">Signed releases</span></h3><p><span lang="he">כל גרסה חתומה במפתח של פוקי, ותוכנת המחשב בודקת כל קובץ שהיא מורידה.</span><span lang="en">Every version is signed with Puki's key, and the PC program checks every file it downloads.</span></p></div>
       </div>
+      <details class="tech">
+        <summary><span lang="he">לסקרנים הטכניים</span><span lang="en">For the technically curious</span></summary>
+        <ul>
+          <li><span lang="he">הטאבלט והמחשב מדברים ב-HTTPS עם תעודה שהמחשב יוצר לעצמו; קוד ה-QR נושא את טביעת ה-SHA-256 שלה, והאפליקציה מצמידה אותה, כך שאף מכשיר אחר ברשת לא יכול להתחזות.</span><span lang="en">Tablet and PC talk HTTPS with a certificate the PC makes for itself; the QR code carries its SHA-256 fingerprint and the app pins it, so no other device on the network can pose as the PC.</span></li>
+          <li><span lang="he">טביעת תעודת החתימה של ה-APK (SHA-256):</span><span lang="en">The APK signing certificate (SHA-256):</span> <code>a799cab5bcf83c20c754490f8d0eb271cf844e2b7e69518760789f2a96eb3c3d</code></li>
+          <li><span lang="he">מתקין המחשב בודק כל הורדה מול טביעות SHA-256 קבועות (brain/pins.json).</span><span lang="en">The PC installer checks every download against fixed SHA-256 pins (brain/pins.json).</span></li>
+          <li><span lang="he">המודלים: Gemma 4 של Google לשיחה ולראייה, Whisper של ivrit.ai ו-Parakeet לשמיעה, ו-BlueTTS לקול. <a href="https://github.com/TomSadeh/puki/blob/main/brain/README.md">פרטים</a></span><span lang="en">The models: Google's Gemma 4 for talk and sight, ivrit.ai's Whisper and Parakeet for hearing, BlueTTS for the voice. <a href="https://github.com/TomSadeh/puki/blob/main/brain/README.md">Details</a></span></li>
+          <li><span lang="he">עדכונים אוטומטיים מ-GitHub דרך <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/TomSadeh/puki">Obtainium</a> (עם "לכלול גרסאות טרום-שחרור"). כל הגרסאות: <a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</span><span lang="en">Automatic updates from GitHub through <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/TomSadeh/puki">Obtainium</a> (with "include prereleases" on). Every version: <a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</span></li>
+        </ul>
+      </details>
     </div>
   </section>
 
@@ -250,14 +266,12 @@
           <p><b><span lang="he">על הטאבלט: סורקים עם המצלמה</span><span lang="en">On the tablet: scan with the camera</span></b></p>
           <p><span lang="he">הקוד פותח את ההורדה של הגרסה החדשה ביותר. או פותחים בטאבלט את הכתובת</span><span lang="en">The code opens the newest version's download. Or open this address on the tablet:</span>
             <a href="get.html">tomsadeh.github.io/puki/get.html</a></p>
-          <p><span lang="he">רוצים עדכונים אוטומטיים מ-GitHub? </span><span lang="en">Want automatic updates from GitHub? </span><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/TomSadeh/puki">Obtainium</a>
-            <span lang="he">(עם "לכלול גרסאות טרום-שחרור").</span><span lang="en">(with "include prereleases" on).</span></p>
         </div>
       </div>
       <ol class="steps">
         <li><b><span lang="he">מתקינים את המשחק בטאבלט</span><span lang="en">Install the game on the tablet</span></b><br>
-          <span lang="he">מורידים את ה-<a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (אנדרואיד 8 ומעלה) ומאשרים התקנה; <a href="#install">כך זה נראה</a>. אחר כך המשחק מתעדכן לבד מההגדרות של ההורים.</span>
-          <span lang="en">Download the <a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (Android 8 or newer) and allow the install; <a href="#install">here's what you'll see</a>. After that the game updates itself from the parent settings.</span></li>
+          <span lang="he">מורידים את ה-<a data-apk href="get.html">APK</a> (אנדרואיד 8 ומעלה) ומאשרים התקנה; <a href="#install">כך זה נראה</a>. אחר כך המשחק מתעדכן לבד מההגדרות של ההורים.</span>
+          <span lang="en">Download the <a data-apk href="get.html">APK</a> (Android 8 or newer) and allow the install; <a href="#install">here's what you'll see</a>. After that the game updates itself from the parent settings.</span></li>
         <li><b><span lang="he">מתקינים את המוח של פוקי במחשב (לא חובה)</span><span lang="en">Set up Puki's brain on a PC (optional)</span></b><br>
           <span lang="he">בווינדוס מריצים את <a data-exe href="https://github.com/TomSadeh/puki/releases">Puki.exe</a>; בלינוקס <code>python3 brain/install.py</code>. ההתקנה מורידה כ-9GB ומגדירה הכול.</span>
           <span lang="en">On Windows run <a data-exe href="https://github.com/TomSadeh/puki/releases">Puki.exe</a>; on Linux <code>python3 brain/install.py</code>. It downloads about 9 GB and sets everything up.</span></li>
@@ -271,7 +285,7 @@
   <section id="install">
     <div class="wrap">
       <h2><span lang="he">התקנה מחוץ לחנות, צעד אחר צעד</span><span lang="en">Installing from outside the store, step by step</span></h2>
-      <p class="sub"><span lang="he">פוקי עוד לא בחנות של Google, אז אנדרואיד שואל כמה שאלות בפעם הראשונה. זה נראה מפחיד, אבל זה רגיל לכל אפליקציה מחוץ לחנות.</span><span lang="en">Puki isn't on Google Play yet, so Android asks a few questions the first time. It looks alarming, but it's the same for any app from outside the store.</span></p>
+      <p class="sub"><span lang="he">פוקי בדרך ל-Google Play. עד אז, אנדרואיד שואל כמה שאלות בפעם הראשונה. זה נראה מפחיד, אבל זה רגיל לכל אפליקציה מחוץ לחנות.</span><span lang="en">Puki is on its way to Google Play. Until then, Android asks a few questions the first time. It looks alarming, but it's the same for any app from outside the store.</span></p>
       <div class="guide">
         <div class="card"><h3><b class="n">1</b><span lang="he">מורידים</span><span lang="en">Download</span></h3>
           <p><span lang="he">בטאבלט: סורקים את הקוד למעלה או לוחצים "הורדה לאנדרואיד". אם Chrome אומר שהקובץ "עלול להזיק", לוחצים "להוריד בכל זאת".</span><span lang="en">On the tablet, scan the code above or tap "Download for Android". If Chrome says the file "may be harmful", tap "Download anyway".</span></p></div>
