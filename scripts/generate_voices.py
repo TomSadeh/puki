@@ -266,6 +266,8 @@ voice_lines = [
     ("voice_say_your_turn", "Now you!", ("עַכְשָׁיו אַתְּ!", "עַכְשָׁיו אַתָּה!")),
     ("voice_say_again", "One more time?", "עוֹד פַּעַם?"),
     ("voice_say_nice", "Nice!", "יוֹפִי!"),
+    ("voice_say_almost", "Almost!", "כִּמְעַט!"),
+    ("voice_say_listen", "Listen:", ("תַּקְשִׁיבִי טוֹב:", "תַּקְשִׁיב טוֹב:")),
 
     # --- Greeting on the hub, and the end of a game ---
     ("voice_hello", "Hello! Where shall we sail today?", "שָׁלוֹם! לְאָן נָשׁוּט הַיּוֹם?"),

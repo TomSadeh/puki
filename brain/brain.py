@@ -474,9 +474,9 @@ def word_match(heard, target, alts=()):
     if any(a and a in joined for a in ("".join(_words(alt)) for alt in alts)):
         return "close"
     for w in words:
-        if difflib.SequenceMatcher(None, w, goal).ratio() >= 0.5:
+        if difflib.SequenceMatcher(None, w, goal).ratio() >= 0.6:
             return "close"
-        if w[0] == goal[0] and len(w) <= len(goal) + 1:  # the first sound is there
+        if w[0] == goal[0] and len(w) <= len(goal):  # the first sound, in a short word ("פה" for "פרה")
             return "close"
     return "tried"
 

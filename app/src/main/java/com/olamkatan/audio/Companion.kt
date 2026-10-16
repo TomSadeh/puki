@@ -26,8 +26,11 @@ import kotlin.math.sqrt
 
 enum class CompanionStatus { OFF, WAKING, READY }
 
-/** How a try at saying a word went (Say it with Puki). Every try but SILENT is a win. */
-enum class WordTry { SILENT, TRIED, CLOSE, WORD }
+/**
+ * How a try at saying a word went (Say it with Puki): nothing heard, another word, a near miss,
+ * the word itself, or SPOKE: the child talked but the word couldn't be checked (PC off).
+ */
+enum class WordTry { SILENT, TRIED, CLOSE, WORD, SPOKE }
 
 /** Result of checking the PC from parent settings. */
 enum class Connection { OK, WRONG_CODE, LOCKED_OUT, NOT_FOUND }
@@ -236,12 +239,12 @@ class Companion(
             _listening.value = false
         }
         if (!hasSpeech(wav)) return WordTry.SILENT
-        if (!isReady) return WordTry.TRIED
+        if (!isReady) return WordTry.SPOKE
         val path = "/repeat?lang=${lang()}&target=" + URLEncoder.encode(word, "UTF-8") +
             alsoCounts.joinToString("") { "&alt=" + URLEncoder.encode(it, "UTF-8") }
         val body = withContext(Dispatchers.IO) {
             request("POST", path, body = wav, contentType = "audio/wav", timeoutMs = 8000)
-        } ?: return WordTry.TRIED
+        } ?: return WordTry.SPOKE
         return when (runCatching { JSONObject(String(body)).getString("match") }.getOrNull()) {
             "word" -> WordTry.WORD
             "close" -> WordTry.CLOSE

@@ -98,7 +98,6 @@ class SayItViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = SayState(words = sayWords.shuffled().take(ROUNDS))
     }
 
-    /** Any try earns a star: at two, trying is the whole point. */
     fun award() {
         _state.value = _state.value.copy(starsEarned = _state.value.starsEarned + 1)
         viewModelScope.launch { progressRepository.addStars(1) }
@@ -112,6 +111,7 @@ class SayItViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val ROUNDS = 8
+        const val TRIES = 3
     }
 }
 
@@ -130,9 +130,11 @@ private suspend fun VoicePlayer.praise(language: Language) =
 
 /**
  * Say it with Puki: a picture appears, Puki says the word, and the child says it back.
- * Every try is rewarded, and Puki then says the word again the right way (a recast, as
- * speech therapists do). With the PC, saying the word itself gets confetti; without it,
- * the tablet still hears that the child spoke.
+ * With the PC listening, the word itself moves the game on: another word or a near miss gets
+ * the word again ("listen well" / "almost") and another go, up to three tries. A near miss
+ * still earns the star in the end; Puki always closes by saying the word the right way (a
+ * recast, as speech therapists do). Without the PC, the tablet can only hear that the child
+ * spoke, so any try counts.
  */
 @Composable
 fun SayItScreen(onBack: () -> Unit, viewModel: SayItViewModel = viewModel()) {
@@ -170,23 +172,26 @@ fun SayItScreen(onBack: () -> Unit, viewModel: SayItViewModel = viewModel()) {
         val alsoCounts = if (language == Language.ENGLISH) word.alsoCountsEn else word.alsoCountsHe
         delay(500)
         if (state.roundIndex == 0) say("voice_say_intro")
-        say("voice_say_${word.id}")
-        var result: WordTry? = WordTry.SILENT
-        for (attempt in 0..1) {
-            if (attempt == 0) say("voice_say_your_turn") else {
-                say("voice_say_again")
-                say("voice_say_${word.id}")
+        val wordKey = "voice_say_${word.id}"
+        say(wordKey)
+        var last: WordTry? = null
+        var nearMiss = false
+        for (attempt in 0 until SayItViewModel.TRIES) {
+            when (last) {
+                null -> say("voice_say_your_turn")
+                WordTry.SILENT -> { say("voice_say_again"); say(wordKey) }
+                WordTry.CLOSE -> { say("voice_say_almost"); say(wordKey); say("voice_say_your_turn") }
+                else -> { say("voice_say_listen"); say(wordKey); say("voice_say_your_turn") }
             }
-            result = companion?.listenForWord(text, alsoCounts)
-            if (result == null) {
-                // No microphone: just leave time to say it, and count it
-                delay(3500)
-                result = WordTry.TRIED
+            last = companion?.listenForWord(text, alsoCounts) ?: run {
+                delay(3500)  // no microphone: just leave time to say it
+                WordTry.SPOKE
             }
-            if (result != WordTry.SILENT) break
+            if (last == WordTry.CLOSE) nearMiss = true
+            if (last == WordTry.WORD || last == WordTry.SPOKE) break
         }
-        when (result) {
-            WordTry.WORD -> {
+        when {
+            last == WordTry.WORD -> {
                 sfxPlayer.play(Sfx.SUCCESS)
                 confetti = true
                 viewModel.award()
@@ -194,13 +199,13 @@ fun SayItScreen(onBack: () -> Unit, viewModel: SayItViewModel = viewModel()) {
                 talking = true
                 try { voicePlayer.praise(language) } finally { talking = false }
             }
-            WordTry.CLOSE, WordTry.TRIED -> {
+            last == WordTry.SPOKE || nearMiss -> {
                 sfxPlayer.play(Sfx.POP)
                 viewModel.award()
                 scope.launch { pictureReaction.celebrate() }
                 say("voice_say_nice")
             }
-            else -> Unit  // quiet is fine too: Puki just says the word once more
+            else -> Unit  // no star this time, and no "no" either: Puki just says the word once more
         }
         say("voice_say_${word.id}")
         delay(900)
