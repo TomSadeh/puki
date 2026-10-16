@@ -1,5 +1,6 @@
 package io.github.tomsadeh.puki.ui.animals.components
 
+import androidx.compose.ui.unit.Dp
 import io.github.tomsadeh.puki.ui.components.hintGlow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
@@ -31,7 +32,8 @@ fun FoodItem(
     onDropped: (dropTargetId: String?) -> Unit,
     modifier: Modifier = Modifier,
     hint: Boolean = false,  // wiggle and glow: this is the one
-    tapToZone: String? = null  // a tap sends it there (the hungry animal)
+    tapToZone: String? = null,  // a tap sends it there (the hungry animal)
+    plateSize: Dp = 165.dp  // smaller on a phone's short screen
 ) {
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
@@ -52,7 +54,7 @@ fun FoodItem(
                     modifier = Modifier
                         .hintGlow(hint)
                         .idleBob(food.id.length)
-                        .size(165.dp)
+                        .size(plateSize)
                         .shadow(6.dp, CircleShape)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.9f))
@@ -62,7 +64,7 @@ fun FoodItem(
                     Image(
                         painter = painterResource(id = food.drawableRes),
                         contentDescription = food.name.en,
-                        modifier = Modifier.size(135.dp)
+                        modifier = Modifier.size(plateSize * 0.82f)
                     )
                 }
             } else {

@@ -20,7 +20,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.File
 import io.github.tomsadeh.puki.brain.PinnedTls
-import java.net.URL
 import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

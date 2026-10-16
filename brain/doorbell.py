@@ -287,12 +287,16 @@ class Brain:
              "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"]
             + (["--mmproj", mmproj] if mmproj and os.path.exists(mmproj) else []),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags, env=env,
+            preexec_fn=KILL_ON_CLOSE.preexec if os.name != "nt" else None,
         )
         brain = subprocess.Popen(
             [CFG["brain_python"], os.path.join(HERE, "brain.py")],
             cwd=HERE, creationflags=flags, env=env,
             stdout=subprocess.DEVNULL if no_console else None, stderr=errors,
+            preexec_fn=KILL_ON_CLOSE.preexec if os.name != "nt" else None,
         )
+        for p in (llama, brain):
+            KILL_ON_CLOSE.add(p)  # (brain.py's own children join the job too)
         self.procs = [llama, brain]
         deadline = time.time() + CFG["startup_timeout_s"]
         while time.time() < deadline:
@@ -332,6 +336,95 @@ class Brain:
 
 
 BRAIN = Brain()
+
+
+# ---------- The brain never outlives the doorbell ----------
+# If the doorbell is killed (Task Manager, a crash, an update), llama-server and brain.py would
+# keep running and hold the GPU with no one left to put them to sleep.
+
+class _KillOnClose:
+    """Windows: a job object that kills everything in it when the doorbell exits, however it
+    exits. Linux: each child asks the kernel for SIGKILL when its parent dies."""
+
+    def __init__(self):
+        self.job = None
+        if os.name == "nt":
+            try:
+                import ctypes
+                from ctypes import wintypes
+                k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+                k32.CreateJobObjectW.restype = wintypes.HANDLE
+
+                class Basic(ctypes.Structure):
+                    _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64),
+                                ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                                ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                                ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                                ("SchedulingClass", wintypes.DWORD)]
+
+                class Io(ctypes.Structure):
+                    _fields_ = [(n, ctypes.c_uint64) for n in ("ReadOps", "WriteOps", "OtherOps",
+                                                               "ReadBytes", "WriteBytes", "OtherBytes")]
+
+                class Extended(ctypes.Structure):
+                    _fields_ = [("Basic", Basic), ("Io", Io), ("ProcessMemoryLimit", ctypes.c_size_t),
+                                ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                                ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+                job = k32.CreateJobObjectW(None, None)
+                info = Extended()
+                info.Basic.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+                if job and k32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info)):  # 9: extended limits
+                    self.job, self.k32 = job, k32
+            except Exception as e:
+                log(f"couldn't tie the brain to the doorbell ({e}); it may outlive a crash")
+
+    def add(self, proc):
+        if self.job:
+            import ctypes
+            self.k32.AssignProcessToJobObject(self.job, ctypes.c_void_p(int(proc._handle)))
+
+    @staticmethod
+    def preexec():
+        """For Popen on Linux: SIGKILL this child when the doorbell dies."""
+        if sys.platform.startswith("linux"):
+            import ctypes
+            import signal
+            ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, signal.SIGKILL)  # PR_SET_PDEATHSIG
+
+
+KILL_ON_CLOSE = _KillOnClose()
+
+
+def clear_leftovers():
+    """Stops a llama-server or brain.py left running by an earlier doorbell (one that was killed
+    before this version), so the new one gets the ports and the GPU memory back."""
+    ports = [CFG["llama_port"], CFG["brain_port"]]
+    if not any(_port_open(p) for p in ports):
+        return
+    log("an earlier brain is still running; stopping it")
+    if os.name == "nt":
+        ps = ("Get-NetTCPConnection -State Listen -LocalPort " + ",".join(map(str, ports)) + " -ErrorAction SilentlyContinue | "
+              "ForEach-Object { Get-CimInstance Win32_Process -Filter \"ProcessId=$($_.OwningProcess)\" } | "
+              "Where-Object { $_.Name -eq 'llama-server.exe' -or $_.CommandLine -match 'brain[.]py' } | "
+              "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; "
+              "Get-CimInstance Win32_Process -Filter \"ParentProcessId=$($_.ProcessId)\" | "
+              "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } }")
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    else:
+        for pattern in (os.path.join(HERE, "brain.py"), os.path.join(CFG["llama_dir"], "llama-server")):
+            subprocess.run(["pkill", "-f", pattern], capture_output=True)
+    for _ in range(20):
+        if not any(_port_open(p) for p in ports):
+            break
+        time.sleep(0.5)
+
+
+def _port_open(port):
+    with socket.socket() as s:
+        s.settimeout(0.3)
+        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -587,6 +680,7 @@ class TLSServer(ThreadingHTTPServer):
 def start():
     """Starts everything but the main loop (the tray runs that in a thread); returns the server."""
     global CERT_FP
+    clear_leftovers()
     threading.Thread(target=BRAIN.idle_watch, daemon=True).start()
     CERT_FP = tls.ensure(CFG.get("brain_python"))
     server = TLSServer((CFG["bind"], CFG["port"]), Handler, tls.server_context())

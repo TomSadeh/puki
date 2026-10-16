@@ -109,9 +109,11 @@ fun HubScreen(
                 )
             }
 
+            // On a phone's short screen the islands would pile up: smaller there (tablets keep full size)
+            val screenScale = (height / 560.dp).coerceIn(0.6f, 1f)
             // Islands nearer the horizon are drawn a little smaller, for depth
             allIslands.forEachIndexed { index, island ->
-                val depthScale = 0.82f + 0.35f * ((island.fractionalY - 0.42f) / 0.38f).coerceIn(0f, 1f)
+                val depthScale = (0.82f + 0.35f * ((island.fractionalY - 0.42f) / 0.38f).coerceIn(0f, 1f)) * screenScale
                 IslandButton(
                     island = island,
                     onClick = { onIslandClick(island.route) },

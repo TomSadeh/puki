@@ -1,5 +1,9 @@
 package io.github.tomsadeh.puki.ui.hub.components
 
+import kotlin.math.roundToInt
+import androidx.compose.ui.draw.CacheDrawScope
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithCache
@@ -92,9 +96,10 @@ fun HubBackground() {
                 .fillMaxSize()
                 .graphicsLayer()
                 .drawWithCache {
-                    val wave = unitWave()
                     val boat = unitBoat()
-                    val waveStroke = Stroke(width = 0.12f, cap = StrokeCap.Round)
+                    // Each row's wave drawn once into a little image: ~70 stroked curves a frame cost
+                    // the tablet a sixth of its frame time; stamping images is nearly free
+                    val stamps = waveStamps(this, WAVE_ROWS)
                     onDrawBehind {
                         val w = size.width
                         val h = size.height
@@ -106,21 +111,16 @@ fun HubBackground() {
                         drawBoat(boat, w * boatX, horizon + h * 0.035f, h * 0.035f, wavePhase)
 
                         // Little wave arcs drifting sideways, bigger towards the viewer
-                        val rows = 7
-                        for (row in 0 until rows) {
-                            val t = (row + 0.5f) / rows
+                        for (row in 0 until WAVE_ROWS) {
+                            val t = (row + 0.5f) / WAVE_ROWS
                             val y = horizon + (h - horizon) * t
-                            val waveW = w * (0.018f + 0.022f * t)
-                            val gap = waveW * 5f
+                            val stamp = stamps[row]
+                            val gap = stamp.waveW * 5f
                             val drift = (wavePhase + row * 0.37f) % 1f * gap * (if (row % 2 == 0) 1 else -1)
                             val bob = sin((wavePhase + row * 0.2f) * 2 * PI).toFloat() * h * 0.003f
-                            val color = Color.White.copy(alpha = 0.18f + 0.22f * t)
                             var x = -2 * gap + drift + (row * 0.43f % 1f) * gap
                             while (x < w + gap) {
-                                withTransform({
-                                    translate(x, y + bob)
-                                    scale(waveW, waveW, pivot = Offset.Zero)
-                                }) { drawPath(wave, color, style = waveStroke) }
+                                drawImage(stamp.image, Offset(x - stamp.originX, y + bob - stamp.originY))
                                 x += gap
                             }
                         }
@@ -199,6 +199,33 @@ private fun DrawScope.drawBoat(boat: Boat, x: Float, y: Float, s: Float, phase: 
         drawLine(Color(0xFF6D4C41), Offset(0f, 0f), Offset(0f, -1.6f), strokeWidth = 0.08f)
         drawPath(boat.sail, Color.White)
         drawPath(boat.jib, Color(0xFFFFF59D))
+    }
+}
+
+private const val WAVE_ROWS = 7
+
+/** A row's wave as an image; its baseline start sits at [originX], [originY] in the image. */
+private class WaveStamp(val image: ImageBitmap, val originX: Float, val originY: Float, val waveW: Float)
+
+/** One stamp per row of waves: bigger and brighter towards the viewer, as the rows are drawn. */
+private fun waveStamps(scope: CacheDrawScope, rows: Int): List<WaveStamp> {
+    val wave = unitWave()
+    val stroke = Stroke(width = 0.12f, cap = StrokeCap.Round)
+    return List(rows) { row ->
+        val t = (row + 0.5f) / rows
+        val waveW = scope.size.width * (0.018f + 0.022f * t)
+        val pad = waveW * 0.1f
+        val ox = pad
+        val oy = pad + waveW * 0.15f  // the arcs rise 0.15 above their baseline
+        val image = ImageBitmap(maxOf(1, (waveW + 2 * pad).roundToInt()), maxOf(1, (waveW * 0.15f + 2 * pad).roundToInt()))
+        CanvasDrawScope().draw(scope, scope.layoutDirection, androidx.compose.ui.graphics.Canvas(image),
+            Size(image.width.toFloat(), image.height.toFloat())) {
+            withTransform({
+                translate(ox, oy)
+                scale(waveW, waveW, pivot = Offset.Zero)
+            }) { drawPath(wave, Color.White.copy(alpha = 0.18f + 0.22f * t), style = stroke) }
+        }
+        WaveStamp(image, ox, oy, waveW)
     }
 }
 

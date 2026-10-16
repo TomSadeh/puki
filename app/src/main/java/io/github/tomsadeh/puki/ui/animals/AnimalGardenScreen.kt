@@ -1,5 +1,8 @@
 package io.github.tomsadeh.puki.ui.animals
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
 import io.github.tomsadeh.puki.ui.components.RoundPrompt
 import io.github.tomsadeh.puki.ui.components.noticeTouches
 import io.github.tomsadeh.puki.ui.components.rememberHelp
@@ -103,11 +106,12 @@ fun AnimalGardenScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Animal in center with drop zone
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
+                // The animal with its drop zone, and the food tray: under it on a tablet; beside it
+                // on a phone's short screen, where under it would leave the animal tiny
+                BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    val compact = maxHeight < 440.dp
+                    val animal: @Composable (Modifier) -> Unit = { m ->
+                        Box(modifier = m, contentAlignment = Alignment.Center) {
                     DropZone(
                         zoneId = state.currentAnimal.id,
                         highlightColor = GrassGreen
@@ -115,9 +119,10 @@ fun AnimalGardenScreen(
                         AnimalDisplay(animal = state.currentAnimal, reaction = animalReaction)
                     }
                 }
-
-                // Food tray at bottom
-                AnimatedVisibility(
+                    }
+                    val tray: @Composable () -> Unit = {
+                // (by its full name: the Column's own AnimatedVisibility can't be called from here)
+                androidx.compose.animation.AnimatedVisibility(
                     visible = !state.roundComplete,
                     enter = fadeIn() + scaleIn()
                 ) {
@@ -128,6 +133,7 @@ fun AnimalGardenScreen(
                         state.foodChoices.forEach { food ->
                             FoodItem(
                                 food = food,
+                                plateSize = if (compact) 130.dp else 165.dp,
                                 hint = help.showHint && food.id == state.currentAnimal.foodId,
                                 tapToZone = state.currentAnimal.id,
                                 onDropped = { dropTargetId ->
@@ -172,6 +178,19 @@ fun AnimalGardenScreen(
                                     }
                                 }
                             )
+                        }
+                    }
+                }
+                    }
+                    if (compact) {
+                        Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                            animal(Modifier.weight(1f).fillMaxHeight())
+                            tray()
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            animal(Modifier.weight(1f))
+                            tray()
                         }
                     }
                 }
