@@ -22,6 +22,7 @@
   "whisper_min_free_vram_mb": 2000,
   "bluetts_dir": "~/puki-brain/BlueTTS",
   "renikud_model": "~/puki-brain/models/renikud-plus/model.onnx",
+  "safety_threshold": 0.95,
   "voice": "noa",
   "companion_name": "פוקי",
   "companion_name_en": "Puki",

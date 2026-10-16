@@ -52,7 +52,7 @@ app/src/main/java/io/github/tomsadeh/puki/
 │                                #   JNI), voice/ (BlueTTS port), DeviceModels
 ├── update/Updater.kt            # In-app updates from GitHub releases
 └── theme/
-brain/                           # The PC brain (Python): doorbell.py (HTTPS), brain.py, persona.py, tls.py,
+brain/                           # The PC brain (Python): doorbell.py (HTTPS), brain.py, persona.py, safety.py, tls.py,
                                  #   install.py + pins.json (make_pins.py), tray.py / build_exe.py (Puki.exe)
 scripts/                         # Voices (generate/check), release.py
 native/whisper/                  # Builds libpuki_whisper.so (prebuilt copies are in jniLibs)
@@ -167,6 +167,13 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
   release. In it there's no stdout and no console, so every subprocess uses `CREATE_NO_WINDOW`.
 
 ---
+
+- **What the child says goes through safety.py first** (brain.py's /listen): word lists, then a
+  one-token gate on the model's probabilities (`safety_threshold`, default 0.95), give hurt,
+  danger, big questions, secrets and the like a fixed reply that points to mommy or daddy; the
+  model never writes those. A stress test (October 2026) showed why: with Puki's cheerful prompt,
+  every Gemma size cheered at "let's make a fire" or "I fell down". Don't remove a net without
+  re-running that test; the phone brain (Persona.kt) doesn't have these yet.
 
 ## Things to Avoid
 

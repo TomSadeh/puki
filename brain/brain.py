@@ -30,6 +30,7 @@ import soundfile as sf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from doorbell import CFG, LLAMA_URL, log  # noqa: E402
 import persona  # noqa: E402
+import safety  # noqa: E402
 from persona import (  # noqa: E402
     set_child,
     child,
@@ -57,9 +58,11 @@ REQUEST_LOCK = threading.Lock()
 recent = deque(maxlen=6)
 
 
-def ask_gemma(situation, lang):
+def ask_gemma(situation, lang, listening=False):
     kind = "food" if any(w in situation for w in FOOD_WORDS) else "other"
-    opener = random.choice(OPENERS[lang][kind])
+    # A suggested opening sound keeps game lines varied; not for answering the child, where a
+    # forced "Hooray!" can land on "I fell down"
+    opener = None if listening else random.choice(OPENERS[lang][kind])
     hint = situation
     if lang == "he":
         if opener:
@@ -71,11 +74,50 @@ def ask_gemma(situation, lang):
             hint += f"\n(Start your reply with '{opener}!')"
         if recent:
             hint += "\n(Don't repeat what you said before: " + " / ".join(recent) + ")"
-    messages = [{"role": "system", "content": system_prompt(lang)}]
+    messages = [{"role": "system", "content": system_prompt(lang) + safety.system_extra(lang, persona.GIRL)}]
     for user, reply in examples(lang):
         messages += [{"role": "user", "content": user}, {"role": "assistant", "content": reply}]
     messages.append({"role": "user", "content": hint})
     return chat(messages)
+
+
+def gate(heard):
+    """The model's one-token read of what the child said (greedy): the category to answer with
+    a fixed reply (see safety.py), or None when it's ordinary play. P(ordinary) comes from the
+    first token's probabilities, so the threshold (safety_threshold) can be set as strict as wanted."""
+    payload = {
+        "messages": [{"role": "user", "content": safety.classify_prompt(heard)}],
+        "max_tokens": 1,
+        "temperature": 0,
+        "logprobs": True,
+        "top_logprobs": 20,
+        "chat_template_kwargs": {"enable_thinking": False},
+    }
+    req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", data=json.dumps(payload).encode(),
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        top = json.load(r)["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
+    probs = {}
+    for t in top:
+        d = t["token"].strip()
+        if d in ("0", "1", "2", "3"):
+            probs[d] = probs.get(d, 0.0) + math.exp(t["logprob"])
+    return safety.gate_category(probs, CFG.get("safety_threshold", 0.95))
+
+
+def guarded_reply(heard, lang):
+    """(category, fixed reply) when what the child said needs a careful answer, else None."""
+    if not heard:
+        return None
+    caught = safety.guard(heard, lang, persona.GIRL)
+    if caught:
+        return caught
+    try:
+        cat = gate(heard)
+    except Exception as e:
+        log(f"safety gate failed: {e}")
+        return None
+    return (cat, safety.replies(lang, persona.GIRL)[cat]) if cat else None
 
 
 def chat(messages, max_tokens=48, temperature=0.9, response_format=None, timeout=45):
@@ -173,10 +215,12 @@ def story(played, icons, lang):
     return None
 
 
-def line_for(situation, lang):
+def line_for(situation, lang, listening=False):
     for _ in range(3):
-        raw = ask_gemma(situation, lang)
+        raw = ask_gemma(situation, lang, listening)
         text = clean(raw, lang)
+        if text and not safety.reply_ok(text):
+            text = None
         if text:
             recent.append(text)
             return text
@@ -351,9 +395,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(audio)
 
-    def _line(self, situation, lang):
+    def _line(self, situation, lang, listening=False):
         try:
-            return line_for(situation, lang)
+            return line_for(situation, lang, listening)
         except Exception as e:
             log(f"gemma failed: {e}")
             return None
@@ -413,11 +457,16 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 log(f"whisper failed: {e}")
                 return self._fail(400)
+            # Hurt, danger, big questions and the like get a fixed, kind reply (safety.py)
+            caught = guarded_reply(heard, lang)
+            if caught:
+                log(f"heard {heard!r} -> [{caught[0]}] {caught[1]}")
+                return self._reply(caught[1], lang, heard)
             situation = listen_situation(heard, lang)
             context = query.get("context", [""])[0][:200]
             if context:
                 situation = context + " " + situation
-            text = self._line(situation, lang)
+            text = self._line(situation, lang, listening=True)
             log(f"heard {heard!r} -> {text}")
             self._reply(text, lang, heard)
         elif url.path == "/repeat":
