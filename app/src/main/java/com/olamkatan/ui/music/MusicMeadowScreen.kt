@@ -257,7 +257,7 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
                                 androidx.compose.foundation.Image(
                                     painter = androidx.compose.ui.res.painterResource(id = instrument.drawableRes),
                                     contentDescription = instrument.name.en,
-                                    modifier = androidx.compose.ui.Modifier.size(135.dp)
+                                    modifier = androidx.compose.ui.Modifier.size(152.dp)
                                 )
                             } else {
                                 Text(instrument.emoji, fontSize = 52.sp)

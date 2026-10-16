@@ -48,7 +48,7 @@ fun FoodItem(
                 Box(
                     modifier = Modifier
                         .idleBob(food.id.length)
-                        .size(150.dp)
+                        .size(165.dp)
                         .shadow(6.dp, CircleShape)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.9f))
@@ -58,7 +58,7 @@ fun FoodItem(
                     Image(
                         painter = painterResource(id = food.drawableRes),
                         contentDescription = food.name.en,
-                        modifier = Modifier.size(115.dp)
+                        modifier = Modifier.size(135.dp)
                     )
                 }
             } else {

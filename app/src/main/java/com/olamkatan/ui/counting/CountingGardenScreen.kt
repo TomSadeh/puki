@@ -198,7 +198,7 @@ fun CountingGardenScreen(
                 Box(
                     modifier = Modifier
                         .graphicsLayer { scaleX = tapScale * pulse; scaleY = tapScale * pulse }
-                        .size(130.dp)
+                        .size(150.dp)
                         .shadow(8.dp, CircleShape)
                         .clip(CircleShape)
                         .background(state.currentRound.itemColor)
@@ -229,7 +229,7 @@ fun CountingGardenScreen(
                     Image(
                         painter = painterResource(state.currentRound.itemIcon),
                         contentDescription = null,
-                        modifier = Modifier.size(76.dp)
+                        modifier = Modifier.size(104.dp)
                     )
                 }
             }

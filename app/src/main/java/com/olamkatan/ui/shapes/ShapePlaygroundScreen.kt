@@ -121,7 +121,7 @@ fun ShapePlaygroundScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     DropZone(zoneId = "target") {
-                        Canvas(modifier = Modifier.size(230.dp).reaction(targetReaction)) {
+                        Canvas(modifier = Modifier.size(270.dp).reaction(targetReaction)) {
                             drawShapeOutline(state.targetShape, size)
                         }
                     }
@@ -159,7 +159,7 @@ fun ShapePlaygroundScreen(
                                     }
                                 }
                             ) {
-                                Canvas(modifier = Modifier.size(140.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)) {
+                                Canvas(modifier = Modifier.size(190.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)) {
                                     drawShapeFilled(shape, size)
                                 }
                             }
