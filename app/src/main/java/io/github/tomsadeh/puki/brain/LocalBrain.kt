@@ -124,7 +124,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         val lang = if (query["lang"]?.firstOrNull() == "en") "en" else "he"
                         val heard = ears().transcribe(body ?: ByteArray(0), lang, if (lang == "he") persona.hotwords() else "")
                         // Hurt, danger, big questions and the like get a fixed, kind reply (Safety)
-                        guardedReply(mind, heard, lang)?.let { (cat, text) ->
+                        guardedReply(mind, heard, lang, query["game"]?.firstOrNull()?.take(40) ?: "")?.let { (cat, text) ->
                             Log.i(TAG, "heard something careful: [$cat]")  // (not what she said)
                             return@synchronized reply(text, lang, voice)
                         }
@@ -156,9 +156,9 @@ class LocalBrain(private val models: DeviceModels) : Brain {
     }
 
     /** (category, fixed reply) when what the child said needs a careful answer, else null. */
-    private fun guardedReply(mind: Mind, heard: String, lang: String): Pair<String, String>? {
+    private fun guardedReply(mind: Mind, heard: String, lang: String, game: String = ""): Pair<String, String>? {
         if (heard.isEmpty()) return null
-        Safety.guard(heard, lang, persona.girl)?.let { return it }
+        Safety.guard(heard, lang, persona.girl, game)?.let { return it }
         val cat = try {
             Safety.gateCategory(mind.digit(Safety.classifyPrompt(heard)))
         } catch (e: Exception) {

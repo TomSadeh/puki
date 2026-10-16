@@ -48,8 +48,35 @@ class SafetyTest {
             "I love the pillow" to "en",     // not "pill"
             "let us match colors" to "en",   // not "matches"
             "the doggy says woof" to "en",
+            // From a review: words in Puki's own games, and Hebrew prefixes of other words
+            "בוא נספור מספרים" to "he",      // not "מספריים" (scissors)
+            "פוקי נפלא" to "he",             // not "נפל"
+            "אני רוצה סודה" to "he",          // not "סוד"
+            "שמים את העוגה בסיר" to "he",     // a pot in the kitchen
+            "החתול נעלם" to "he",            // peekaboo
+            "אמא שלי אוהבת תפוזים" to "he",  // mommy mentioned, not called for
+            "הכלב הלך" to "he",
+            "the tower fell" to "en",
+            "fire truck" to "en",
+            "play store" to "en",
+            "out the window, a bird" to "en",
+            "all gone!" to "en",
         )
         for ((heard, lang) in cases) assertNull(heard, Safety.guard(heard, lang, girl = true))
+    }
+
+    @Test
+    fun stackedHebrewPrefixes() {
+        for (heard in listOf("מהתרופות", "והסכין", "בהשקע", "וכשנפלתי")) {
+            assertTrue(heard, Safety.guard(heard, "he", girl = true) != null)
+        }
+    }
+
+    @Test
+    fun aGameMayUseItsOwnWords() {
+        val knife = "בוא נחתוך את העוגה עם סכין"
+        assertNull(Safety.guard(knife, "he", girl = true, game = "myday/kitchen"))
+        assertEquals("danger", Safety.guard(knife, "he", girl = true)?.first)
     }
 
     @Test
@@ -81,6 +108,7 @@ class SafetyTest {
         assertFalse(Safety.replyOk("אמא בדרך!"))
         assertFalse(Safety.replyOk("אני החבר הכי טוב שלך"))
         assertTrue(Safety.replyOk("יש! ירוק כמו העשב!"))
+        assertTrue(Safety.replyOk("בדרך כלל הפרה אוכלת עשב"))  // "usually", not "on her way"
     }
 
     @Test
@@ -89,7 +117,9 @@ class SafetyTest {
         assertNull(Safety.gateCategory(ordinary, 0.95))
         assertEquals("hurt", Safety.gateCategory(ordinary, 0.99))  // a stricter threshold catches more
         assertEquals("danger", Safety.gateCategory(mapOf("0" to 0.2, "2" to 0.7, "1" to 0.1), 0.9))
-        assertNull(Safety.gateCategory(emptyMap(), 0.9))            // no digits: leave it to the model
+        // Fails closed: when the first token wasn't mostly a digit, it's "unclear", not ordinary
+        assertEquals("unclear", Safety.gateCategory(emptyMap(), 0.9))
+        assertEquals("unclear", Safety.gateCategory(mapOf("0" to 0.3, "1" to 0.05), 0.9))
     }
 
     @Test
@@ -99,8 +129,8 @@ class SafetyTest {
         assertEquals("hurt", Safety.gateCategory("1"))
         assertEquals("danger", Safety.gateCategory(" 2\n"))
         assertEquals("big_question", Safety.gateCategory("3"))
-        assertNull(Safety.gateCategory("Yes"))  // not a digit: leave it to the model
-        assertNull(Safety.gateCategory(""))
+        assertEquals("unclear", Safety.gateCategory("Yes"))  // not a digit: fails closed
+        assertEquals("unclear", Safety.gateCategory(""))
     }
 
     @Test

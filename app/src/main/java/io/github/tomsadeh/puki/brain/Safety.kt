@@ -10,8 +10,10 @@ package io.github.tomsadeh.puki.brain
  * - The gate: the model reads what the child said ([classifyPrompt]) and picks one digit. On the
  *   PC, P(ordinary) from the first token's probabilities is compared with a threshold. LiteRT-LM
  *   (0.18.0) doesn't expose token probabilities, so here it's one greedy digit ([Mind.digit]):
- *   anything but "0" is caught. That's the PC gate's decision at an even threshold, so it catches
- *   less than the PC's 0.95.
+ *   anything but "0" is caught, and anything that isn't a digit is "unclear". That's the PC gate's
+ *   decision at an even split, so it catches less than the PC's threshold (0.8).
+ * Round two (from a review of false alarms in the games): whole-word stems, stacked Hebrew
+ * prefixes, parents only as phrases, and [ALLOWED_IN_GAME] (the kitchen may say "knife").
  * After the model writes, [replyOk] drops lines that promise or bond in ways a playmate shouldn't.
  */
 object Safety {
@@ -23,14 +25,31 @@ object Safety {
     private fun words(text: String) = WORD.findAll(text.lowercase()).map { it.value }.toList()
 
     /**
-     * True if a phrase appears, or a word starts with a stem (=stem: the whole word only).
-     * Short or ambiguous stems are whole-word: "מת" (dead) must not match "מתוק" (sweet), nor
-     * "war" "warm".
+     * [word] and, in Hebrew, the word with up to three prefix letters taken off (they stack:
+     * "מהתרופות", "וכשנפלתי"), as long as at least three letters are left.
      */
-    private fun has(text: String, stems: List<String>, lang: String): Boolean {
+    private fun forms(word: String, lang: String): List<String> {
+        val forms = mutableListOf(word)
+        if (lang == "he") {
+            var k = 0
+            while (k < 3 && word.length - k > 3 && word[k] in PREFIXES) {
+                k++
+                forms.add(word.substring(k))
+            }
+        }
+        return forms
+    }
+
+    /**
+     * True if a phrase appears, or a word starts with a stem (=stem: the whole word only).
+     * Most Hebrew stems are whole words or listed forms: as prefixes they collide ("נפל" in
+     * "נפלא", "סוד" in "סודה", "מספרי" in "מספרים"). [allowed]: stems this game uses itself.
+     */
+    private fun has(text: String, stems: List<String>, lang: String, allowed: Set<String> = emptySet()): Boolean {
         val t = text.lowercase()
         val ws = words(text)
         for (stem in stems) {
+            if (stem.trimStart('=') in allowed) continue
             if (' ' in stem) {
                 if (stem in t) return true
                 continue
@@ -38,8 +57,7 @@ object Safety {
             val exact = stem.startsWith("=")
             val s = stem.trimStart('=')
             for (w in ws) {
-                val cands = if (lang == "he" && w.length > 2 && w[0] in PREFIXES) listOf(w, w.substring(1)) else listOf(w)
-                if (cands.any { if (exact) it == s else it.startsWith(s) }) return true
+                if (forms(w, lang).any { if (exact) it == s else it.startsWith(s) }) return true
             }
         }
         return false
@@ -47,37 +65,47 @@ object Safety {
 
     class Rule(val category: String, val he: List<String>, val en: List<String>)
 
-    /** The first match wins, so the more specific rules come first. */
+    /** The first match wins, so the more specific rules come first (generated from safety.py: copy, don't edit by hand). */
     val RULES = listOf(
         Rule("quiet",
             listOf("=שקט", "די פוקי", "תשתוק", "תשתקי", "=שתוק", "=ששש"),
             listOf("be quiet", "stop talking", "=shush", "=shh", "=hush")),
         Rule("bedtime",
             listOf("לא רוצה לישון", "לא רוצה ללכת לישון", "לא הולכת לישון", "לא הולך לישון"),
-            listOf("don't want to sleep", "don't want to go to bed", "not going to bed", "no bed")),
+            listOf("don't want to sleep", "don't want to go to bed", "not going to bed")),
         Rule("danger",
-            listOf("סכין", "סכינ", "מספרי", "=אש", "גפרור", "מצית", "להדליק", "נדליק", "חלון", "מרפסת", "תרופ", "כביש",
-                "חשמל", "שקע", "החוצה לבד", "לבד בחוץ", "הולכת החוצה", "הולך החוצה", "לקפוץ מה"),
-            listOf("knife", "knives", "scissor", "=fire", "=matches", "lighter", "window", "balcony", "medicine", "=pill", "pills",
-                "outside alone", "go outside", "going outside", "=road", "street", "plug", "socket", "jump off")),
+            listOf("=סכין", "=סכינים", "=מספריים", "עם אש", "בוא נדליק", "בואי נדליק", "להדליק אש", "מדליק אש",
+                "מדליקה אש", "=גפרור", "=גפרורים", "=מצית", "לקפוץ מה", "קופצת מה", "קופץ מה", "מטפס על החלון",
+                "מטפסת על החלון", "תרופ", "רצה לכביש", "רץ לכביש", "הולכת לכביש", "הולך לכביש", "=שקע", "=שקעים",
+                "נוגע בחשמל", "נוגעת בחשמל", "החוצה לבד", "לבד בחוץ", "יוצאת לבד", "יוצא לבד", "נוגעת בתנור",
+                "נוגע בתנור"),
+            listOf("=knife", "=knives", "scissors", "=matches", "=lighter", "play with fire", "make a fire",
+                "light a fire", "jump out the window", "jump off", "climb the window", "medicine", "=pills",
+                "outside alone", "go outside by myself", "run to the road", "run to the street", "=socket",
+                "=outlet", "touch the stove", "touching the stove")),
         Rule("hurt",
-            listOf("כואב", "כאב", "נפלתי", "נפלה", "נפל", "=דם", "נשרט", "=מכה", "בוכה", "בוכ", "מפחד", "=פחד", "עזרה", "הצילו"),
-            listOf("hurt", "ouch", "fell", "blood", "bleed", "scared", "afraid", "=cry", "crying", "=help", "boo boo")),
+            listOf("כואב", "כואבת", "=כאב", "נפלתי", "=דם", "נשרטתי", "עשיתי מכה", "קיבלתי מכה", "=בוכה", "=בוכים",
+                "=בכיתי", "=מפחד", "=מפחדת", "=פוחד", "=פוחדת", "=עזרה", "=הצילו"),
+            listOf("hurt", "ouch", "i fell", "i fall", "blood", "bleed", "scared", "afraid", "=cry", "crying",
+                "=help", "boo boo", "owie")),
         Rule("needs",
-            listOf("רעב", "צמא", "עייפ", "פיפי", "קקי", "שירותים", "=סיר"),
-            listOf("hungry", "thirsty", "tired", "sleepy", "pee", "poo", "potty", "=toilet")),
+            listOf("=רעב", "=רעבה", "=צמא", "=צמאה", "עייפ", "פיפי", "קקי", "שירותים"),
+            listOf("hungry", "thirsty", "tired", "sleepy", "=pee", "=poo", "potty", "=toilet")),
         Rule("feelings",
-            listOf("כועס", "כועסת", "הרביץ", "הרביצה", "עצוב", "עצובה", "בודד", "בודדה"),
+            listOf("=כועס", "=כועסת", "הרביץ", "הרביצה", "=עצוב", "=עצובה", "=בודד", "=בודדה"),
             listOf("angry", "hit me", "=sad", "lonely", "mad at me")),
         Rule("big_question",
-            listOf("=מת", "=מתה", "מוות", "למות", "מלחמה", "אלוהים", "גן עדן", "איפה סבא", "איפה סבתא"),
-            listOf("dead", "=die", "died", "death", "=war", "=god", "heaven", "where is grandpa", "where is grandma")),
+            listOf("=מת", "=מתה", "=מתו", "=מוות", "=למות", "מלחמה", "אלוהים", "גן עדן", "איפה סבא", "איפה סבתא"),
+            listOf("dead", "=die", "died", "death", "=war", "=god", "heaven", "where is grandpa", "where's grandpa",
+                "where is grandma", "where's grandma")),
         Rule("secrets",
-            listOf("סוד", "להסתיר", "נסתיר", "תסתיר", "אל תגיד", "כתובת", "איפה אתה גר", "טלפון"),
-            listOf("secret", "hide from", "hide it", "don't tell", "address", "where do you live", "phone")),
+            listOf("=סוד", "=סודות", "=סודי", "להסתיר", "נסתיר", "תסתיר", "אל תגיד", "אל תספר", "כתובת",
+                "איפה אתה גר", "מספר טלפון", "מספר הטלפון"),
+            listOf("secret", "hide from", "hide it from", "don't tell", "address", "where do you live",
+                "phone number")),
         Rule("buying",
-            listOf("לקנות", "תקנה", "קנה לי", "חנות", "כסף"),
-            listOf("=buy", "=store", "=shop", "money", "=pay")),
+            listOf("לקנות", "=תקנה", "=תקני", "קנה לי", "=כסף"),
+            listOf("=buy", "buy me", "=pay", "money")),
         Rule("bad_words",
             listOf("מילה גסה", "מילים גסות", "קללה"),
             listOf("bad word", "swear", "curse")),
@@ -87,11 +115,18 @@ object Safety {
         Rule("love",
             listOf("אוהב אותי", "אוהבת אותי", "החבר הכי טוב", "החברה הכי טובה", "הכי טוב שלי"),
             listOf("love me", "best friend")),
-        // Last: a parent named in a secret or a big question gets that rule's answer instead
+        // Last, and only as phrases: mommy and daddy come up in ordinary play all the time
         Rule("parent",
-            listOf("אמא", "אבא", "איננו", "נעלם", "=הלך"),
-            listOf("mommy", "mummy", "=mama", "=mom", "daddy", "=dada", "=dad", "=gone")),
+            listOf("רוצה את אמא", "רוצה אמא", "רוצה לאמא", "איפה אמא", "אמא איפה", "רוצה את אבא", "רוצה אבא",
+                "רוצה לאבא", "איפה אבא", "אבא איפה", "אמא איננה", "אבא איננו", "קוראת לאמא", "קורא לאמא",
+                "מתגעגעת לאמא", "מתגעגע לאמא", "מתגעגעת לאבא", "מתגעגע לאבא"),
+            listOf("want mommy", "want my mommy", "where is mommy", "where's mommy", "want daddy", "want my daddy",
+                "where is daddy", "where's daddy", "want mama", "where's mama", "mommy is gone", "daddy is gone",
+                "miss mommy", "miss daddy")),
     )
+
+    /** What a game says itself, so it isn't a warning there (by the app's screen route, ?game=). */
+    val ALLOWED_IN_GAME = mapOf("myday/kitchen" to setOf("knife", "knives", "סכין", "סכינים"))
 
     /** The fixed replies, in the child's gender (בואי / בוא). */
     fun replies(lang: String, girl: Boolean): Map<String, String> {
@@ -109,6 +144,7 @@ object Safety {
             "bad_words" to "Puki only says nice words! Let's play.",
             "unkind" to "Oops! Kind words, please. Let's play.",
             "love" to "I love playing with you! And mommy and daddy love you the most.",
+            "unclear" to "Hmm, Puki didn't quite hear. Let's play!",
         )
         val come = if (girl) "בואי" else "בוא"
         return mapOf(
@@ -125,13 +161,18 @@ object Safety {
             "bad_words" to "אצל פוקי רק מילים יפות! $come נשחק.",
             "unkind" to "אופס! מילים נעימות, בבקשה. $come נשחק.",
             "love" to "אני אוהב לשחק איתך! ואמא ואבא אוהבים אותך הכי הכי.",
+            "unclear" to "הממ, פוקי לא שמע טוב. $come נשחק!",
         )
     }
 
-    /** (category, reply) when the word lists recognize what the child said, else null. */
-    fun guard(heard: String, lang: String, girl: Boolean): Pair<String, String>? {
+    /**
+     * (category, reply) when the word lists recognize what the child said, else null. [game]: the
+     * screen she's on (the app's route), for words that game uses itself.
+     */
+    fun guard(heard: String, lang: String, girl: Boolean, game: String = ""): Pair<String, String>? {
+        val allowed = ALLOWED_IN_GAME[game] ?: emptySet()
         for (rule in RULES) {
-            if (has(heard, if (lang == "he") rule.he else rule.en, lang)) return rule.category to replies(lang, girl).getValue(rule.category)
+            if (has(heard, if (lang == "he") rule.he else rule.en, lang, allowed)) return rule.category to replies(lang, girl).getValue(rule.category)
         }
         return null
     }
@@ -141,7 +182,10 @@ object Safety {
     val GATE_CATEGORY = mapOf("1" to "hurt", "2" to "danger", "3" to "big_question")
 
     /** On the PC, the default for safety_threshold (here only an even split matters, see above). */
-    const val THRESHOLD = 0.95
+    const val THRESHOLD = 0.8
+
+    /** Below this much probability on the four digits, the answer wasn't a digit: "unclear". */
+    const val MIN_DIGIT_MASS = 0.5
 
     fun classifyPrompt(heard: String) =
         "A toddler said to a toy parrot: \"$heard\". Which is it? 0 = ordinary play or chatter; " +
@@ -150,27 +194,29 @@ object Safety {
             "a secret, or wants to buy something. Wanting more play, a game or a toy is 0. Answer with one digit."
 
     /**
-     * From P(digit) for "0".."3" (any scale): the category to answer with, or null when
-     * P(ordinary) is at least [threshold].
+     * From P(digit) for "0".."3" (real probabilities): the category to answer with, or null when
+     * P(ordinary) is at least [threshold]. It fails closed: when the first token wasn't mostly a
+     * digit, the split between digits means little, so it's "unclear" (a neutral line).
      */
     fun gateCategory(digitProbs: Map<String, Double>, threshold: Double): String? {
         val total = "0123".sumOf { digitProbs[it.toString()] ?: 0.0 }
-        if (total <= 0) return null
+        if (total < MIN_DIGIT_MASS) return "unclear"
         if ((digitProbs["0"] ?: 0.0) / total >= threshold) return null
         val worst = listOf("1", "2", "3").maxBy { digitProbs[it] ?: 0.0 }  // the first on a tie, like Python's max
         return GATE_CATEGORY.getValue(worst)
     }
 
-    /** The gate from one greedy answer (what the phone has): its digit, or null if it isn't one. */
+    /** The gate from one greedy answer (what the phone has): anything but a digit 0-3 is "unclear". */
     fun gateCategory(answer: String): String? {
-        val d = answer.trim().takeIf { it.length == 1 && it in "0123" } ?: return null
+        val d = answer.trim().takeIf { it.length == 1 && it in "0123" } ?: return "unclear"
         return gateCategory(mapOf(d to 1.0), THRESHOLD)
     }
 
     // ---- What the model must not say, whatever it was asked: promises, and bonding a playmate shouldn't do ----
 
     private val BANNED_PHRASES = listOf("אוהב אותך", "אוהבת אותך", "החבר הכי טוב", "החברה הכי טובה", "תמיד איתך", "תמיד כאן",
-        "בדרך", "תגיע בקרוב", "יגיע בקרוב",
+        "אמא בדרך", "אבא בדרך", "היא בדרך", "הוא בדרך", "הם בדרך", "בדרך אלייך", "בדרך אליך",
+        "תגיע בקרוב", "יגיע בקרוב",
         "love you", "best friend", "always with you", "always here", "on her way", "on his way",
         "coming soon", "be here soon")
 
