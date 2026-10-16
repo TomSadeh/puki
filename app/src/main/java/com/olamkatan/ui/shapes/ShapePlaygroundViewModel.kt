@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.olamkatan.OlamKatanApplication
+import com.olamkatan.ui.common.GameSession
 import com.olamkatan.data.content.ShapeDef
 import com.olamkatan.data.content.level1Shapes
 import com.olamkatan.data.content.shapesForLevel
@@ -25,18 +26,17 @@ data class ShapeRoundState(
 
 class ShapePlaygroundViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val progressRepository = (application as OlamKatanApplication).progressRepository
+    private val session = GameSession(ISLAND, (application as OlamKatanApplication).progressRepository, viewModelScope)
     private var allShapes = level1Shapes
     private var rounds = emptyList<ShapeDef>()
     private var level = 1
-    private var mistakes = 0
 
     private val _state = MutableStateFlow(ShapeRoundState(isLoading = true))
     val state: StateFlow<ShapeRoundState> = _state.asStateFlow()
 
     init {
         viewModelScope.launch {
-            level = progressRepository.getDifficulty(ISLAND)
+            level = session.level()
             allShapes = shapesForLevel(level)  // later levels add shapes to the first four
             rounds = allShapes.shuffled().take(4)
             startRound(0)
@@ -46,7 +46,7 @@ class ShapePlaygroundViewModel(application: Application) : AndroidViewModel(appl
     private fun startRound(index: Int) {
         if (index >= rounds.size) {
             _state.value = _state.value.copy(sessionComplete = true)
-            viewModelScope.launch { progressRepository.recordSession(ISLAND, rounds.size, mistakes) }
+            session.finish(rounds.size)
             return
         }
         val target = rounds[index]
@@ -66,9 +66,9 @@ class ShapePlaygroundViewModel(application: Application) : AndroidViewModel(appl
         if (isCorrect) {
             val newStars = _state.value.totalStarsEarned + 1
             _state.value = _state.value.copy(roundComplete = true, totalStarsEarned = newStars)
-            viewModelScope.launch { progressRepository.addStars(1) }
+            session.star()
         } else {
-            mistakes++
+            session.slip()
         }
         return isCorrect
     }

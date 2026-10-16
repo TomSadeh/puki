@@ -1,5 +1,13 @@
 package com.olamkatan.ui.components
 
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
+import com.olamkatan.ui.common.LocalVoicePlayer
+import com.olamkatan.ui.common.LocalCompanion
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import com.olamkatan.ui.common.LocalLanguage
+import com.olamkatan.data.models.BilingualText
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -183,5 +191,42 @@ fun GameTopBar(
                 Text("$starsEarned", fontSize = 20.sp, color = Color.White)
             }
         }
+    }
+}
+
+/** The My Day routines' top bar: back, the routine's name, and space to keep the name centred. */
+@Composable
+fun MyDayTopBar(title: BilingualText, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.22f))
+                .clickable { onBack() },
+            contentAlignment = Alignment.Center
+        ) { BackArrowIcon() }
+        PromptBubble(title.resolve(LocalLanguage.current))
+        Spacer(modifier = Modifier.width(52.dp))
+    }
+}
+
+/**
+ * Starts a round: tells Puki what's on screen ([scene] in Hebrew, [sceneEn] in English), then,
+ * after a breath, says the round's prompt ([voiceKeys], one after another).
+ */
+@Composable
+fun RoundPrompt(round: Int, scene: String, sceneEn: String, vararg voiceKeys: String) {
+    val companion = LocalCompanion.current
+    val voicePlayer = LocalVoicePlayer.current
+    val language = LocalLanguage.current
+    LaunchedEffect(round) {
+        companion?.setScene(scene, sceneEn)
+        delay(500)
+        voicePlayer.playSequence(voiceKeys.toList(), language)
     }
 }

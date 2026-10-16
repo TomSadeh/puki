@@ -22,15 +22,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.Canvas
 import com.olamkatan.ui.components.idleBob
-import com.olamkatan.ui.components.PromptBubble
 import com.olamkatan.ui.components.Scene
-import com.olamkatan.ui.components.BackArrowIcon
+import com.olamkatan.ui.components.MyDayTopBar
 import android.app.Application
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -147,22 +145,7 @@ fun BathTimeScreen(
                 modifier = Modifier.fillMaxSize().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.22f))
-                            .clickable { onBack() },
-                        contentAlignment = Alignment.Center
-                    ) { BackArrowIcon() }
-                    PromptBubble(BilingualText("אמבטיה", "Bath Time").resolve(language))
-                    Spacer(modifier = Modifier.width(52.dp))
-                }
+                MyDayTopBar(BilingualText("אמבטיה", "Bath Time"), onBack)
 
                 Spacer(modifier = Modifier.height(16.dp))
 

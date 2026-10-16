@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.olamkatan.OlamKatanApplication
+import com.olamkatan.ui.common.GameSession
 import com.olamkatan.data.content.CountingRound
 import com.olamkatan.data.content.countingRoundsForLevel
 import com.olamkatan.data.content.level1CountingRounds
@@ -25,7 +26,7 @@ data class CountingState(
 
 class CountingGardenViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val progressRepository = (application as OlamKatanApplication).progressRepository
+    private val session = GameSession(ISLAND, (application as OlamKatanApplication).progressRepository, viewModelScope)
     private var rounds = emptyList<CountingRound>()
 
     private val _state = MutableStateFlow(CountingState(isLoading = true))
@@ -33,7 +34,7 @@ class CountingGardenViewModel(application: Application) : AndroidViewModel(appli
 
     init {
         viewModelScope.launch {
-            val level = progressRepository.getDifficulty(ISLAND)
+            val level = session.level()
             // Bigger numbers at higher levels, with one easier round from the level below
             rounds = if (level == 1) level1CountingRounds.shuffled().take(4)
                 else (countingRoundsForLevel(level).shuffled().take(3) + countingRoundsForLevel(level - 1).shuffled().take(1)).shuffled()
@@ -44,7 +45,7 @@ class CountingGardenViewModel(application: Application) : AndroidViewModel(appli
     private fun startRound(index: Int) {
         if (index >= rounds.size) {
             _state.value = _state.value.copy(sessionComplete = true)
-            viewModelScope.launch { progressRepository.recordSession(ISLAND, rounds.size, 0) }
+            session.finish(rounds.size)
             return
         }
         _state.value = CountingState(
@@ -72,7 +73,7 @@ class CountingGardenViewModel(application: Application) : AndroidViewModel(appli
         )
 
         if (isComplete) {
-            viewModelScope.launch { progressRepository.addStars(1) }
+            session.star()
         }
 
         return if (isComplete) -1 else newCount

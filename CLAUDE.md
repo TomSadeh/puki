@@ -27,34 +27,30 @@ See `olam-katan-claude-code-prompt.md` for the full game design document.
 ```
 app/src/main/java/com/olamkatan/
 ├── MainActivity.kt              # Single activity, sets up Compose + audio players
-├── OlamKatanApp.kt              # Top-level composable, NavHost lives here
-├── navigation/
-│   └── NavGraph.kt              # All routes defined here
+├── OlamKatanApp.kt              # Top-level composable, NavHost, the companion's brain choice
+├── OlamKatanApplication.kt      # App-wide objects: repositories, Companion, the device brain
+├── navigation/NavGraph.kt       # All routes
 ├── ui/
-│   ├── hub/                     # Hub world screen
-│   ├── animals/                 # Animal Garden island
-│   ├── colors/                  # Color Splash island
-│   ├── shapes/                  # Shape Playground island
-│   ├── counting/                # Counting Garden island
-│   ├── music/                   # Music Meadow island
-│   ├── words/                   # Word Garden island
-│   ├── myday/                   # My Day house + sub-screens per room
-│   ├── canvas/                  # Free-play canvas
-│   ├── stickers/                # Sticker album
-│   ├── settings/                # Parent settings
+│   ├── hub/                     # Hub world (islands on the sea)
+│   ├── animals/ colors/ shapes/ counting/ music/ words/   # The islands
+│   ├── say/                     # Say it with Puki (speech, needs the brain)
+│   ├── myday/                   # My Day house + one screen per routine, bedtime story
+│   ├── canvas/                  # Free painting (Puki looks at the drawing)
+│   ├── stickers/  onboarding/  settings/
+│   ├── common/                  # CompositionLocals, AppViewModel, GameSession (levels, stars)
 │   └── components/              # Shared composables (see below)
 ├── data/
-│   ├── models/                  # Data classes: Animal, Shape, Color, Sticker, etc.
-│   ├── content/                 # Static content definitions (animal lists, shape lists, etc.)
-│   ├── ProgressRepository.kt   # Stars, stickers, difficulty levels
-│   └── SettingsRepository.kt   # Language, sound, time limit
-├── audio/
-│   ├── VoicePlayer.kt          # Plays recorded voice lines (gendered Hebrew variants, praise, personal lines)
-│   └── SfxPlayer.kt            # SoundPool wrapper for tap/success/error sounds
+│   ├── models/  content/        # Data classes and the static game content
+│   ├── ProgressRepository.kt    # Stars, stickers, levels (and the level rule, nextLevel)
+│   └── SettingsRepository.kt    # Language, gender, sound, time limit, companion
+├── audio/                       # VoicePlayer, SfxPlayer, MusicPlayer, MicRecorder, Companion (talks to a brain)
+├── brain/                       # The brain on a high-end phone: LocalBrain, Persona, Mind (Gemma),
+│                                #   Ears (whisper.cpp JNI), voice/ (BlueTTS port), DeviceModels
+├── update/Updater.kt            # In-app updates from GitHub releases
 └── theme/
-    ├── Theme.kt
-    ├── Color.kt
-    └── Type.kt
+brain/                           # The PC brain (Python): doorbell.py, brain.py, persona.py, installer, tray
+scripts/                         # Voices (generate/check), release.py
+native/whisper/                  # Builds libpuki_whisper.so (prebuilt copies are in jniLibs)
 ```
 
 ---
@@ -76,14 +72,21 @@ Build and reuse these across all islands:
 
 | Component | Purpose |
 |-----------|---------|
-| `DragTarget` | Generic drag-and-drop composable with snap-back animation |
-| `DropZone` | Target area that highlights when a draggable hovers over it |
-| `ConfettiOverlay` | Canvas-based particle confetti triggered on success |
-| `StarBurst` | Star-earned celebration animation |
-| `BigTapButton` | Oversized tappable area with scale animation on press |
-| `RoundCompleteSheet` | "Great job!" overlay with star award and continue/home buttons |
-| `LongPressGate` | Wrapper requiring 2-second long-press (for parent-only actions) |
-| `WigglingItem` | Item that gently wiggles to attract attention |
+| `GameBackground`, `SceneBackdrop` | A game's backdrop: an illustrated scene (farm, stage, bathroom...) or bubbles |
+| `GameTopBar` / `MyDayTopBar` | Back, round dots and stars / back and the routine's name |
+| `RoundPrompt` | Starts a round: tells Puki the scene, then plays the spoken prompt |
+| `DragTarget` / `DropZone` | Drag and drop, also tap-to-place (`tapToZone`); see Drag and Drop |
+| `RoundCompleteSheet` | End-of-session card: stars landing, sun rays, confetti, continue/home |
+| `ConfettiOverlay` | Two confetti cannons and a gentle shower (about 90 pieces) |
+| `CompanionParrot` | Puki in the corner: tap to chat, hold to talk |
+| `Help.kt` | Hints when she's stuck (`rememberHelp`, `hintGlow`) |
+| `Juice.kt`, `Reactions.kt`, `Scatter.kt` | Squish on press, pop-ins, idle bobbing, reactions, scattered layouts |
+| `LongPressGate` | Two-second hold for parent-only actions |
+| `TimeLimitOverlay` | The calm end when the time limit is reached |
+| `WigglingItem` | Gently wiggles to attract attention |
+
+Drawing: build Paths once (`drawWithCache`), put still parts in their own layer (`graphicsLayer()`)
+and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 
 ### Naming
 
@@ -100,11 +103,10 @@ Build and reuse these across all islands:
 
 ### Drag and Drop
 
-- Use `Modifier.pointerInput` with `detectDragGestures` for drag.
-- Track drag offset in composable state. On release, check proximity to drop zones.
-- If match: animate to snap position, trigger success.
-- If no match: animate back to origin with a spring animation + play boing sound.
-- Drag threshold: item must overlap drop zone by ≥40% to register as a drop.
+- `DragTarget` handles the drag; `DragDropState` finds the zone under the piece (its centre, or
+  at least 30% overlap). A wrong drop springs back home.
+- `tapToZone`: a plain tap flies the piece to that zone, as if dragged (toddlers tap more than drag).
+- The game decides right or wrong in `onDragEnd`; a second tap after a win is ignored (`null`).
 
 ### Animations
 
@@ -112,7 +114,7 @@ Build and reuse these across all islands:
 - Spring animations for bounces: `spring(dampingRatio = 0.4f, stiffness = 300f)`.
 - Confetti: custom `Canvas` drawing with a list of `Particle` data classes updated via `LaunchedEffect` + `withFrameMillis`.
 - Idle animations (breathing, blinking): `rememberInfiniteTransition`.
-- Keep frame rate reasonable — don't animate 200 particles at 60fps continuously. Cap particles at 30–50, remove when off-screen.
+- Keep frame rate reasonable: animations run only while their thing is on screen, and particles stay under ~100.
 
 ### Audio
 
@@ -125,16 +127,23 @@ Build and reuse these across all islands:
 
 ### Difficulty System
 
-- Each island has an `Int` difficulty level stored in DataStore, keyed like `"difficulty_animals"`.
-- After 3 consecutive successful rounds at a level, increment difficulty.
-- Never decrement. A "successful round" means completing the activity (since there's no fail state, track whether the child completed without excessive wrong attempts — but err toward advancing).
-- ViewModel reads difficulty on init and selects content accordingly.
+- Each island has a level, 1 to `ProgressRepository.MAX_LEVEL` (3), in DataStore (`"difficulty_animals"`).
+- At the end of a session (`GameSession.finish`): two easy sessions in a row (at most one slip every
+  other round) move it up; a hard one (two slips a round) moves it down. The rule is
+  `ProgressRepository.nextLevel`, tested in `LevelRuleTest`.
+- The ViewModel reads the level when it starts (`GameSession.level()`) and picks content for it.
 
 ### Testing Considerations
 
-- Every ViewModel should be testable with fake repositories.
+- JVM unit tests in `app/src/test` (`./gradlew testDebugUnitTest`): the phone brain's Persona and
+  voice text, the level rule, pairing links, and `RegexPortabilityTest` (no Java-only regex flags:
+  Android's ICU engine rejects `(?U)`, which crashed 0.3.0 at start).
+- The PC brain's persona: `python -m pytest brain/tests`.
+- `python scripts/check_voices.py`: every voice line the app plays has audio.
+- CI (`.github/workflows/ci.yml`) runs all of these on every push.
+- Before a release, run it on a real device: the debug build's `SelfTestReceiver`
+  (`adb shell am broadcast -n com.olamkatan/.SelfTestReceiver`, then `adb logcat -s PukiSelfTest`).
 - Keep composables "dumb" — they render state and emit events, nothing else.
-- Content definitions (animal lists, etc.) should be pure data, easy to verify.
 
 ---
 
@@ -161,28 +170,16 @@ Build and reuse these across all islands:
 ./gradlew installDebug
 
 # Run tests
-./gradlew test
+./gradlew testDebugUnitTest
+python -m pytest brain/tests
 ```
 
-Target a tablet emulator: Pixel C or Nexus 10 profile, API 34, landscape orientation.
+Test on a real tablet or phone over adb; the x86 emulator is very heavy. Releases: `python scripts/release.py --publish`
+(builds the shrunk release APK and uploads it as a GitHub pre-release; installed apps offer the update).
 
 ---
 
-## Implementation Order
+## Where things stand
 
-Follow this order. Each step should result in a working, testable build:
-
-1. Project scaffolding: Compose activity, theme, navigation shell, empty screens.
-2. Settings + language system: DataStore, `BilingualText`, language toggle, RTL switching.
-3. Audio system: `TtsManager` + `SfxPlayer` initialization and basic playback.
-4. Hub world: static landscape, tappable islands, star counter, lock overlays.
-5. Shared components: `DragTarget`, `DropZone`, `ConfettiOverlay`, `RoundCompleteSheet`.
-6. Animal Garden (Level 1 only): validates full gameplay loop.
-7. Progression system: star awarding, difficulty tracking, unlock logic.
-8. Remaining islands Level 1: Color Splash, Shape Playground, Counting Garden.
-9. My Day house: Bath Time, Brushy Brushy, Tidy Up, Getting Dressed, Table Time.
-10. Higher difficulty levels for all islands.
-11. Music Meadow + Word Garden.
-12. Free Canvas + Sticker Album.
-13. Bedtime Routine.
-14. Polish: idle animations, particles, ambient sounds, time limit.
+The original build plan is done (all islands, My Day, canvas, stickers, bedtime, levels). What's
+next is in ROADMAP.md.

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.counting
 
+import com.olamkatan.ui.components.RoundPrompt
 import com.olamkatan.ui.components.rememberSessionSeed
 import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.ColorFilter
@@ -83,11 +84,12 @@ fun CountingGardenScreen(
 
     if (state.isLoading) return
 
-    LaunchedEffect(state.roundIndex) {
-        companion?.setScene("במשחק הספירה: סופרים ${state.currentRound.itemName.he}.", "In the counting game: we're counting ${state.currentRound.itemName.en.lowercase()}.")
-        delay(500)
-        voicePlayer.play("voice_prompt_count_along", language)
-    }
+    RoundPrompt(
+        state.roundIndex,
+        scene = "במשחק הספירה: סופרים ${state.currentRound.itemName.he}.",
+        sceneEn = "In the counting game: we're counting ${state.currentRound.itemName.en.lowercase()}.",
+        "voice_prompt_count_along"
+    )
 
     GameBackground(
             scene = Scene.GARDEN,

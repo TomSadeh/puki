@@ -1,5 +1,6 @@
 package com.olamkatan.ui.shapes
 
+import com.olamkatan.ui.components.RoundPrompt
 import com.olamkatan.ui.components.hintGlow
 import com.olamkatan.ui.components.noticeTouches
 import com.olamkatan.ui.components.rememberHelp
@@ -26,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,14 +87,12 @@ fun ShapePlaygroundScreen(
         voicePlayer.playSequence(listOf("voice_prompt_drag_it", "voice_shape_${state.targetShape.id}"), language)
     }
 
-    LaunchedEffect(state.roundIndex) {
-        companion?.setScene("במשחק הצורות: מחפשים ${state.targetShape.name.he}.", "In the shape game: we're looking for the ${state.targetShape.name.en.lowercase()}.")
-        delay(500)
-        voicePlayer.playSequence(
-            listOf("voice_prompt_drag_it", "voice_shape_${state.targetShape.id}"),
-            language
-        )
-    }
+    RoundPrompt(
+        state.roundIndex,
+        scene = "במשחק הצורות: מחפשים ${state.targetShape.name.he}.",
+        sceneEn = "In the shape game: we're looking for the ${state.targetShape.name.en.lowercase()}.",
+        "voice_prompt_drag_it", "voice_shape_${state.targetShape.id}"
+    )
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(

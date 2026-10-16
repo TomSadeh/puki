@@ -18,6 +18,14 @@ class ProgressRepository(private val context: Context) {
 
     companion object {
         const val MAX_LEVEL = 3
+
+        /** The rule behind [recordSession]: the new (level, easy-session streak). */
+        fun nextLevel(level: Int, streak: Int, rounds: Int, mistakes: Int): Pair<Int, Int> = when {
+            mistakes <= rounds / 2 ->  // easy: at most one slip every other round
+                if (streak + 1 >= 2 && level < MAX_LEVEL) (level + 1) to 0 else level to streak + 1
+            mistakes >= rounds * 2 -> maxOf(1, level - 1) to 0  // two misses a round
+            else -> level to 0
+        }
     }
 
     private object Keys {
@@ -64,16 +72,10 @@ class ProgressRepository(private val context: Context) {
     suspend fun recordSession(island: String, rounds: Int, mistakes: Int): Int {
         var level = 1
         context.progressDataStore.edit { prefs ->
-            level = (prefs[difficultyKey(island)] ?: 1).coerceIn(1, MAX_LEVEL)
-            var streak = prefs[streakKey(island)] ?: 0
-            when {
-                mistakes <= rounds / 2 -> {  // easy: at most one slip every other round
-                    streak++
-                    if (streak >= 2 && level < MAX_LEVEL) { level++; streak = 0 }
-                }
-                mistakes >= rounds * 2 -> { streak = 0; if (level > 1) level-- }  // two misses a round
-                else -> streak = 0
-            }
+            val (next, streak) = nextLevel(
+                (prefs[difficultyKey(island)] ?: 1).coerceIn(1, MAX_LEVEL), prefs[streakKey(island)] ?: 0, rounds, mistakes
+            )
+            level = next
             prefs[difficultyKey(island)] = level
             prefs[streakKey(island)] = streak
         }

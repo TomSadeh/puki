@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.olamkatan.OlamKatanApplication
+import com.olamkatan.ui.common.GameSession
 import com.olamkatan.data.content.AnimalDef
 import com.olamkatan.data.content.FoodDef
 import com.olamkatan.data.content.level1Animals
@@ -30,7 +31,7 @@ data class AnimalRoundState(
 
 class AnimalGardenViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val progressRepository = (application as OlamKatanApplication).progressRepository
+    private val session = GameSession(ISLAND, (application as OlamKatanApplication).progressRepository, viewModelScope)
 
     private val _state = MutableStateFlow(AnimalRoundState(isLoading = true))
     val state: StateFlow<AnimalRoundState> = _state.asStateFlow()
@@ -38,11 +39,10 @@ class AnimalGardenViewModel(application: Application) : AndroidViewModel(applica
     private var animals = emptyList<AnimalDef>()
     private var allFoods = level1Foods
     private var level = 1
-    private var mistakes = 0
 
     init {
         viewModelScope.launch {
-            level = progressRepository.getDifficulty(ISLAND)
+            level = session.level()
             // New animals join the farm ones, so old friends keep coming back
             val pool = when (level) {
                 1 -> level1Animals
@@ -58,7 +58,7 @@ class AnimalGardenViewModel(application: Application) : AndroidViewModel(applica
     private fun startRound(index: Int) {
         if (index >= animals.size) {
             _state.value = _state.value.copy(sessionComplete = true)
-            viewModelScope.launch { progressRepository.recordSession(ISLAND, animals.size, mistakes) }
+            session.finish(animals.size)
             return
         }
         val animal = animals[index]
@@ -86,9 +86,9 @@ class AnimalGardenViewModel(application: Application) : AndroidViewModel(applica
                 roundComplete = true,
                 totalStarsEarned = newStars
             )
-            viewModelScope.launch { progressRepository.addStars(1) }
+            session.star()
         } else {
-            mistakes++
+            session.slip()
         }
         return isCorrect
     }

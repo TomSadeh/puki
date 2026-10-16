@@ -1,5 +1,6 @@
 package com.olamkatan.ui.animals
 
+import com.olamkatan.ui.components.RoundPrompt
 import com.olamkatan.ui.components.noticeTouches
 import com.olamkatan.ui.components.rememberHelp
 import com.olamkatan.ui.components.Scene
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,14 +75,12 @@ fun AnimalGardenScreen(
         voicePlayer.playSequence(listOf("voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"), language)
     }
 
-    LaunchedEffect(state.roundIndex) {
-        companion?.setScene("במשחק החיות: ${state.currentAnimal.name.he} מחכה לאוכל.", "In the animal game: the ${state.currentAnimal.name.en.lowercase()} is waiting for food.")
-        delay(500)
-        voicePlayer.playSequence(
-            listOf("voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"),
-            language
-        )
-    }
+    RoundPrompt(
+        state.roundIndex,
+        scene = "במשחק החיות: ${state.currentAnimal.name.he} מחכה לאוכל.",
+        sceneEn = "In the animal game: the ${state.currentAnimal.name.en.lowercase()} is waiting for food.",
+        "voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"
+    )
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(

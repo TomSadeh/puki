@@ -3,7 +3,7 @@ package com.olamkatan.ui.myday.brush
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.PromptBubble
 import com.olamkatan.ui.components.Scene
-import com.olamkatan.ui.components.BackArrowIcon
+import com.olamkatan.ui.components.MyDayTopBar
 import android.app.Application
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -113,22 +111,7 @@ fun BrushyBrushyScreen(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.22f))
-                        .clickable { onBack() },
-                    contentAlignment = Alignment.Center
-                ) { BackArrowIcon() }
-                PromptBubble(BilingualText("צחצוח שיניים", "Brushy Brushy").resolve(language))
-                Spacer(modifier = Modifier.width(52.dp))
-            }
+            MyDayTopBar(BilingualText("צחצוח שיניים", "Brushy Brushy"), onBack)
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.colors
 
+import com.olamkatan.ui.components.RoundPrompt
 import com.olamkatan.ui.components.hintGlow
 import com.olamkatan.ui.components.noticeTouches
 import com.olamkatan.ui.components.rememberHelp
@@ -29,7 +30,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,14 +78,12 @@ fun ColorSplashScreen(
         voicePlayer.playSequence(listOf("voice_prompt_tap_the", "voice_color_${state.targetColor.id}"), language)
     }
 
-    LaunchedEffect(state.roundIndex) {
-        companion?.setScene("במשחק הצבעים: מחפשים את הצבע ${state.targetColor.name.he}.", "In the color game: we're looking for ${state.targetColor.name.en.lowercase()}.")
-        delay(500)
-        voicePlayer.playSequence(
-            listOf("voice_prompt_tap_the", "voice_color_${state.targetColor.id}"),
-            language
-        )
-    }
+    RoundPrompt(
+        state.roundIndex,
+        scene = "במשחק הצבעים: מחפשים את הצבע ${state.targetColor.name.he}.",
+        sceneEn = "In the color game: we're looking for ${state.targetColor.name.en.lowercase()}.",
+        "voice_prompt_tap_the", "voice_color_${state.targetColor.id}"
+    )
 
     GameBackground(
             scene = Scene.PLAYGROUND,

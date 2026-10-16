@@ -339,7 +339,7 @@ def strip_nikud(text):
     return NIKUD.sub("", text)
 
 
-# Words BlueTTS reads wrong (the brain swaps them too, in brain.py's MISREAD): a recorded line
+# Words BlueTTS reads wrong (the brain swaps them too, in persona.py's MISREAD): a recorded line
 # with one of them is refused, so it gets reworded instead of recorded wrong
 MISREAD = {"הידד": "it comes out as 'אהדה'"}
 

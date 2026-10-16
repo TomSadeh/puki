@@ -37,3 +37,7 @@ jobs:
         run: python scripts/check_voices.py
       - name: The PC brain's code compiles
         run: python -m compileall -q brain scripts
+      - name: The PC brain's persona (line filter, word check)
+        run: |
+          pip install pytest
+          python -m pytest -q brain/tests
