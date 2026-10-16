@@ -217,7 +217,7 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 
 ## Credits
 
-- Music ("Puki main theme", "Puki nights") by the project's author: piano, produced with Suno
+- Music ("Puki main theme", "Puki nights" and the Dance and Freeze track) by the project's author: piano, produced with Suno
 - [BlueTTS](https://github.com/maxmelichov/BlueTTS) by Max Melichov: Hebrew/English text-to-speech
 - [ivrit.ai](https://huggingface.co/ivrit-ai): Hebrew fine-tuned Whisper
 - [Parakeet TDT 0.6B v2](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) by NVIDIA (CC-BY-4.0), hears English;
