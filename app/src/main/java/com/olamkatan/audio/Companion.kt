@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
+import com.olamkatan.brain.Brain
+import com.olamkatan.brain.HttpBrain
 import com.olamkatan.data.models.Language
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,10 +94,17 @@ class Companion(
     private var wakeJob: Job? = null
     private val recorder = MicRecorder()
 
+    /** The brain changed (PC or device): forget the old status and look again. */
+    fun recheck() {
+        wakeJob?.cancel()
+        _status.value = CompanionStatus.OFF
+        wake()
+    }
+
     /** Checks for the server and wakes the brain if needed. Cheap to call on every game screen. */
     fun wake() {
         if (!enabled || wakeJob?.isActive == true || isReady) return
-        if (address.isBlank() && !isEmulator()) return  // not set up yet
+        if (address.isBlank() && !isEmulator() && !onDevice) return  // not set up yet
         wakeJob = scope.launch(Dispatchers.IO) {
             val state = health() ?: run { _status.value = CompanionStatus.OFF; return@launch }
             if (state == "ready") {
@@ -292,7 +301,9 @@ class Companion(
             return false
         }
         if (audio.isEmpty()) return false  // no safe line this time
-        val file = File(context.cacheDir, "companion_${System.nanoTime()}.ogg").apply { writeBytes(audio) }
+        // The PC sends OGG; the device brain makes WAV
+        val ext = if (audio.size > 4 && String(audio, 0, 4, Charsets.US_ASCII) == "RIFF") "wav" else "ogg"
+        val file = File(context.cacheDir, "companion_${System.nanoTime()}.$ext").apply { writeBytes(audio) }
         _speaking.value = true
         voicePlayer.playFile(file) { file.delete() }
         // Done talking when the line ends or another voice line cuts in
@@ -393,6 +404,13 @@ class Companion(
         return runCatching { JSONObject(String(bytes)).getString("brain") }.getOrNull()
     }
 
+    /** The PC's brain over the home network, or this device's own (see [Brain]). */
+    private val pcBrain = HttpBrain({ baseUrl() }, { code })
+    var deviceBrain: Brain? = null
+    /** Think on this device instead of the PC (parent settings; needs [deviceBrain]). */
+    var onDevice = false
+    private val brain: Brain get() = deviceBrain?.takeIf { onDevice } ?: pcBrain
+
     /** Returns the response body (empty for 204), or null on any failure. */
     private fun request(
         method: String,
@@ -400,32 +418,13 @@ class Companion(
         body: ByteArray? = null,
         timeoutMs: Int,
         contentType: String = "application/json; charset=utf-8"
-    ): ByteArray? =
-        runCatching {
-            val full = if (method == "POST") {
-                val sep = if ("?" in path) "&" else "?"
-                path + sep + "name=" + URLEncoder.encode(childName, "UTF-8") + "&gender=" + (if (childGirl) "girl" else "boy")
-            } else path
-            val conn = URL(baseUrl() + full).openConnection() as HttpURLConnection
-            conn.requestMethod = method
-            conn.connectTimeout = 1500
-            conn.setRequestProperty("X-Puki-Code", code.trim())
-            conn.readTimeout = timeoutMs
-            if (body != null) {
-                conn.doOutput = true
-                conn.setRequestProperty("Content-Type", contentType)
-                conn.outputStream.use { it.write(body) }
-            }
-            try {
-                when (conn.responseCode) {
-                    200 -> conn.inputStream.use { it.readBytes() }
-                    204 -> ByteArray(0)
-                    else -> null
-                }
-            } finally {
-                conn.disconnect()
-            }
-        }.getOrNull()
+    ): ByteArray? {
+        val full = if (method == "POST") {
+            val sep = if ("?" in path) "&" else "?"
+            path + sep + "name=" + URLEncoder.encode(childName, "UTF-8") + "&gender=" + (if (childGirl) "girl" else "boy")
+        } else path
+        return brain.request(method, full, body, timeoutMs, contentType)
+    }
 
     private companion object {
         const val LISTEN_MILLIS = 3500L

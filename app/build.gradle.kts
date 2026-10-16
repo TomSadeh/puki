@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // The game's version. Bump it for each release; scripts/release.py reads it from here, and the
@@ -9,7 +10,7 @@ val pukiVersion = "0.2.1"
 
 android {
     namespace = "com.olamkatan"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.olamkatan"
@@ -19,12 +20,17 @@ android {
         versionName = pukiVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // 64-bit ARM phones and tablets only (debug builds add the x86_64 emulator, below)
+        ndk { abiFilters += listOf("arm64-v8a") }
         vectorDrawables {
             useSupportLibrary = true
         }
     }
 
     buildTypes {
+        debug {
+            ndk { abiFilters += listOf("x86_64") }
+        }
         release {
             // Signed like the builds Android Studio installs from this PC, so a release installs
             // over one of those without losing the child's progress
@@ -42,22 +48,23 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     buildFeatures {
         compose = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
-
     packaging {
+        // Compressed in the APK (unpacked on install): the device brain's libraries are big
+        jniLibs { useLegacyPackaging = true }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 
@@ -85,6 +92,11 @@ dependencies {
 
     // QR scanner for pairing with the PC (ZXing: no Play services, no network)
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    // Puki's brain on the device itself (optional, for high-end phones): Gemma through
+    // LiteRT-LM, the voice and Hebrew pronunciation through ONNX Runtime
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.22.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

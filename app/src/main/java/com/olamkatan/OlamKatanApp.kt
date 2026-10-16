@@ -1,5 +1,6 @@
 package com.olamkatan
 
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Lifecycle
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -84,6 +85,19 @@ fun OlamKatanApp(
         companion.address = settings.companionAddress
         companion.code = settings.companionCode
         companion.language = language
+    }
+
+    // Where Puki thinks: the PC, or this device once its models are downloaded
+    val context = LocalContext.current
+    LaunchedEffect(settings.brainOnDevice) {
+        val app = context.applicationContext as OlamKatanApplication
+        val onDevice = settings.brainOnDevice && app.deviceModels.ready()
+        companion.deviceBrain = app.localBrain
+        if (onDevice != companion.onDevice) {
+            companion.onDevice = onDevice
+            if (!onDevice) app.localBrain.close()  // gives the memory back
+            companion.recheck()
+        }
     }
 
     LaunchedEffect(settings.childName, settings.gender) {

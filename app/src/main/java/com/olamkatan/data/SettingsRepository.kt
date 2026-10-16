@@ -34,6 +34,7 @@ class SettingsRepository(private val context: Context) {
         val COMPANION_ENABLED = booleanPreferencesKey("companion_enabled")
         val COMPANION_ADDRESS = stringPreferencesKey("companion_address")
         val COMPANION_CODE = stringPreferencesKey("companion_code")
+        val BRAIN_ON_DEVICE = booleanPreferencesKey("brain_on_device")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
@@ -51,7 +52,8 @@ class SettingsRepository(private val context: Context) {
             loaded = true,
             companionEnabled = prefs[Keys.COMPANION_ENABLED] ?: true,
             companionAddress = prefs[Keys.COMPANION_ADDRESS] ?: DEFAULT_COMPANION_ADDRESS,
-            companionCode = prefs[Keys.COMPANION_CODE] ?: ""
+            companionCode = prefs[Keys.COMPANION_CODE] ?: "",
+            brainOnDevice = prefs[Keys.BRAIN_ON_DEVICE] ?: false
         )
     }
 
@@ -101,5 +103,9 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun updateGender(gender: Gender) {
         context.settingsDataStore.edit { it[Keys.GENDER] = gender.name }
+    }
+
+    suspend fun updateBrainOnDevice(on: Boolean) {
+        context.settingsDataStore.edit { it[Keys.BRAIN_ON_DEVICE] = on }
     }
 }

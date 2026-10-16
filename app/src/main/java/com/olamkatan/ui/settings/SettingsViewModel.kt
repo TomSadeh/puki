@@ -1,5 +1,8 @@
 package com.olamkatan.ui.settings
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -74,6 +77,37 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setCompanionCode(code: String) {
         viewModelScope.launch { settingsRepository.updateCompanionCode(code) }
+    }
+
+    // ---- Puki's brain on this device ----
+
+    private val app = application as OlamKatanApplication
+    val deviceModels get() = app.deviceModels
+    var downloadError by mutableStateOf<String?>(null)
+        private set
+
+    fun downloadDeviceBrain() {
+        downloadError = null
+        // In the app's scope, so it carries on when the parent leaves settings
+        app.appScope.launch {
+            try {
+                app.deviceModels.download()
+            } catch (e: Exception) {
+                downloadError = e.message ?: e.javaClass.simpleName
+            }
+        }
+    }
+
+    fun setBrainOnDevice(on: Boolean) {
+        viewModelScope.launch { settingsRepository.updateBrainOnDevice(on) }
+    }
+
+    fun removeDeviceBrain() {
+        viewModelScope.launch {
+            settingsRepository.updateBrainOnDevice(false)
+            app.localBrain.close()
+            app.deviceModels.delete()
+        }
     }
 
     fun cycleTimeLimit(current: Int) {

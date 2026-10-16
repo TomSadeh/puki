@@ -344,6 +344,13 @@ fun SettingsScreen(
                 }
             }
 
+            // Puki's brain on this phone (only offered where it can run)
+            val context = androidx.compose.ui.platform.LocalContext.current
+            if (remember { com.olamkatan.brain.DeviceModels.capable(context) }) {
+                Spacer(modifier = Modifier.height(24.dp))
+                DeviceBrainCard(settingsViewModel)
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             UpdateCard()

@@ -64,8 +64,14 @@ what Puki answered.
 
 Toddler tablets tend to be cheap and weak (this was built for a Galaxy Tab A7 Lite with 3 GB
 of RAM). A language model, Hebrew speech recognition and Hebrew TTS together need far more,
-so the tablet stays the screen and a PC on the home network does the thinking. On a high-end
-tablet the whole stack could run on the device; contributions welcome.
+so the tablet stays the screen and a PC on the home network does the thinking.
+
+**Or on a high-end phone.** On a phone with about 12 GB of memory (tested on a Galaxy S25), Puki
+can think, talk and listen on the device itself, away from home too. In parent settings,
+"Puki on this phone" downloads the models once (about 5.9 GB: Gemma 4 E4B for LiteRT-LM, the
+BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs on the GPU
+(the first word in under a second), the voice takes about 0.6 s for a line, and Whisper about
+2 s for a word. For now it speaks Hebrew only there; English falls back to the recorded lines.
 
 ## Privacy and security
 
@@ -145,6 +151,11 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
 - **BlueTTS and nikud:** BlueTTS's Hebrew pronunciation model garbles text that already has
   nikud, so all text is fed to it plain. Words plain spelling can't disambiguate (letter
   names, animal sounds) are given as phonemes in `generate_voices.py`.
+- **The brain on the phone** (`app/src/main/java/com/olamkatan/brain/`): `LocalBrain` answers the
+  same requests as the PC brain, with `Persona` (a port of brain.py's prompts and line filter),
+  `voice/` (a Kotlin port of BlueTTS's pipeline, checked to match Python sample for sample),
+  `Mind` (Gemma through LiteRT-LM) and `Ears` (whisper.cpp). The whisper.cpp library is prebuilt
+  in `app/src/main/jniLibs`; rebuild it with `python native/whisper/build.py` (needs the NDK).
 - **Releasing:** bump `pukiVersion` in `app/build.gradle.kts`, commit, then run
   `python scripts/release.py --publish` from this checkout. It refuses if personal voice lines
   (`voice_*_name*`) are in `res/raw`, so a release never carries a child's name.
@@ -162,6 +173,10 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
   [Gemma terms of use](https://ai.google.dev/gemma/terms); GGUF builds by [Unsloth](https://huggingface.co/unsloth)
 - [llama.cpp](https://github.com/ggml-org/llama.cpp) and
   [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
+- On the phone: [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) (Apache-2.0) runs Gemma,
+  [ONNX Runtime](https://onnxruntime.ai) (MIT) runs BlueTTS and
+  [RenikudPlus](https://huggingface.co/notmax123/RenikudPlus) (Hebrew pronunciation), and
+  [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) runs ivrit.ai's Whisper
 
 Models are downloaded separately and are not part of this repository.
 

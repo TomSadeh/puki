@@ -234,7 +234,8 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
 
 - **Run the whole stack on a high-end tablet or phone:** Gemma 4 E4B through LiteRT-LM on
   the GPU, BlueTTS through ONNX Runtime, and ivrit.ai's Whisper through whisper.cpp. This
-  would make Puki work away from home. **Status:** a speed-test app is built (Gemma, the
-  voice and Whisper, models downloaded on the phone); the voice matches the PC's output.
-  Next: numbers from a Galaxy S25, then a "Puki's brain: on this device / on the PC" setting.
+  would make Puki work away from home. **Status:** measured on a Galaxy S25 (Gemma's first word in
+  about 0.85 s on the GPU, the voice 0.6 s a line, Whisper about 2 s a word), and built into the
+  app as "Puki on this phone" in parent settings. Still open: an English voice on the phone
+  (espeak for BlueTTS, or Kokoro), Whisper on the GPU, and loading Gemma faster (18 s the first time).
 - **Tuning the persona** from real logs: which lines delight, which fall flat.
