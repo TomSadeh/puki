@@ -468,7 +468,8 @@ def stop_puki(root, dry):
         return
     powershell(
         "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'doorbell[.]py|brain[.]py|tray[.]py|Puki[.]exe' "
-        f"-and ($_.CommandLine -like '*{HERE}*' -or $_.Name -eq 'Puki.exe') }} | "
+        f"-and ($_.CommandLine -like '*{HERE}*' -or $_.Name -eq 'Puki.exe') "
+        f"-and $_.ProcessId -notin @({os.getpid()}, {os.getppid()}) }} | "
         "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; "
         f"Get-Process llama-server -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -like '{root}*' }} | "
         "Stop-Process -Force -ErrorAction SilentlyContinue")

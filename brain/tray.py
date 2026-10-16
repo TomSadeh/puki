@@ -6,7 +6,7 @@
 
 The icon is grey while Puki sleeps, yellow while it wakes up, and green when it's awake.
 Its menu opens the dashboard, shows the pairing code, puts the brain to sleep, turns
-"start at login" on or off, and quits.
+"start at login" on or off, uninstalls Puki, and quits.
 
 As Puki.exe, the first run unpacks the brain's files into %LOCALAPPDATA%\\Puki and runs the
 installer in a window (Python comes along via uv, so the PC needs none). After that it's
@@ -72,8 +72,15 @@ def read(path):
         return ""
 
 
-def is_set_up(brain_dir):
-    """True once the installer has written the paths and the Python environment exists."""
+def install_root(brain_dir):
+    """The folder the installer put everything in: where the brain's Python environment is."""
+    py = brain_python(brain_dir)
+    if py and os.path.basename(os.path.dirname(os.path.dirname(py))) == ".venv":
+        return os.path.dirname(os.path.dirname(os.path.dirname(py)))
+    return home() if FROZEN else None
+
+
+def brain_python(brain_dir):
     import json
     cfg = {}
     # Puki.exe: only what its own installer wrote counts (the example's paths are someone else's)
@@ -83,20 +90,29 @@ def is_set_up(brain_dir):
                 cfg.update(json.load(f))
         except (OSError, ValueError):
             pass
-    py = os.path.expanduser(cfg.get("brain_python", ""))
+    return os.path.expanduser(cfg.get("brain_python", ""))
+
+
+def is_set_up(brain_dir):
+    """True once the installer has written the paths and the Python environment exists."""
+    py = brain_python(brain_dir)
     return bool(py) and os.path.exists(py)
 
 
 def run_setup():
     """Runs the installer in a console window (its questions and progress bars need one)."""
+    in_console("Puki setup", ["--no-start"] + (["--dir", home()] if FROZEN else []))
+
+
+def in_console(title, args):
+    """Runs install.py with [args] in a console window of its own, then closes it."""
     ctypes.windll.kernel32.AllocConsole()
     out = open("CONOUT$", "w", encoding="utf-8", buffering=1)
     sys.stdout = sys.stderr = out
     sys.stdin = open("CONIN$", "r", encoding="utf-8")
-    ctypes.windll.kernel32.SetConsoleTitleW("Puki setup")
+    ctypes.windll.kernel32.SetConsoleTitleW(title)
     import install
-    argv = ["install", "--no-start"] + (["--dir", home()] if FROZEN else [])
-    sys.argv = argv
+    sys.argv = ["install"] + args
     try:
         install.main()
     except SystemExit:
@@ -187,6 +203,18 @@ def main():
         server.shutdown()
         icon.stop()
 
+    def uninstall(icon, _):
+        root = install_root(brain_dir)
+        if ctypes.windll.user32.MessageBoxW(
+                0, "Remove Puki from this PC? A window will ask before each part: start at login, the "
+                   "firewall rule, the downloaded models (several GB) and the settings.", "Puki", 0x34) != 6:
+            return
+        quit_(icon, None)
+        in_console("Uninstall Puki", ["--uninstall"] + (["--dir", root] if root else []))
+        if FROZEN:
+            message("Puki is uninstalled. To finish, delete Puki.exe.")
+        os._exit(0)
+
     menu = pystray.Menu(
         pystray.MenuItem(status, None, enabled=False),
         pystray.MenuItem("Open the dashboard", lambda: webbrowser.open(DASHBOARD), default=True),
@@ -194,6 +222,7 @@ def main():
         pystray.MenuItem("Put to sleep now", sleep, enabled=lambda _: doorbell.BRAIN.state != "cold"),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("Start at login", toggle_autostart, checked=autostart_on),
+        pystray.MenuItem("Uninstall Puki...", uninstall),
         pystray.MenuItem("Quit Puki", quit_),
     )
     icon = pystray.Icon("Puki", icon_image("cold"), "Puki is asleep", menu)

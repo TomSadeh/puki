@@ -63,7 +63,8 @@ the firewall rule it added, and everything it downloaded, asking before each par
 
 `brain\tray.py` runs the doorbell with an icon in the Windows tray: grey while Puki sleeps,
 yellow while it wakes, green when it's awake. Its menu opens the dashboard, shows the
-pairing code, puts the brain to sleep, turns "start at login" on or off, and quits. Windows
+pairing code, puts the brain to sleep, turns "start at login" on or off, uninstalls Puki
+(the same `--uninstall`, in a window that asks before each part), and quits. Windows
 first puts new tray icons behind the **^** arrow; drag it onto the taskbar to keep it in view.
 
 ```
