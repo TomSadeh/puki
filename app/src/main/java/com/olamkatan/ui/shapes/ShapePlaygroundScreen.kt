@@ -1,5 +1,8 @@
 package com.olamkatan.ui.shapes
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.olamkatan.ui.components.scatterTilt
+import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.PathEffect
@@ -117,7 +120,7 @@ fun ShapePlaygroundScreen(
 
                 // Target outline (drop zone) in center
                 Box(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
                     DropZone(zoneId = "target") {
@@ -125,42 +128,39 @@ fun ShapePlaygroundScreen(
                             drawShapeOutline(state.targetShape, size)
                         }
                     }
-                }
 
-                // Draggable shapes at bottom
-                if (!state.roundComplete) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(36.dp),
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        state.shapeChoices.forEachIndexed { index, shape ->
-                            val shapeReaction = rememberReactionState(state.roundIndex, shape.id)
-                            DragTarget(
-                                itemId = shape.id,
-                                onDragStart = { voicePlayer.play("voice_shape_${shape.id}", language) },
-                                onDragEnd = { dropTargetId ->
-                                    if (dropTargetId == "target") {
-                                        val correct = viewModel.onShapeDropped(shape.id)
-                                        if (correct) {
-                                            sfxPlayer.play(Sfx.SUCCESS)
-                                            if (companion != null) companion.react("במשחק הצורות שמו את ה${shape.name.he} במקום הנכון!", "In the shape game the child put the ${shape.name.en.lowercase()} in the right place!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
-                                            showRoundSuccess = true
-                                            scope.launch { targetReaction.celebrate() }
-                                            scope.launch {
-                                                delay(if (companion?.isReady == true) 3400 else 2000)
-                                                showRoundSuccess = false
-                                                viewModel.nextRound()
+                    // The pieces lie around the target, half on each side
+                    if (!state.roundComplete) {
+                        Scatter(seed = state.roundIndex, aroundCenter = true, modifier = Modifier.fillMaxSize()) {
+                            state.shapeChoices.forEachIndexed { index, shape ->
+                                val shapeReaction = rememberReactionState(state.roundIndex, shape.id)
+                                DragTarget(
+                                    itemId = shape.id,
+                                    onDragStart = { voicePlayer.play("voice_shape_${shape.id}", language) },
+                                    onDragEnd = { dropTargetId ->
+                                        if (dropTargetId == "target") {
+                                            val correct = viewModel.onShapeDropped(shape.id)
+                                            if (correct) {
+                                                sfxPlayer.play(Sfx.SUCCESS)
+                                                if (companion != null) companion.react("במשחק הצורות שמו את ה${shape.name.he} במקום הנכון!", "In the shape game the child put the ${shape.name.en.lowercase()} in the right place!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+                                                showRoundSuccess = true
+                                                scope.launch { targetReaction.celebrate() }
+                                                scope.launch {
+                                                    delay(if (companion?.isReady == true) 3400 else 2000)
+                                                    showRoundSuccess = false
+                                                    viewModel.nextRound()
+                                                }
+                                            } else {
+                                                sfxPlayer.play(Sfx.WRONG_GENTLE)
+                                                if (companion != null) companion.react("במשחק הצורות ניסו לשים ${shape.name.he} במקום של ${state.targetShape.name.he}.", "In the shape game the child tried to put the ${shape.name.en.lowercase()} where the ${state.targetShape.name.en.lowercase()} goes.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
+                                                scope.launch { shapeReaction.shake() }
                                             }
-                                        } else {
-                                            sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                            if (companion != null) companion.react("במשחק הצורות ניסו לשים ${shape.name.he} במקום של ${state.targetShape.name.he}.", "In the shape game the child tried to put the ${shape.name.en.lowercase()} where the ${state.targetShape.name.en.lowercase()} goes.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
-                                            scope.launch { shapeReaction.shake() }
                                         }
                                     }
-                                }
-                            ) {
-                                Canvas(modifier = Modifier.size(190.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)) {
-                                    drawShapeFilled(shape, size)
+                                ) {
+                                    Canvas(modifier = Modifier.size(190.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)) {
+                                        drawShapeFilled(shape, size)
+                                    }
                                 }
                             }
                         }

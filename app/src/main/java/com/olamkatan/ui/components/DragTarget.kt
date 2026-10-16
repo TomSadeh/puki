@@ -41,17 +41,8 @@ fun DragTarget(
             .onGloballyPositioned { coords ->
                 rootPosition = coords.positionInRoot()
             }
-            .absoluteOffset {
-                IntOffset(
-                    offsetAnim.value.x.roundToInt(),
-                    offsetAnim.value.y.roundToInt()
-                )
-            }
-            .graphicsLayer {
-                scaleX = if (isDragging) 1.1f else 1f
-                scaleY = if (isDragging) 1.1f else 1f
-                shadowElevation = if (isDragging) 8f else 0f
-            }
+            // The touch handling sits before the movement: measured on the part that stays put,
+            // finger movement is exact (inside the moving part, each move would count for less)
             .pointerInput(itemId) {
                 detectDragGestures(
                     onDragStart = {
@@ -62,10 +53,10 @@ fun DragTarget(
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        scope.launch {
-                            offsetAnim.snapTo(offsetAnim.value + Offset(dragAmount.x, dragAmount.y))
-                        }
-                        dragDropState.dragPosition = rootPosition + offsetAnim.value +
+                        // Where the item is going now (the snap below happens a frame later)
+                        val next = offsetAnim.value + Offset(dragAmount.x, dragAmount.y)
+                        scope.launch { offsetAnim.snapTo(next) }
+                        dragDropState.dragPosition = rootPosition + next +
                             Offset(size.width / 2f, size.height / 2f)
                     },
                     onDragEnd = {
@@ -91,6 +82,19 @@ fun DragTarget(
                         }
                     }
                 )
+            }
+            .absoluteOffset {
+                IntOffset(
+                    offsetAnim.value.x.roundToInt(),
+                    offsetAnim.value.y.roundToInt()
+                )
+            }
+            // After the touch handling: inside a scaled layer, finger movement is measured scaled
+            // down, and the item would fall behind the finger the farther it's dragged
+            .graphicsLayer {
+                // Lifted items just grow; a shadow here would be a square box around round things
+                scaleX = if (isDragging) 1.12f else 1f
+                scaleY = if (isDragging) 1.12f else 1f
             }
     ) {
         content()

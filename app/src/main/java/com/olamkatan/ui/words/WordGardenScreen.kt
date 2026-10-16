@@ -1,5 +1,7 @@
 package com.olamkatan.ui.words
 
+import com.olamkatan.ui.components.scatterTilt
+import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.lerp
 import com.olamkatan.ui.components.popIn
@@ -212,11 +214,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
             Spacer(modifier = Modifier.height(24.dp))
 
             // Letter choices
-            Row(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Scatter(seed = state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 state.letterChoices.forEachIndexed { index, letter ->
                     val block = LETTER_BLOCKS[index % LETTER_BLOCKS.size]
                     val letterReaction = rememberReactionState(state.roundIndex, letter.id)
@@ -234,7 +232,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                             .idleBob(index)
                             .reaction(letterReaction)
                             .size(160.dp)
-                            .graphicsLayer { scaleX = scale; scaleY = scale }
+                            .graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = scatterTilt(state.roundIndex, index) }
                             .shadow(10.dp, RoundedCornerShape(32.dp))
                             .clip(RoundedCornerShape(32.dp))
                             .background(Brush.verticalGradient(listOf(lerp(block, Color.White, 0.25f), block, lerp(block, Color.Black, 0.2f))))

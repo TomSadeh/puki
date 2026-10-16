@@ -1,5 +1,7 @@
 package com.olamkatan.ui.colors
 
+import com.olamkatan.ui.components.scatterTilt
+import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
@@ -117,15 +119,12 @@ fun ColorSplashScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Color blobs
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(40.dp),
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Balloons floating about, high and low
+            Scatter(seed = state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 state.colorChoices.forEachIndexed { i, color ->
                     val blobReaction = rememberReactionState(state.roundIndex, color.id)
-                    Box(modifier = Modifier.popIn(i, state.roundIndex).idleBob(i).reaction(blobReaction)) {
+                    Box(modifier = Modifier.popIn(i, state.roundIndex).idleBob(i).reaction(blobReaction)
+                        .graphicsLayer { rotationZ = scatterTilt(state.roundIndex, i) }) {
                     ColorBlob(
                         color = color.color,
                         onClick = {

@@ -1,0 +1,63 @@
+package com.olamkatan.ui.components
+
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import kotlin.random.Random
+
+/**
+ * Lays its children out loosely instead of in a row: high and low in turn, nudged a little
+ * each round ([seed]) so no two rounds look the same. Order is kept (first child first, in
+ * reading direction), so counting still goes one by one.
+ *
+ * With [aroundCenter] the middle is left free (for a target), and the children stand
+ * half on one side of it and half on the other.
+ */
+@Composable
+fun Scatter(
+    seed: Int,
+    modifier: Modifier = Modifier,
+    aroundCenter: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0, minHeight = 0)) }
+        val w = constraints.maxWidth
+        val tallest = placeables.maxOfOrNull { it.height } ?: 0
+        val h = if (constraints.hasBoundedHeight) constraints.maxHeight else (tallest * 1.7f).toInt()
+        val n = placeables.size
+        val rnd = Random(seed * 7919 + n)
+        val flip = rnd.nextBoolean()  // whether the first one starts high or low
+
+        val centers = if (!aroundCenter) {
+            List(n) { i ->
+                val high = (i % 2 == 0) != flip
+                val x = (i + 0.5f) / n + (rnd.nextFloat() - 0.5f) * 0.25f / n
+                val y = (if (high) 0.3f else 0.7f) + (rnd.nextFloat() - 0.5f) * 0.12f
+                x to y
+            }
+        } else {
+            val left = (n + 1) / 2
+            List(n) { i ->
+                val onLeft = i < left
+                val k = if (onLeft) i else i - left
+                val m = if (onLeft) left else n - left
+                val x = (if (onLeft) 0.15f else 0.85f) + (if (k % 2 == 0) -0.04f else 0.04f) + (rnd.nextFloat() - 0.5f) * 0.04f
+                val y = (k + 0.5f) / m + (rnd.nextFloat() - 0.5f) * 0.1f
+                x to y
+            }
+        }
+
+        layout(w, h) {
+            placeables.forEachIndexed { i, p ->
+                val (fx, fy) = centers[i]
+                val x = (w * fx - p.width / 2f).toInt().coerceIn(0, (w - p.width).coerceAtLeast(0))
+                val y = (h * fy - p.height / 2f).toInt().coerceIn(0, (h - p.height).coerceAtLeast(0))
+                p.placeRelative(x, y)  // mirrors in Hebrew, so the first one is where reading starts
+            }
+        }
+    }
+}
+
+/** A small tilt for the [index]th scattered thing, different each round. */
+fun scatterTilt(seed: Int, index: Int): Float = Random(seed * 131 + index).nextFloat() * 16f - 8f

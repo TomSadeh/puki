@@ -1,5 +1,11 @@
 package com.olamkatan.ui.myday.tidy
 
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.BoxWithConstraints
 import com.olamkatan.ui.components.PromptBubble
 import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
@@ -138,61 +144,66 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Homes (drop zones) at top
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
+                // The room: homes where they belong, toys scattered on the floor
+                BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    val w = maxWidth
+                    val h = maxHeight
                     state.homes.forEach { home ->
-                        DropZone(zoneId = home.id) {
-                            Box(
-                                modifier = Modifier
-                                    .size(140.dp)
-                                    .shadow(4.dp, RoundedCornerShape(16.dp))
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color.White.copy(alpha = 0.8f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(painter = painterResource(home.icon), contentDescription = null, modifier = Modifier.size(90.dp))
-                                    Text(home.name.resolve(language), fontSize = 10.sp, color = EarthBrown)
+                        val spot = HOME_SPOTS.getValue(home.id)
+                        val inside = state.items.firstOrNull { it.homeId == home.id && it.tidied }
+                        DropZone(
+                            zoneId = home.id,
+                            modifier = Modifier
+                                .align(AbsoluteAlignment.TopLeft)
+                                .absoluteOffset(w * spot.x, h * spot.y)
+                                .size(w * spot.w, h * spot.h)
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                Image(painter = painterResource(home.icon), contentDescription = home.name.resolve(language),
+                                    alignment = Alignment.BottomCenter,  // furniture stands on the floor
+                                    modifier = Modifier.fillMaxSize())
+                                if (inside != null) {
+                                    // Put away: it shows in its home
+                                    Image(
+                                        painter = painterResource(inside.icon),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .align(AbsoluteAlignment.TopLeft)
+                                            .absoluteOffset(w * spot.w * spot.inX, h * spot.h * spot.inY)
+                                            .popIn(key = inside.id)
+                                            .size(w * spot.w * spot.inSize)
+                                    )
                                 }
                             }
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Items on floor (draggable)
-                Row(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    state.items.filter { !it.tidied }.forEach { item ->
-                        DragTarget(
-                            itemId = item.id,
-                            onDragEnd = { dropId ->
-                                if (dropId != null) {
-                                    val correct = viewModel.onItemDropped(item.id, dropId)
-                                    if (correct) {
-                                        sfxPlayer.play(Sfx.SUCCESS)
-                                        voicePlayer.play("voice_tidy_${item.id}", language)
-                                    } else {
-                                        sfxPlayer.play(Sfx.WRONG_GENTLE)
+                    state.items.forEachIndexed { i, item ->
+                        if (!item.tidied) {
+                            val spot = FLOOR_SPOTS[i]
+                            DragTarget(
+                                itemId = item.id,
+                                modifier = Modifier.align(AbsoluteAlignment.TopLeft).absoluteOffset(w * spot.first, h * spot.second),
+                                onDragEnd = { dropId ->
+                                    if (dropId != null) {
+                                        val correct = viewModel.onItemDropped(item.id, dropId)
+                                        if (correct) {
+                                            sfxPlayer.play(Sfx.DROP)
+                                            voicePlayer.play("voice_tidy_${item.id}", language)
+                                        } else {
+                                            sfxPlayer.play(Sfx.WRONG_GENTLE)
+                                        }
                                     }
                                 }
+                            ) {
+                                Image(
+                                    painter = painterResource(item.icon),
+                                    contentDescription = item.name.resolve(language),
+                                    modifier = Modifier
+                                        .idleBob(i, 0.5f)
+                                        .size(130.dp)
+                                        .graphicsLayer { rotationZ = spot.third }
+                                )
                             }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(140.dp)
-                                    .shadow(6.dp, RoundedCornerShape(20.dp))
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(Color(0xFFFFF3E0)),
-                                contentAlignment = Alignment.Center
-                            ) { Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(100.dp)) }
                         }
                     }
                 }
@@ -204,3 +215,24 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
         }
     }
 }
+
+
+/** Where a home stands in the room (fractions of the play area), its size, and where a
+ *  put-away item shows inside it (fractions of the home). */
+private data class HomeSpot(val x: Float, val y: Float, val w: Float, val h: Float,
+                            val inX: Float, val inY: Float, val inSize: Float)
+
+private val HOME_SPOTS = mapOf(
+    "bookcase" to HomeSpot(0.03f, 0.06f, 0.20f, 0.68f, 0.30f, 0.34f, 0.40f),  // standing on the floor
+    "shelf" to HomeSpot(0.33f, 0.02f, 0.26f, 0.30f, 0.32f, -0.30f, 0.36f),
+    "toybox" to HomeSpot(0.56f, 0.42f, 0.18f, 0.36f, 0.25f, 0.20f, 0.50f),
+    "hamper" to HomeSpot(0.79f, 0.36f, 0.17f, 0.42f, 0.22f, 0.30f, 0.55f),
+)
+
+/** Where each toy lies on the floor (fractions of the play area) and how it's tilted. */
+private val FLOOR_SPOTS = listOf(
+    Triple(0.27f, 0.64f, -14f),  // teddy
+    Triple(0.79f, 0.74f, 22f),   // book, in front of the hamper (not its home)
+    Triple(0.43f, 0.72f, 9f),    // shirt
+    Triple(0.07f, 0.72f, 0f),    // ball, in front of the bookcase
+)

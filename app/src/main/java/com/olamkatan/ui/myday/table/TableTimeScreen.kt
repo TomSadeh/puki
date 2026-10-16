@@ -1,5 +1,21 @@
 package com.olamkatan.ui.myday.table
 
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.Canvas
 import com.olamkatan.ui.components.PromptBubble
 import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
@@ -129,74 +145,39 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Placemat with drop zones
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .padding(horizontal = 32.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFFFFE0B2)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier.fillMaxWidth().padding(16.dp)
-                    ) {
-                        state.items.forEach { item ->
-                            DropZone(zoneId = item.id) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(130.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (item.placed) Color.White else Color.White.copy(alpha = 0.3f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (item.placed) {
-                                        Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(90.dp))
-                                    } else {
-                                        Text("?", fontSize = 28.sp, color = Color.Gray)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Draggable items
+                // The table seen from above, with the basket of things to set beside it
                 Row(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    state.items.filter { !it.placed }.forEach { item ->
-                        DragTarget(
-                            itemId = item.id,
-                            onDragEnd = { dropId ->
-                                if (dropId != null) {
-                                    val correct = viewModel.onItemPlaced(item.id, dropId)
-                                    if (correct) {
-                                        sfxPlayer.play(Sfx.DROP)
-                                        voicePlayer.play("voice_table_${item.id}", language)
-                                    } else {
-                                        sfxPlayer.play(Sfx.WRONG_GENTLE)
+                    TableScene(items = state.items, modifier = Modifier.weight(1f).fillMaxHeight())
+                    Basket(modifier = Modifier.width(300.dp).fillMaxHeight()) {
+                        state.items.forEachIndexed { i, item ->
+                            if (!item.placed) {
+                                val (dx, dy, tilt) = BASKET_SPOTS[i]
+                                DragTarget(
+                                    itemId = item.id,
+                                    modifier = Modifier.align(AbsoluteAlignment.TopLeft).absoluteOffset(dx.dp, dy.dp),
+                                    onDragEnd = { dropId ->
+                                        if (dropId != null) {
+                                            val correct = viewModel.onItemPlaced(item.id, dropId)
+                                            if (correct) {
+                                                sfxPlayer.play(Sfx.DROP)
+                                                voicePlayer.play("voice_table_${item.id}", language)
+                                            } else {
+                                                sfxPlayer.play(Sfx.WRONG_GENTLE)
+                                            }
+                                        }
                                     }
-                                }
-                            }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(140.dp)
-                                    .shadow(6.dp, RoundedCornerShape(20.dp))
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(Color.White),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(100.dp))
-                                    Text(item.name.resolve(language), fontSize = 10.sp, color = EarthBrown)
+                                ) {
+                                    Image(
+                                        painter = painterResource(item.icon),
+                                        contentDescription = item.name.resolve(language),
+                                        modifier = Modifier
+                                            .idleBob(i, 0.5f)
+                                            .size(118.dp)
+                                            .graphicsLayer { rotationZ = tilt }
+                                    )
                                 }
                             }
                         }
@@ -207,6 +188,105 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
             if (state.isComplete) {
                 RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
             }
+        }
+    }
+}
+
+
+/** Where each thing goes on the table (fractions of the table), and how big its place is. */
+private data class Place(val id: String, val x: Float, val y: Float, val w: Float, val h: Float)
+
+private val PLACES = listOf(
+    Place("plate", 0.50f, 0.56f, 0.34f, 0.34f),
+    Place("fork", 0.24f, 0.56f, 0.13f, 0.34f),
+    Place("spoon", 0.76f, 0.56f, 0.13f, 0.34f),
+    Place("cup", 0.74f, 0.20f, 0.16f, 0.16f),
+)
+
+/** The things in the basket: offset in dp and a little tilt, so they look tumbled in. */
+private val BASKET_SPOTS = listOf(Triple(40f, 70f, -12f), Triple(150f, 40f, 10f), Triple(30f, 200f, 18f), Triple(150f, 190f, -8f))
+
+/** A wooden table seen from above, with a placemat and a faint outline where each thing goes. */
+@Composable
+private fun TableScene(items: List<PlaceSetting>, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val w = minOf(maxWidth, maxHeight * 1.35f)
+        val h = w / 1.35f
+        Box(modifier = Modifier.size(w, h)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                // Table top with wood grain
+                drawRoundRect(Color(0xFFB07A45), cornerRadius = CornerRadius(size.height * 0.08f))
+                drawRoundRect(Color(0xFFD4A26A), Offset(size.width * 0.015f, size.height * 0.02f),
+                    Size(size.width * 0.97f, size.height * 0.96f), CornerRadius(size.height * 0.07f))
+                for (k in 1..7) {
+                    val y = size.height * k / 8f
+                    drawLine(Color(0xFFB07A45).copy(alpha = 0.45f), Offset(size.width * 0.03f, y),
+                        Offset(size.width * 0.97f, y + size.height * 0.01f * (k % 3 - 1)), strokeWidth = 3f)
+                }
+                // Placemat
+                drawOval(Color(0xFFFFF3E0), Offset(size.width * 0.12f, size.height * 0.22f), Size(size.width * 0.76f, size.height * 0.68f))
+                drawOval(Color(0xFFFFCC80), Offset(size.width * 0.12f, size.height * 0.22f), Size(size.width * 0.76f, size.height * 0.68f),
+                    style = Stroke(width = size.height * 0.012f))
+            }
+            PLACES.forEach { place ->
+                val item = items.firstOrNull { it.id == place.id } ?: return@forEach
+                DropZone(
+                    zoneId = place.id,
+                    // From the table's top-left in both languages: the table doesn't mirror
+                    modifier = Modifier
+                        .align(AbsoluteAlignment.TopLeft)
+                        .absoluteOffset(w * (place.x - place.w / 2), h * (place.y - place.h / 2 * 1.35f))
+                        .size(w * place.w, h * place.h * 1.35f)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        if (item.placed) {
+                            Image(painter = painterResource(item.icon), contentDescription = null,
+                                modifier = Modifier.popIn().fillMaxSize(0.95f))
+                        } else {
+                            // A faint outline of what goes here
+                            Image(painter = painterResource(item.icon), contentDescription = null,
+                                colorFilter = ColorFilter.tint(Color(0xFF5D4037)),
+                                modifier = Modifier.fillMaxSize(0.95f).alpha(0.16f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A woven basket the things are tumbled into. */
+@Composable
+private fun Basket(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(300.dp, 360.dp)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val top = size.height * 0.18f
+                // Handle
+                drawArc(Color(0xFFA1887F), 180f, 180f, false, Offset(size.width * 0.18f, top - size.height * 0.14f),
+                    Size(size.width * 0.64f, size.height * 0.34f), style = Stroke(width = size.width * 0.04f))
+                // Body, with a woven pattern
+                val body = Path().apply {
+                    moveTo(size.width * 0.04f, top + size.height * 0.04f)
+                    lineTo(size.width * 0.96f, top + size.height * 0.04f)
+                    lineTo(size.width * 0.86f, size.height * 0.98f)
+                    lineTo(size.width * 0.14f, size.height * 0.98f)
+                    close()
+                }
+                drawPath(body, Color(0xFFD7A86E))
+                for (k in 1..6) {
+                    val y = top + size.height * 0.04f + (size.height * 0.94f - top) * k / 7f
+                    drawLine(Color(0xFFB0834F), Offset(size.width * 0.06f, y), Offset(size.width * 0.94f, y), strokeWidth = 4f)
+                }
+                for (k in 1..7) {
+                    val x = size.width * k / 8f
+                    drawLine(Color(0xFFB0834F).copy(alpha = 0.6f), Offset(x, top + size.height * 0.05f),
+                        Offset(size.width * 0.5f + (x - size.width * 0.5f) * 0.8f, size.height * 0.97f), strokeWidth = 3f)
+                }
+                // Rim
+                drawRoundRect(Color(0xFFA1887F), Offset(0f, top), Size(size.width, size.height * 0.06f), CornerRadius(size.height * 0.03f))
+            }
+            content()
         }
     }
 }

@@ -43,14 +43,13 @@ fun DropZone(
             }
             .drawBehind {
                 if (glowAlpha > 0f) {
-                    drawRoundRect(
-                        color = highlightColor.copy(alpha = glowAlpha),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f),
-                        style = Stroke(width = 6f)
-                    )
-                    drawRoundRect(
-                        color = highlightColor.copy(alpha = glowAlpha * 0.3f),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f)
+                    // A soft round glow under whatever is hovering, no hard edges
+                    drawCircle(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            listOf(highlightColor.copy(alpha = glowAlpha), Color.Transparent),
+                            center = center, radius = size.maxDimension * 0.7f
+                        ),
+                        radius = size.maxDimension * 0.7f
                     )
                 }
             }

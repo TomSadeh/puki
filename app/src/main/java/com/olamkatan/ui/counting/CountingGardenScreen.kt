@@ -1,5 +1,7 @@
 package com.olamkatan.ui.counting
 
+import com.olamkatan.ui.components.scatterTilt
+import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.ColorFilter
 import com.olamkatan.ui.components.popIn
 import com.olamkatan.ui.components.idleBob
@@ -150,10 +152,8 @@ fun CountingGardenScreen(
                     if (state.roundComplete) itemReactions.forEachIndexed { i, r -> launch { delay(i * 90L); r.celebrate() } }
                 }
                 val itemSize = if (target <= 5) 130.dp else 92.dp
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Dotted about the garden, high and low, but still counted one after another
+                Scatter(seed = state.roundIndex, modifier = Modifier.fillMaxSize().padding(28.dp)) {
                     repeat(target) { i ->
                         val filled = i < state.currentCount
                         val itemScale by animateFloatAsState(

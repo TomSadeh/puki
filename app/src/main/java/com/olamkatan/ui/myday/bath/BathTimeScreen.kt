@@ -1,5 +1,25 @@
 package com.olamkatan.ui.myday.bath
 
+import com.olamkatan.ui.components.popIn
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import com.olamkatan.ui.components.idleBob
 import com.olamkatan.ui.components.PromptBubble
@@ -141,67 +161,52 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Body parts as drop zones
+                // The child in the tub, with the soap (or, once clean, the shower) beside it
+                var rinsing by remember { mutableStateOf(false) }
                 Row(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    state.bodyParts.forEach { part ->
-                        DropZone(zoneId = part.id) {
+                    BathScene(parts = state.bodyParts, rinsing = rinsing, modifier = Modifier.weight(1f).fillMaxHeight())
+                    Box(modifier = Modifier.width(220.dp), contentAlignment = Alignment.Center) {
+                        if (state.showRinse && !state.isComplete) {
                             Box(
                                 modifier = Modifier
-                                    .idleBob(state.bodyParts.indexOf(part), 0.5f)
-                                    .size(170.dp)
-                                    .shadow(8.dp, RoundedCornerShape(32.dp))
-                                    .clip(RoundedCornerShape(32.dp))
-                                    .background(if (part.cleaned) Color.White else Color(0xFFBCAAA4))
-                                    .border(6.dp, if (part.cleaned) Color(0xFF81D4FA) else Color(0xFF8D6E63), RoundedCornerShape(32.dp)),
+                                    .popIn()
+                                    .idleBob(1)
+                                    .size(150.dp)
+                                    .shadow(8.dp, CircleShape)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF29B6F6))
+                                    .clickable(enabled = !rinsing) {
+                                        sfxPlayer.play(Sfx.WHOOSH)
+                                        voicePlayer.play("voice_prompt_bath", language)
+                                        rinsing = true
+                                        scope.launch {
+                                            delay(1800)  // let the water pour first
+                                            viewModel.onRinse()
+                                        }
+                                    },
                                 contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(painter = painterResource(part.icon), contentDescription = null, modifier = Modifier.size(110.dp))
-                                    if (part.cleaned) Image(painter = painterResource(R.drawable.ic_myday_sparkle), contentDescription = null, modifier = Modifier.size(34.dp))
+                            ) { Image(painter = painterResource(R.drawable.ic_myday_shower), contentDescription = null, modifier = Modifier.size(96.dp)) }
+                        } else if (!state.showRinse) {
+                            DragTarget(
+                                itemId = "soap",
+                                onDragEnd = { dropId ->
+                                    val partId = dropId?.removeSuffix("2")  // each arm and leg is its own spot
+                                    if (partId != null && state.bodyParts.any { it.id == partId }) {
+                                        viewModel.onSoapDropped(partId)
+                                        sfxPlayer.play(Sfx.POP)
+                                        voicePlayer.play("voice_body_$partId", language)
+                                    }
                                 }
+                            ) {
+                                Box(
+                                    modifier = Modifier.idleBob(0).size(140.dp).shadow(8.dp, CircleShape).clip(CircleShape).background(Color(0xFFFFF9C4)),
+                                    contentAlignment = Alignment.Center
+                                ) { Image(painter = painterResource(R.drawable.ic_myday_soap), contentDescription = null, modifier = Modifier.size(96.dp)) }
                             }
                         }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (state.showRinse && !state.isComplete) {
-                    // Rinse button
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .shadow(8.dp, CircleShape)
-                            .clip(CircleShape)
-                            .background(Color(0xFF29B6F6))
-                            .clickable {
-                                sfxPlayer.play(Sfx.WHOOSH)
-                                voicePlayer.play("voice_prompt_bath", language)
-                                viewModel.onRinse()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) { Image(painter = painterResource(R.drawable.ic_myday_shower), contentDescription = null, modifier = Modifier.size(76.dp)) }
-                } else if (!state.showRinse) {
-                    // Soap draggable
-                    DragTarget(
-                        itemId = "soap",
-                        onDragEnd = { dropId ->
-                            if (dropId != null) {
-                                viewModel.onSoapDropped(dropId)
-                                sfxPlayer.play(Sfx.POP)
-                                val part = state.bodyParts.find { it.id == dropId }
-                                if (part != null) voicePlayer.play("voice_body_${part.id}", language)
-                            }
-                        }
-                    ) {
-                        Box(
-                            modifier = Modifier.idleBob(0).size(140.dp).shadow(8.dp, CircleShape).clip(CircleShape).background(Color(0xFFFFF9C4)),
-                            contentAlignment = Alignment.Center
-                        ) { Image(painter = painterResource(R.drawable.ic_myday_soap), contentDescription = null, modifier = Modifier.size(96.dp)) }
                     }
                 }
 
@@ -210,6 +215,103 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
 
             if (state.isComplete) {
                 RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
+            }
+        }
+    }
+}
+
+
+/** Where each muddy spot sits on the child (fractions of the picture), and its radius. */
+private data class Spot(val zoneId: String, val partId: String, val x: Float, val y: Float, val r: Float)
+
+private val SPOTS = listOf(
+    Spot("face", "face", 0.60f, 0.32f, 0.07f),  // a cheek, clear of the eyes
+    Spot("arms", "arms", 0.21f, 0.58f, 0.09f),
+    Spot("arms2", "arms", 0.79f, 0.58f, 0.09f),
+    Spot("tummy", "tummy", 0.50f, 0.55f, 0.10f),
+    Spot("legs", "legs", 0.39f, 0.73f, 0.075f),
+    Spot("legs2", "legs", 0.61f, 0.73f, 0.075f),
+)
+
+/** The child standing in a tub: mud on each spot until it's soaped, then bubbles. */
+@Composable
+private fun BathScene(parts: List<BodyPart>, rinsing: Boolean, modifier: Modifier = Modifier) {
+    val t = rememberInfiniteTransition(label = "bath")
+    val wave by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = LinearEasing)), label = "wave")
+    val fall by t.animateFloat(0f, 1f, infiniteRepeatable(tween(700, easing = LinearEasing)), label = "fall")
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val side = minOf(maxWidth, maxHeight)
+        Box(modifier = Modifier.size(side)) {
+            Image(painter = painterResource(R.drawable.ic_myday_child_bath), contentDescription = null, modifier = Modifier.fillMaxSize())
+            SPOTS.forEach { spot ->
+                val cleaned = parts.firstOrNull { it.id == spot.partId }?.cleaned == true
+                DropZone(
+                    zoneId = spot.zoneId,
+                    modifier = Modifier
+                        // From the picture's top-left corner in both languages (the picture doesn't mirror)
+                        .align(AbsoluteAlignment.TopLeft)
+                        .absoluteOffset(x = side * (spot.x - spot.r), y = side * (spot.y - spot.r))
+                        .size(side * spot.r * 2)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val c = Offset(size.width / 2, size.height / 2)
+                        val r = size.minDimension / 2
+                        if (!cleaned) {
+                            // Mud: a few brown blobs
+                            val mud = Color(0xFF795548)
+                            drawCircle(mud.copy(alpha = 0.75f), r * 0.42f, c + Offset(-r * 0.18f, -r * 0.1f))
+                            drawCircle(mud.copy(alpha = 0.7f), r * 0.3f, c + Offset(r * 0.32f, r * 0.12f))
+                            drawCircle(mud.copy(alpha = 0.65f), r * 0.2f, c + Offset(-r * 0.05f, r * 0.42f))
+                            drawCircle(mud.copy(alpha = 0.6f), r * 0.12f, c + Offset(r * 0.45f, -r * 0.4f))
+                        } else {
+                            // Bubbles
+                            val bubble = Color.White.copy(alpha = 0.85f)
+                            listOf(Triple(-0.35f, -0.2f, 0.28f), Triple(0.25f, -0.35f, 0.22f), Triple(0.3f, 0.25f, 0.3f),
+                                   Triple(-0.2f, 0.35f, 0.2f)).forEach { (dx, dy, br) ->
+                                val bc = c + Offset(dx * r, dy * r - wave * r * 0.15f)
+                                drawCircle(bubble, br * r, bc)
+                                drawCircle(Color(0xFFB3E5FC), br * r, bc, style = Stroke(width = 2.5f))
+                                drawCircle(Color.White, br * r * 0.3f, bc + Offset(-br * r * 0.35f, -br * r * 0.35f))
+                            }
+                        }
+                    }
+                }
+            }
+            // The tub, in front of the legs
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val top = h * 0.80f
+                val water = Path().apply {
+                    moveTo(w * 0.08f, top + h * 0.02f)
+                    var x = w * 0.08f
+                    while (x <= w * 0.92f) {
+                        lineTo(x, top + h * 0.02f + kotlin.math.sin((x / w * 6f + wave) * 2 * Math.PI.toFloat()) * h * 0.008f)
+                        x += w * 0.02f
+                    }
+                    lineTo(w * 0.92f, h * 0.9f); lineTo(w * 0.08f, h * 0.9f); close()
+                }
+                drawPath(water, Color(0xFF81D4FA).copy(alpha = 0.85f))
+                // Foam along the water line
+                for (i in 0 until 9) {
+                    val fx = w * (0.12f + i * 0.095f)
+                    drawCircle(Color.White, h * (0.022f + 0.01f * (i % 3)), Offset(fx, top + h * 0.02f))
+                }
+                // The tub's body and rim
+                drawRoundRect(Color.White, Offset(w * 0.06f, top + h * 0.035f), Size(w * 0.88f, h * 0.15f), CornerRadius(h * 0.06f))
+                drawRoundRect(Color(0xFFE3F2FD), Offset(w * 0.06f, top + h * 0.12f), Size(w * 0.88f, h * 0.065f), CornerRadius(h * 0.05f))
+                drawRoundRect(Color(0xFFB0BEC5), Offset(w * 0.04f, top + h * 0.02f), Size(w * 0.92f, h * 0.03f), CornerRadius(h * 0.015f))
+                // Feet of the tub
+                drawCircle(Color(0xFFFFC107), h * 0.025f, Offset(w * 0.16f, h * 0.99f))
+                drawCircle(Color(0xFFFFC107), h * 0.025f, Offset(w * 0.84f, h * 0.99f))
+                // The shower: water drops falling over the child
+                if (rinsing) {
+                    for (i in 0 until 26) {
+                        val dx = w * (0.2f + (i * 37 % 60) / 100f)
+                        val dy = ((fall + i * 0.137f) % 1f) * h * 0.8f
+                        drawLine(Color(0xFF4FC3F7), Offset(dx, dy), Offset(dx, dy + h * 0.04f), strokeWidth = 5f, cap = StrokeCap.Round)
+                    }
+                }
             }
         }
     }
