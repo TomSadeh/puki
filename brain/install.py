@@ -130,7 +130,7 @@ class ConsoleUI:
 
     def finish(self, code, url):
         if code:
-            self.say(f"\n  Pairing code: {code}")
+            print(f"\n  Pairing code: {code}")  # on screen only: the install log doesn't keep it
         if url:
             qr_lines = qr_text(url)
             if qr_lines:
@@ -607,10 +607,20 @@ def write_config(root, py, model, dry):
     if dry:
         say(f"    → would write {path}")
         return
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    write_private(path, json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")  # may hold the child's name
     say(f"    ✓ {path}")
+
+
+def write_private(path, text):
+    """Writes a file only this user may read (the pairing code, the child's name). On Windows
+    the user's folders already keep other users out; this covers Linux and shared machines."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+    try:
+        os.chmod(path, 0o600)  # also when the file was already there
+    except OSError:
+        pass
 
 
 def port_rule():
@@ -619,6 +629,12 @@ def port_rule():
         "Get-NetFirewallRule -Direction Inbound -Action Allow -Enabled True | "
         f"Where-Object {{ ($_ | Get-NetFirewallPortFilter).LocalPort -contains '{PORT}' }} | "
         "Select-Object -First 1 -ExpandProperty DisplayName").stdout.strip()
+
+
+def rule_is_local(name):
+    """True if the rule only lets in this PC's own network (not any network marked Private)."""
+    out = powershell(f"(Get-NetFirewallRule -DisplayName '{name}' | Get-NetFirewallAddressFilter).RemoteAddress").stdout
+    return "LocalSubnet" in out
 
 
 def lan_subnet():
@@ -653,14 +669,21 @@ def setup_firewall(dry):
     if not WINDOWS:
         return setup_firewall_linux(dry)
     existing = port_rule()
-    if existing:
+    if existing == FIREWALL_RULE and not rule_is_local(existing) and not dry:
+        # Older installs opened the port to any network marked Private; narrow it to this one
+        say("    Windows will ask for permission to limit the firewall rule to your home network...")
+        powershell(f"Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "
+                   f"\"-NoProfile -Command Set-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -RemoteAddress LocalSubnet\"")
+        say(f"    ✓ firewall rule '{existing}' (your home network only)" if rule_is_local(existing)
+            else f"    ! the rule '{existing}' still lets in any private network (the prompt was declined?)")
+    elif existing:
         say(f"    ✓ firewall rule '{existing}' (already there)")
     elif dry:
         say(f"    → would add the firewall rule '{FIREWALL_RULE}' (TCP {PORT}, home networks only; asks for admin)")
     else:
         say("    Windows will ask for permission to add the firewall rule...")
         rule = (f"New-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -Direction Inbound -Protocol TCP "
-                f"-LocalPort {PORT} -Profile Private -Action Allow")
+                f"-LocalPort {PORT} -Profile Private -RemoteAddress LocalSubnet -Action Allow")
         powershell(f"Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList \"-NoProfile -Command {rule}\"")
         if port_rule():
             say(f"    ✓ firewall rule added (TCP {PORT}, home networks only)")
@@ -779,8 +802,7 @@ def pairing():
         import secrets
         alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         raw = "".join(secrets.choice(alphabet) for _ in range(8))
-        with open(code_file, "w", encoding="utf-8") as f:
-            f.write(f"{raw[:4]}-{raw[4:]}\n")
+        write_private(code_file, f"{raw[:4]}-{raw[4:]}\n")
     with open(code_file, encoding="utf-8") as f:
         code = f.read().strip()
     ip = lan_address()

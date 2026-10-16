@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- No Android backups: they'd copy the child's name and the pairing code to the cloud -->
     <!-- Reaches the companion "brain" on the family PC over the home network, and asks GitHub
          whether there's a newer game (nothing about the child is sent anywhere else) -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,7 +14,7 @@
     <application
         android:name=".OlamKatanApplication"
         android:usesCleartextTraffic="true"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"

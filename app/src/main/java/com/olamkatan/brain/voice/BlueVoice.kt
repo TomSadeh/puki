@@ -179,6 +179,7 @@ class BlueVoice(
 
     fun close() {
         listOf(dp, textEnc, vectorEst, vocoder).forEach { it.close() }
+        renikud.close()  // 311 MB of its own
     }
 
     private fun wav(samples: FloatArray): ByteArray {

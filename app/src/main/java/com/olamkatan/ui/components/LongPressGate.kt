@@ -6,7 +6,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -20,15 +22,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** For grown-ups only: [onUnlocked] runs after a [holdDurationMs] hold, while a ring fills up. */
 @Composable
 fun LongPressGate(
-    holdDurationMs: Long = 1500L,
+    holdDurationMs: Long = 2000L,
     onUnlocked: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    var isHolding by remember { mutableStateOf(false) }
-    var holdProgress by remember { mutableStateOf(0f) }
+    var holdProgress by remember { mutableFloatStateOf(0f) }
+    val unlocked by rememberUpdatedState(onUnlocked)  // the latest callback, not the first one
     val scope = rememberCoroutineScope()
     var holdJob by remember { mutableStateOf<Job?>(null) }
 
@@ -43,21 +46,18 @@ fun LongPressGate(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
-                        isHolding = true
                         holdJob = scope.launch {
                             val steps = 15
                             for (i in 1..steps) {
                                 delay(holdDurationMs / steps)
                                 holdProgress = i.toFloat() / steps
                             }
-                            onUnlocked()
+                            unlocked()
                             holdProgress = 0f
-                            isHolding = false
                         }
                         tryAwaitRelease()
                         holdJob?.cancel()
                         holdProgress = 0f
-                        isHolding = false
                     }
                 )
             }

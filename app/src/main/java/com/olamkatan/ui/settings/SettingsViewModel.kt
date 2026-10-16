@@ -103,7 +103,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun removeDeviceBrain() {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             settingsRepository.updateBrainOnDevice(false)
             runCatching { app.localBrain.close() }
             app.deviceModels.delete()

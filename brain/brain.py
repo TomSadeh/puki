@@ -14,6 +14,7 @@ import base64
 import difflib
 import io
 import json
+import math
 import os
 import random
 import re
@@ -594,7 +595,12 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/speak":
             # Fixed text from the app (a question, a story sentence): just say it
             text = str(req.get("text", ""))[:200].strip()
-            self._reply(text, lang, speed=float(req.get("speed", 0.92))) if text else self._fail(204)
+            try:
+                speed = float(req.get("speed", 0.92))
+            except (TypeError, ValueError):
+                speed = 0.92
+            speed = min(max(speed, 0.5), 1.5) if math.isfinite(speed) else 0.92  # 0, NaN or 1e9 would break TTS
+            self._reply(text, lang, speed=speed) if text else self._fail(204)
         elif url.path == "/listen":
             # Body: a short WAV recording of the child; optional context=what Puki just asked
             try:
@@ -642,7 +648,8 @@ class Handler(BaseHTTPRequestHandler):
             log(f"looked at a drawing -> {text}")
             self._reply(text, lang)
         elif url.path == "/story":
-            icons = {str(k): str(v) for k, v in dict(req.get("icons", {})).items()}
+            # The pictures the story may use (the app sends about 20); capped, it all goes into the prompt
+            icons = {str(k)[:60]: str(v)[:60] for k, v in list(dict(req.get("icons", {})).items())[:40]}
             played = str(req.get("played", ""))[:300] or ("משחקים" if lang == "he" else "games")
             try:
                 sentences = story(played, icons, lang) if icons else None

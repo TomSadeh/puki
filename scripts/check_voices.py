@@ -5,6 +5,8 @@ VoicePlayer skips missing files silently, so a gap means a game just stays
 quiet. This script finds every voice key in the Kotlin code, expands the
 templated ones (e.g. "voice_animal_${animal.id}") using the ids defined in
 the content data, and reports keys with no file. Exits 1 if anything is missing.
+Lines with the child's name (voice_*_name*) are optional: they're git-ignored, and the app
+records them from the PC at run time. Audio files nothing plays are listed as a warning.
 
 Usage: python scripts/check_voices.py [--lang he|en]
 """
@@ -72,6 +74,8 @@ def find_keys(sources):
         if path in OPTIONAL_KEY_FILES:
             continue
         for lineno, line in enumerate(code.splitlines(), 1):
+            if "PreferencesKey(" in line:  # a settings key that happens to start with "voice_"
+                continue
             for prefix, template in KEY_RE.findall(line):
                 where = f"{path}:{lineno}"
                 if not template:
@@ -111,11 +115,23 @@ def main():
         print()
 
     for lang in langs:
-        missing = [k for k in sorted(keys) if not has_audio(k, lang, raw_files)]
+        missing = [k for k in sorted(keys) if not has_audio(k, lang, raw_files) and "_name" not in k]
         problems += len(missing)
         print(f"[{lang}] {len(keys) - len(missing)}/{len(keys)} voice lines have audio")
         for k in missing:
             print(f"  missing: {k}  (used at {keys[k][0]})")
+        print()
+
+    # Audio nothing plays (a warning: VoicePlayer also picks some lines by pattern, like praise)
+    used = set(keys)
+    optional_code = "\n".join(code for path, code in read_sources().items() if path in OPTIONAL_KEY_FILES)
+    orphans = sorted({re.sub(r"_(he|en)(_[fm])?$", "", f) for f in raw_files if f.startswith("voice_")}
+                     - used)
+    orphans = [o for o in orphans if "_name" not in o and o.rstrip("_0123456789") not in optional_code]
+    if orphans:
+        print(f"Not played anywhere ({len(orphans)}; safe to delete, or wire them in):")
+        for o in orphans:
+            print(f"  {o}")
         print()
 
     sys.exit(1 if problems else 0)

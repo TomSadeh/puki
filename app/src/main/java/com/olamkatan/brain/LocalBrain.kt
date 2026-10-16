@@ -22,36 +22,58 @@ class LocalBrain(private val models: DeviceModels) : Brain {
     private var ears: Ears? = null
     @Volatile private var state = "asleep"
 
+    // Two locks: [lifecycle] for waking and closing (quick), [work] around the models while they
+    // answer (slow), so switching Puki off never waits on the main thread for Gemma to finish.
+    // [generation] tells a wake that finishes after a close to throw its models away.
+    private val lifecycle = Any()
+    private val work = Any()
+    @Volatile private var generation = 0
+
     /** Loads the models (in the background; the game polls /health until "ready"). */
-    @Synchronized
     fun wake() {
-        if (state != "asleep" || !models.ready()) return
-        state = "waking"
+        val gen: Int
+        synchronized(lifecycle) {
+            if (state != "asleep" || !models.ready()) return
+            state = "waking"
+            gen = generation
+        }
         thread(name = "puki-brain") {
+            var v: BlueVoice? = null
+            var m: Mind? = null
             try {
                 val env = OrtEnvironment.getEnvironment()
-                val dir = models.dir
-                voice = BlueVoice(env, models.file("voice"), models.file("voice/noa.json"), Renikud(env, models.file("voice/renikud_int8.onnx")))
-                voice!!.speak("שלום")  // warms up the voice before the first real line
+                v = BlueVoice(env, models.file("voice"), models.file("voice/noa.json"), Renikud(env, models.file("voice/renikud_int8.onnx")))
+                v.speak("שלום")  // warms up the voice before the first real line
                 models.cacheDir.mkdirs()
-                mind = Mind(java.io.File(dir, "gemma.litertlm"), models.cacheDir).also { it.load() }
-                state = "ready"
+                m = Mind(models.file("gemma.litertlm"), models.cacheDir).also { it.load() }
+                synchronized(lifecycle) {
+                    if (gen != generation) error("switched off while loading")
+                    synchronized(work) { voice = v; mind = m }
+                    state = "ready"
+                }
             } catch (e: Throwable) {
-                Log.e(TAG, "couldn't load the device brain", e)
-                close()
+                Log.e(TAG, "the device brain didn't load: ${e.message}")
+                runCatching { m?.close() }
+                runCatching { v?.close() }
+                synchronized(lifecycle) { if (gen == generation) state = "asleep" }
             }
         }
     }
 
-    @Synchronized
+    /** Frees the models' memory. Waits for an answer in progress, so call it off the main thread. */
     fun close() {
-        runCatching { mind?.close() }
-        runCatching { voice?.close() }
-        runCatching { ears?.close() }
-        mind = null
-        voice = null
-        ears = null
-        state = "asleep"
+        synchronized(lifecycle) {
+            generation++
+            state = "asleep"
+        }
+        synchronized(work) {
+            runCatching { mind?.close() }
+            runCatching { voice?.close() }
+            runCatching { ears?.close() }
+            mind = null
+            voice = null
+            ears = null
+        }
     }
 
     override fun request(method: String, path: String, body: ByteArray?, timeoutMs: Int, contentType: String): ByteArray? {
@@ -59,10 +81,11 @@ class LocalBrain(private val models: DeviceModels) : Brain {
         val query = parseQuery(path.substringAfter('?', ""))
         if (method == "GET" && route == "/health") return JSONObject().put("brain", state).toString().toByteArray()
         if (route == "/wake") { wake(); return ByteArray(0) }
-        val mind = mind ?: return null
-        val voice = voice ?: return null
         return try {
-            synchronized(this) {
+            synchronized(work) {
+                // Read inside the lock: close() may have just freed them
+                val mind = mind ?: return null
+                val voice = voice ?: return null
                 persona.setChild(query["name"]?.firstOrNull() ?: "", query["gender"]?.firstOrNull() ?: "")
                 when (route) {
                     "/say" -> {
@@ -74,7 +97,9 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         val req = JSONObject(String(body ?: ByteArray(0)))
                         val lang = if (req.optString("lang") == "en") "en" else "he"
                         val text = req.optString("text").take(200).trim()
-                        if (text.isEmpty()) ByteArray(0) else reply(text, lang, voice, req.optDouble("speed", 0.92).toFloat())
+                        // 0, NaN or a huge number would break the voice
+                        val speed = req.optDouble("speed", 0.92).let { if (it.isFinite()) it.coerceIn(0.5, 1.5) else 0.92 }.toFloat()
+                        if (text.isEmpty()) ByteArray(0) else reply(text, lang, voice, speed)
                     }
                     "/look" -> {
                         val lang = if (query["lang"]?.firstOrNull() == "en") "en" else "he"
@@ -92,7 +117,6 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         val alts = (query["alt"] ?: emptyList()).filter { it.isNotEmpty() }.map { it.take(40) }.take(4)
                         val heard = ears().transcribe(body ?: ByteArray(0), lang, (listOf(target) + alts).joinToString(" "))
                         val match = persona.wordMatch(heard, target, alts)
-                        Log.i(TAG, "say '$target': heard '$heard' -> $match")
                         JSONObject().put("heard", heard).put("match", match).toString().toByteArray()
                     }
                     "/listen" -> {
@@ -102,14 +126,13 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         var situation = persona.listenSituation(heard, lang)
                         val context = query["context"]?.firstOrNull()?.take(200) ?: ""
                         if (context.isNotEmpty()) situation = "$context $situation"
-                        Log.i(TAG, "heard '$heard'")
                         reply(line(mind, situation, lang), lang, voice)
                     }
                     else -> null
                 }
             }
-        } catch (e: Throwable) {
-            Log.e(TAG, "$route failed", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "$route failed: ${e.javaClass.simpleName}")  // (not the message: it may quote her)
             null
         }
     }
@@ -121,7 +144,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
         repeat(3) {
             val raw = mind.chat(persona.systemPrompt(lang), persona.examples(lang), persona.situationPrompt(situation, lang))
             persona.clean(raw, lang)?.let { persona.said(it); return it }
-            Log.i(TAG, "rejected: $raw")
+            Log.i(TAG, "a line didn't pass the filter; trying again")  // (not what it said: it may be about her)
         }
         return null
     }
@@ -136,7 +159,8 @@ class LocalBrain(private val models: DeviceModels) : Brain {
     private fun story(mind: Mind, req: JSONObject): ByteArray? {
         val lang = if (req.optString("lang") == "en") "en" else "he"
         val iconsJson = req.optJSONObject("icons") ?: return null
-        val icons = iconsJson.keys().asSequence().associateWith { iconsJson.getString(it) }
+        // The pictures the story may use (the app sends about 20); capped, it all goes into the prompt
+        val icons = iconsJson.keys().asSequence().take(40).associate { it.take(60) to iconsJson.getString(it).take(60) }
         if (icons.isEmpty()) return null
         val played = req.optString("played").take(300).ifEmpty { if (lang == "he") "משחקים" else "games" }
         val schema = JSONObject().put("type", "object").put("required", JSONArray().put("sentences")).put("properties", JSONObject()
@@ -161,7 +185,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                     return JSONObject().put("sentences", out).toString().toByteArray()
                 }
             }
-            Log.i(TAG, "story rejected: ${raw.take(160)}")
+            Log.i(TAG, "a story didn't come out right; trying again")
         }
         return ByteArray(0)
     }

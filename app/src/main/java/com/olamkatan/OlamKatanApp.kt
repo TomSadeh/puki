@@ -43,6 +43,7 @@ import com.olamkatan.ui.common.LocalSfxPlayer
 import com.olamkatan.ui.common.LocalVoicePlayer
 import com.olamkatan.ui.components.TimeLimitOverlay
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun OlamKatanApp(
@@ -100,7 +101,10 @@ fun OlamKatanApp(
         if (onDevice) companion.deviceBrain = brain
         if (onDevice != companion.onDevice) {
             companion.onDevice = onDevice
-            if (!onDevice) companion.deviceBrain?.let { runCatching { app.localBrain.close() } }  // gives the memory back
+            if (!onDevice && companion.deviceBrain != null) {
+                // Gives the memory back; off the main thread, as it waits for an answer in progress
+                app.appScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { app.localBrain.close() } }
+            }
             companion.recheck()
         }
     }

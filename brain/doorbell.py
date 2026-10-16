@@ -89,6 +89,18 @@ def normalize_code(code):
     return "".join(c for c in code.upper() if c.isalnum())
 
 
+def write_private(path, text):
+    """Writes a file only this user may read (the pairing code, the child's name). On Windows
+    the user's folders already keep other users out; this covers Linux and shared machines."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(text)
+    try:
+        os.chmod(path, 0o600)  # also when the file was already there
+    except OSError:
+        pass
+
+
 def load_pairing_code(new=False):
     if not new and os.path.exists(CODE_FILE):
         with open(CODE_FILE, encoding="utf-8") as f:
@@ -96,8 +108,7 @@ def load_pairing_code(new=False):
         if len(code) >= 8:
             return code
     code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))  # 40 bits
-    with open(CODE_FILE, "w", encoding="utf-8") as f:
-        f.write(pretty_code(code) + "\n")
+    write_private(CODE_FILE, pretty_code(code) + "\n")
     return code
 
 
@@ -317,6 +328,10 @@ BRAIN = Brain()
 
 
 class Handler(BaseHTTPRequestHandler):
+    # A connection that never finishes its request is dropped after this many seconds, so a
+    # device on the network can't tie up the doorbell (the code check is never reached then)
+    timeout = 10
+
     def log_message(self, fmt, *args):
         pass
 
@@ -544,7 +559,10 @@ def start():
     threading.Thread(target=BRAIN.idle_watch, daemon=True).start()
     server = ThreadingHTTPServer((CFG["bind"], CFG["port"]), Handler)
     log(f"doorbell listening on {CFG['bind']}:{CFG['port']}")
-    log(f"pairing code: {pretty_code(PAIRING_CODE)}  (type it in the app's parent settings)")
+    if sys.stdout.isatty():  # someone ran it in a terminal; a service's log shouldn't keep the code
+        log(f"pairing code: {pretty_code(PAIRING_CODE)}  (type it in the app's parent settings)")
+    else:
+        log("pairing code: on the dashboard and in pairing_code.txt")
     dashboard.serve(DashboardApp(), CFG["dashboard_port"])
     log(f"dashboard: http://127.0.0.1:{CFG['dashboard_port']}  (this PC only)")
     return server

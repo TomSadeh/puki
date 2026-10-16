@@ -198,7 +198,7 @@ private fun CornerButton(
     }
     if (onHold != null) {
         // The gap between the gate and the button leaves room for the ring to show
-        LongPressGate(holdDurationMs = 2000L, onUnlocked = onHold, modifier = Modifier.padding(10.dp)) {
+        LongPressGate(onUnlocked = onHold, modifier = Modifier.padding(10.dp)) {
             face(Modifier.padding(6.dp).then(circle))
         }
     } else {

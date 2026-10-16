@@ -99,14 +99,18 @@ class DeviceModels(context: Context) {
         if (dest.length() == m.size && okMark(m).exists()) return
         dest.parentFile!!.mkdirs()
         val part = File(dir, m.name + ".part")
-        var attempt = 0
+        // Retry dropped connections, but give up after 20 tries that get nowhere (a server that
+        // keeps ending the download early, with or without an error, would otherwise spin forever)
+        var stuck = 0
         while (part.length() < m.size) {
+            val before = part.length()
             try {
                 fetch(m, part)
             } catch (e: Exception) {
-                if (++attempt > 20) throw e
-                Thread.sleep(3000)
+                if (stuck >= 20) throw e
             }
+            if (part.length() > before) stuck = 0 else if (++stuck > 20) error("${m.name}: the download keeps stopping")
+            if (part.length() < m.size) Thread.sleep(3000)
         }
         if (sha256(part) != m.sha256) {
             part.delete()

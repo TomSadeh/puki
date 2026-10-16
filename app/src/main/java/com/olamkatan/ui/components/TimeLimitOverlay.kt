@@ -77,7 +77,6 @@ fun TimeLimitOverlay(
 
             // Long press to dismiss (parent only)
             LongPressGate(
-                holdDurationMs = 2000L,
                 onUnlocked = onDismiss
             ) {
                 Box(
