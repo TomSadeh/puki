@@ -15,8 +15,17 @@ class MusicPlayer(val context: Context) {
     private var mediaPlayer: MediaPlayer? = null
     private var enabled = true
     private var currentTrack: String? = null
-    private var volume = BASE_VOLUME
+    private var ducked = false
     private var currentVolume = 0f
+
+    /** The parent's music volume, 0..1 (parent settings). */
+    var level = 1f
+        set(value) {
+            field = value.coerceIn(0f, 1f)
+            fadeTo(mediaPlayer, target())
+        }
+
+    private fun target() = (if (ducked) DUCKED_VOLUME else BASE_VOLUME) * level
     private var fade: ValueAnimator? = null
 
     /** Plays res/raw/[name] on a loop, fading over from whatever was playing. */
@@ -36,14 +45,14 @@ class MusicPlayer(val context: Context) {
                 if (enabled) start()
             }
             currentVolume = 0f
-            fadeTo(mediaPlayer, volume)
+            fadeTo(mediaPlayer, target())
         }
     }
 
     /** Quieter while something important is spoken (e.g. a bedtime story). */
     fun duck(ducked: Boolean) {
-        volume = if (ducked) DUCKED_VOLUME else BASE_VOLUME
-        fadeTo(mediaPlayer, volume)
+        this.ducked = ducked
+        fadeTo(mediaPlayer, target())
     }
 
     private fun fadeTo(player: MediaPlayer?, target: Float, then: () -> Unit = {}) {

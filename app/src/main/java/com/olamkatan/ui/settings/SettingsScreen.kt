@@ -1,5 +1,11 @@
 package com.olamkatan.ui.settings
 
+import kotlin.math.roundToInt
+import androidx.compose.material3.Slider
+import com.olamkatan.audio.Sfx
+import com.olamkatan.ui.common.LocalSfxPlayer
+import com.olamkatan.ui.common.LocalVoicePlayer
+import com.olamkatan.ui.common.LocalMusicPlayer
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.audio.Connection
 import androidx.compose.runtime.LaunchedEffect
@@ -161,6 +167,41 @@ fun SettingsScreen(
                     labelOn = BilingualText("פועל", "On").resolve(language),
                     labelOff = BilingualText("כבוי", "Off").resolve(language),
                     onToggle = { settingsViewModel.toggleMusic(settings.musicEnabled) }
+                )
+
+                // Volumes: they apply while dragging, and are saved when the finger lifts
+                val musicPlayer = LocalMusicPlayer.current
+                val voicePlayer = LocalVoicePlayer.current
+                val sfxPlayer = LocalSfxPlayer.current
+                var musicLevel by remember(settings.musicVolume) { mutableStateOf(settings.musicVolume) }
+                var voiceLevel by remember(settings.voiceVolume) { mutableStateOf(settings.voiceVolume) }
+                var sfxLevel by remember(settings.sfxVolume) { mutableStateOf(settings.sfxVolume) }
+                VolumeRow(
+                    label = BilingualText("עוצמת מוזיקה", "Music volume").resolve(language),
+                    icon = R.drawable.ic_ui_music_note,
+                    value = musicLevel,
+                    onChange = { musicLevel = it; musicPlayer.level = it },
+                    onDone = { settingsViewModel.setVolumes(music = musicLevel) }
+                )
+                VolumeRow(
+                    label = BilingualText("עוצמת קולות ופוקי", "Voices and Puki").resolve(language),
+                    icon = R.drawable.ic_companion_parrot,
+                    value = voiceLevel,
+                    onChange = { voiceLevel = it; voicePlayer.level = it },
+                    onDone = {
+                        settingsViewModel.setVolumes(voice = voiceLevel)
+                        voicePlayer.playPraise(language)  // a sample at the new volume
+                    }
+                )
+                VolumeRow(
+                    label = BilingualText("עוצמת צלילים", "Sound effects").resolve(language),
+                    icon = R.drawable.ic_ui_speaker,
+                    value = sfxLevel,
+                    onChange = { sfxLevel = it; sfxPlayer.level = it },
+                    onDone = {
+                        settingsViewModel.setVolumes(sfx = sfxLevel)
+                        sfxPlayer.play(Sfx.POP)
+                    }
                 )
 
                 SettingsToggleRow(
@@ -378,5 +419,20 @@ private fun SettingsToggleRow(
                 )
             )
         }
+    }
+}
+
+
+/** A volume slider with an icon and the level in percent. */
+@Composable
+private fun VolumeRow(label: String, icon: Int, value: Float, onChange: (Float) -> Unit, onDone: () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(32.dp))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(label, style = MaterialTheme.typography.titleMedium, color = EarthBrown, modifier = Modifier.weight(1f))
+            Text("${(value * 100).roundToInt()}%", style = MaterialTheme.typography.titleMedium, color = EarthBrown)
+        }
+        Slider(value = value, onValueChange = onChange, onValueChangeFinished = onDone)
     }
 }

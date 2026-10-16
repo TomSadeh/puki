@@ -42,7 +42,7 @@ class Events:
 
 def serve(app, port):
     """Starts the dashboard in a background thread. [app] provides status(), events,
-    sleep(), new_code(), set_idle(minutes) and pair_url()."""
+    sleep(), new_code(), set_idle(minutes), set_model(choice) and pair_url()."""
     allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
 
     class Handler(BaseHTTPRequestHandler):
@@ -102,6 +102,12 @@ def serve(app, port):
                 app.sleep()
             elif self.path == "/api/new-code":
                 app.new_code()
+            elif self.path == "/api/model":
+                choice = str(body.get("choice", ""))
+                if choice not in ("e4b", "12b"):
+                    self._json(400, {"error": "choice must be e4b or 12b"})
+                    return
+                app.set_model(choice)
             elif self.path == "/api/idle":
                 minutes = int(body.get("minutes", 0))
                 if not 1 <= minutes <= 240:

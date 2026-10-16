@@ -40,6 +40,11 @@
   button:disabled { opacity: .5; cursor: default; }
   input[type=number] { font: inherit; width: 70px; padding: 6px 8px; border-radius: 8px;
                        border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+  .seg button { display: flex; flex-direction: column; align-items: flex-start; padding: 6px 12px; }
+  .seg button small { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .seg button.on small { color: var(--accent-ink); opacity: .8; }
   .pair { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
   .pair img { width: 168px; height: 168px; border-radius: 8px; background: #fff; }
   .code { font: 700 30px/1.1 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .08em; }
@@ -77,6 +82,14 @@
       <div class="big" id="state">…</div>
       <dl class="rows">
         <dt>Running on</dt><dd id="device">–</dd>
+        <dt>Mind</dt>
+        <dd>
+          <div class="seg" id="models">
+            <button data-model="e4b">Gemma E4B<small>lighter, faster</small></button>
+            <button data-model="12b">Gemma 12B<small>smarter, ~9 GB GPU</small></button>
+          </div>
+          <div class="muted small" id="modelNote"></div>
+        </dd>
         <dt>Awake for</dt><dd id="awake">–</dd>
         <dt>Sleeps in</dt><dd id="sleeps">–</dd>
         <dt>Free GPU memory</dt><dd id="vram">–</dd>
@@ -144,7 +157,20 @@ function showStatus(s) {
   $("pill").textContent = names[s.brain] || s.brain;
   $("pill").className = "pill " + s.brain;
   $("state").textContent = names[s.brain] || s.brain;
-  $("device").textContent = s.device || "–";
+  $("device").textContent = s.device ? `Gemma ${s.model} on the ${s.device}` : "–";
+  for (const b of document.querySelectorAll("#models button")) {
+    const m = b.dataset.model;
+    b.classList.toggle("on", s.model_choice === m);
+    b.disabled = !s.models_installed[m];
+    b.title = s.models_installed[m] ? "" : "Not downloaded: run  python brain\\install.py --model " + m + " --only models,config";
+  }
+  const running = s.model ? s.model.toLowerCase() : null;
+  $("modelNote").textContent =
+    !s.models_installed.e4b && !s.models_installed["12b"] ? "" :
+    !s.models_installed[s.model_choice === "e4b" ? "12b" : "e4b"] ? "The other one isn't downloaded (see the installer's --model)." :
+    running && running !== s.model_choice ? (s.model_choice === "12b" && s.free_vram_mb < s.min_free_vram_mb_12b
+      ? "12B is chosen, but the GPU is busy, so E4B is running for now."
+      : "Switches the next time Puki wakes up (or put it to sleep now).") : "";
   $("awake").textContent = s.awake_since ? duration(s.now - s.awake_since) : "–";
   $("sleeps").textContent = s.sleeps_in_s == null ? "–" : duration(s.sleeps_in_s);
   $("vram").textContent = s.free_vram_mb ? `${(s.free_vram_mb / 1024).toFixed(1)} GB` +
@@ -210,6 +236,8 @@ $("saveIdle").onclick = async () => {
   if (s.error) { alert(s.error); return; }
   idleEdited = false; $("saveIdle").hidden = true; showStatus(s);
 };
+for (const b of document.querySelectorAll("#models button"))
+  b.onclick = async () => showStatus(await post("/api/model", { choice: b.dataset.model }));
 $("quiet").onchange = renderLog;
 tick();
 setInterval(tick, 2000);

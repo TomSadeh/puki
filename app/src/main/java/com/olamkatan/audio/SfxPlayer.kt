@@ -24,10 +24,13 @@ class SfxPlayer(private val context: Context) {
         loadedSounds[name] = soundPool.load(context, resId, 1)
     }
 
+    /** The parent's sound-effects volume, 0..1 (parent settings). */
+    var level = 1f
+
     fun play(sfx: Sfx, volume: Float = 1f) {
-        if (!enabled) return
+        if (!enabled || level <= 0f) return
         loadedSounds[sfx.name]?.let { soundId ->
-            soundPool.play(soundId, volume, volume, 1, 0, 1f)
+            soundPool.play(soundId, volume * level, volume * level, 1, 0, 1f)
         }
     }
 

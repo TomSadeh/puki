@@ -68,6 +68,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateCompanionAddress(address) }
     }
 
+    fun setVolumes(music: Float? = null, voice: Float? = null, sfx: Float? = null) {
+        viewModelScope.launch { settingsRepository.updateVolumes(music, voice, sfx) }
+    }
+
     fun setCompanionCode(code: String) {
         viewModelScope.launch { settingsRepository.updateCompanionCode(code) }
     }

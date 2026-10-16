@@ -1,5 +1,6 @@
 package com.olamkatan.data
 
+import androidx.datastore.preferences.core.floatPreferencesKey
 import com.olamkatan.data.models.DEFAULT_COMPANION_ADDRESS
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -24,6 +25,9 @@ class SettingsRepository(private val context: Context) {
         val GENDER = stringPreferencesKey("gender")
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val MUSIC_ENABLED = booleanPreferencesKey("music_enabled")
+        val MUSIC_VOLUME = floatPreferencesKey("music_volume")
+        val VOICE_VOLUME = floatPreferencesKey("voice_volume")
+        val SFX_VOLUME = floatPreferencesKey("sfx_volume")
         val TIME_LIMIT = intPreferencesKey("time_limit_minutes")
         val CHILD_NAME = stringPreferencesKey("child_name")
         val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
@@ -38,6 +42,9 @@ class SettingsRepository(private val context: Context) {
             gender = Gender.valueOf(prefs[Keys.GENDER] ?: Gender.GIRL.name),
             soundEnabled = prefs[Keys.SOUND_ENABLED] ?: true,
             musicEnabled = prefs[Keys.MUSIC_ENABLED] ?: true,
+            musicVolume = prefs[Keys.MUSIC_VOLUME] ?: 1f,
+            voiceVolume = prefs[Keys.VOICE_VOLUME] ?: 1f,
+            sfxVolume = prefs[Keys.SFX_VOLUME] ?: 1f,
             timeLimitMinutes = prefs[Keys.TIME_LIMIT] ?: 0,
             childName = prefs[Keys.CHILD_NAME] ?: "",
             onboardingDone = prefs[Keys.ONBOARDING_DONE] ?: false,
@@ -58,6 +65,14 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun updateMusic(enabled: Boolean) {
         context.settingsDataStore.edit { it[Keys.MUSIC_ENABLED] = enabled }
+    }
+
+    suspend fun updateVolumes(music: Float? = null, voice: Float? = null, sfx: Float? = null) {
+        context.settingsDataStore.edit { prefs ->
+            music?.let { prefs[Keys.MUSIC_VOLUME] = it.coerceIn(0f, 1f) }
+            voice?.let { prefs[Keys.VOICE_VOLUME] = it.coerceIn(0f, 1f) }
+            sfx?.let { prefs[Keys.SFX_VOLUME] = it.coerceIn(0f, 1f) }
+        }
     }
 
     suspend fun updateTimeLimit(minutes: Int) {

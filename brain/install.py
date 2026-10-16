@@ -6,7 +6,8 @@
     python brain\\install.py --dir D:\\puki-brain --yes
 
 It downloads llama.cpp (the CUDA build when there's an NVIDIA GPU, otherwise the CPU
-one), Gemma and its vision part, the ivrit.ai Hebrew Whisper, Parakeet for English, and
+one), Gemma and its vision part (E4B, or the smarter 12B on a GPU with 12 GB or more; see
+--model), the ivrit.ai Hebrew Whisper, Parakeet for English, and
 BlueTTS with its voice models (about 9 GB in all). Then it creates the Python environment,
 writes brain/config.json, adds the home-network firewall rule (one Windows admin prompt),
 starts Puki at login, and opens the dashboard with the pairing code.
@@ -34,6 +35,10 @@ BLUETTS_COMMIT = "0e38dbf08ed53f85863d1eab092bd9572c53a503"
 GEMMA_REPO = "unsloth/gemma-4-E4B-it-GGUF"
 GEMMA_FILE = "gemma-4-E4B-it-Q4_0.gguf"
 MMPROJ_FILE = "mmproj-F16.gguf"
+# The bigger, smarter one: needs about 9 GB of free GPU memory
+GEMMA12_REPO = "unsloth/gemma-4-12B-it-qat-GGUF"
+GEMMA12_FILE = "gemma-4-12B-it-qat-UD-Q4_K_XL.gguf"
+MMPROJ12_NAME = "mmproj-gemma-4-12B-F16.gguf"
 WHISPER_REPO = "ivrit-ai/whisper-large-v3-turbo-ct2"
 PARAKEET_REPO = "istupakov/parakeet-tdt-0.6b-v2-onnx"
 PARAKEET_FILES = ["encoder-model.int8.onnx", "decoder_joint-model.int8.onnx", "nemo128.onnx", "vocab.txt", "config.json"]
@@ -42,7 +47,7 @@ BLUETTS_ONNX_REPO = "notmax123/BlueTTS2.5-onnx"
 PORT = 8790
 DASHBOARD = "http://127.0.0.1:8793"
 FIREWALL_RULE = "Puki companion"
-NEEDED_GB = 12
+NEEDED_GB = 12  # with E4B; 13 with 12B, 19 with both
 UA = {"User-Agent": "puki-installer"}
 
 
@@ -198,11 +203,16 @@ def install_llama(root, gpu, dry):
         say(f"    ✓ llama.cpp {LLAMA_TAG} ({flavor})")
 
 
-def install_models(root, dry):
+def install_models(root, model, dry):
     models = os.path.join(root, "models")
-    gemma = hf_files(GEMMA_REPO)
-    download(hf_url(GEMMA_REPO, GEMMA_FILE), os.path.join(models, GEMMA_FILE), gemma.get(GEMMA_FILE), dry)
-    download(hf_url(GEMMA_REPO, MMPROJ_FILE), os.path.join(models, "mmproj-gemma-4-E4B-F16.gguf"), gemma.get(MMPROJ_FILE), dry)
+    if model in ("e4b", "both"):
+        gemma = hf_files(GEMMA_REPO)
+        download(hf_url(GEMMA_REPO, GEMMA_FILE), os.path.join(models, GEMMA_FILE), gemma.get(GEMMA_FILE), dry)
+        download(hf_url(GEMMA_REPO, MMPROJ_FILE), os.path.join(models, "mmproj-gemma-4-E4B-F16.gguf"), gemma.get(MMPROJ_FILE), dry)
+    if model in ("12b", "both"):
+        gemma12 = hf_files(GEMMA12_REPO)
+        download(hf_url(GEMMA12_REPO, GEMMA12_FILE), os.path.join(models, GEMMA12_FILE), gemma12.get(GEMMA12_FILE), dry)
+        download(hf_url(GEMMA12_REPO, MMPROJ_FILE), os.path.join(models, MMPROJ12_NAME), gemma12.get(MMPROJ_FILE), dry)
     for path, size in hf_files(WHISPER_REPO).items():
         if not path.startswith("."):
             download(hf_url(WHISPER_REPO, path), os.path.join(models, "whisper-ivrit-turbo", path), size, dry)
@@ -256,7 +266,7 @@ def install_venv(root, gpu, dry):
     return py
 
 
-def write_config(root, py, dry):
+def write_config(root, py, model, dry):
     path = os.path.join(HERE, "config.json")
     cfg = {}
     if os.path.exists(path):
@@ -271,7 +281,14 @@ def write_config(root, py, dry):
         "whisper_model": m("models", "whisper-ivrit-turbo"),
         "parakeet_model": m("models", "parakeet-tdt-0.6b-v2-onnx"),
         "bluetts_dir": m("BlueTTS"),
+        "model_12b": m("models", GEMMA12_FILE),
+        "mmproj_12b": m("models", MMPROJ12_NAME),
     })
+    # Which Gemma to use (changeable later on the dashboard); keep the parent's choice if any
+    if model == "12b" or (model == "both" and "model_choice" not in cfg):
+        cfg["model_choice"] = "12b"
+    elif model == "e4b":
+        cfg["model_choice"] = "e4b"
     if dry:
         say(f"    → would write {path}")
         return
@@ -370,6 +387,9 @@ def main():
     ap.add_argument("--no-firewall", action="store_true")
     ap.add_argument("--no-autostart", action="store_true")
     ap.add_argument("--no-start", action="store_true", help="don't start Puki at the end")
+    ap.add_argument("--model", choices=["e4b", "12b", "both"],
+                    help="which Gemma: e4b (lighter, faster), 12b (smarter, needs ~9 GB free GPU memory) or both "
+                         "(12B when the GPU has room, E4B when it's busy). Default: asks, recommending 12b on a 12 GB+ GPU")
     ap.add_argument("--only", help="run just these steps, e.g. --only firewall,autostart "
                     "(llama, models, bluetts, venv, config, firewall, autostart, start)")
     args = ap.parse_args()
@@ -397,6 +417,23 @@ def main():
         fail(f"the folder path is too long for Windows ({len(root)} characters). Pick a shorter one, e.g. --dir C:/puki-brain")
     if free < NEEDED_GB and not os.path.exists(os.path.join(root, "models")):
         fail("not enough disk space. Free some up, or pick another drive with --dir.")
+    big_gpu = bool(gpu) and gpu[1] >= 12000
+    model = args.model
+    if model is None:
+        default = "both" if big_gpu else "e4b"
+        say("\n  Which Gemma (Puki's mind)?")
+        say("    e4b   lighter and faster; fine on any PC (5.8 GB download)")
+        say("    12b   smarter, better Hebrew; needs about 9 GB of free GPU memory (6.9 GB download)")
+        say("    both  12B when the GPU has room, E4B when something else is using it (12.7 GB)")
+        if dry or args.yes:
+            model = default
+        else:
+            model = input(f"  [{default}] ").strip().lower() or default
+            if model not in ("e4b", "12b", "both"):
+                fail(f"unknown choice {model!r}")
+        say(f"  Model:   {model}")
+    if model in ("12b", "both") and not big_gpu:
+        say("  ! Without a GPU with 12 GB or more, the 12B runs on the CPU and answers slowly.")
     say("\n  Gemma is subject to Google's Gemma terms of use: https://ai.google.dev/gemma/terms")
     if not dry and not args.yes:
         if input("\n  Start? [Y/n] ").strip().lower() not in ("", "y", "yes"):
@@ -407,7 +444,7 @@ def main():
     step(1, "llama.cpp (runs Gemma)")
     install_llama(root, gpu, dry) if run("llama") else say("    skipped")
     step(2, "Models: Gemma, its vision part, Hebrew Whisper, Parakeet (English)")
-    install_models(root, dry) if run("models") else say("    skipped")
+    install_models(root, model, dry) if run("models") else say("    skipped")
     step(3, "BlueTTS (Puki's voice)")
     install_bluetts(root, dry) if run("bluetts") else say("    skipped")
     step(4, "Python environment")
@@ -416,7 +453,7 @@ def main():
     else:
         say("    skipped")
     step(5, "Settings")
-    write_config(root, py, dry) if run("config") else say("    skipped")
+    write_config(root, py, model, dry) if run("config") else say("    skipped")
     step(6, "Firewall (home network only)")
     setup_firewall(dry) if run("firewall") and not args.no_firewall else say("    skipped")
     step(7, "Start at login")

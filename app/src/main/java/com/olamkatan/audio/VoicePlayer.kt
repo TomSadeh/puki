@@ -16,6 +16,13 @@ class VoicePlayer(private val context: Context) {
 
     var gender: Gender = Gender.GIRL
 
+    /** The parent's volume for voices, 0..1: the recorded lines and Puki (parent settings). */
+    var level = 1f
+        set(value) {
+            field = value.coerceIn(0f, 1f)
+            runCatching { mediaPlayer?.setVolume(field, field) }
+        }
+
     fun play(voiceKey: String, language: Language, onComplete: (() -> Unit)? = null) {
         if (!enabled) {
             onComplete?.invoke()
@@ -32,6 +39,7 @@ class VoicePlayer(private val context: Context) {
             return
         }
         mediaPlayer = MediaPlayer.create(context, resId)?.apply {
+            setVolume(level, level)
             setOnCompletionListener {
                 it.release()
                 mediaPlayer = null
@@ -54,6 +62,7 @@ class VoicePlayer(private val context: Context) {
         mediaPlayer = runCatching {
             MediaPlayer().apply {
                 setDataSource(file.absolutePath)
+                setVolume(level, level)
                 setOnCompletionListener {
                     it.release()
                     mediaPlayer = null

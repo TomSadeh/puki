@@ -64,6 +64,12 @@ fun OlamKatanApp(
         musicPlayer.playTrack("music_hub")
     }
 
+    LaunchedEffect(settings.musicVolume, settings.voiceVolume, settings.sfxVolume) {
+        musicPlayer.level = settings.musicVolume
+        voicePlayer.level = settings.voiceVolume
+        sfxPlayer.level = settings.sfxVolume
+    }
+
     LaunchedEffect(settings.soundEnabled) {
         sfxPlayer.enabled = settings.soundEnabled
         voicePlayer.enabled = settings.soundEnabled

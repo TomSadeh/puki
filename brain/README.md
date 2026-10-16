@@ -39,7 +39,9 @@ It shows what it will do, then:
 
 1. downloads llama.cpp: the CUDA build if there's an NVIDIA GPU (matched to the driver),
    otherwise the CPU build;
-2. downloads Gemma and its vision part, the ivrit.ai Hebrew Whisper, Parakeet for English,
+2. asks which Gemma to use: **E4B** (lighter, faster), **12B** (smarter, sees drawings better;
+   needs about 9 GB of free GPU memory) or **both** (12B when the GPU has room, E4B when a
+   game or a training run is using it), then downloads it with its vision part, the ivrit.ai Hebrew Whisper, Parakeet for English,
    and BlueTTS with its voice models (about 9 GB in all, into `~/puki-brain`);
 3. creates the Python environment (without the NVIDIA libraries on PCs without a GPU);
 4. writes `brain/config.json` with all the paths;
@@ -49,7 +51,7 @@ It shows what it will do, then:
    pairing code and QR code.
 
 Downloads show progress and resume if interrupted, and running it again only does what's
-missing. Options: `--dry-run` (just show the plan), `--dir D:\puki-brain`, `--cpu`,
+missing. Options: `--dry-run` (just show the plan), `--model e4b|12b|both`, `--dir D:\puki-brain`, `--cpu`,
 `--only firewall,autostart` (repeat single steps), `--no-firewall`, `--no-autostart`.
 
 The steps below are the same thing by hand (for Linux and macOS too).
@@ -128,8 +130,11 @@ the network (a guest's phone, a smart TV) can't make Puki talk or send it record
 
 While the doorbell runs, **http://127.0.0.1:8793** on the PC shows:
 
-- whether the brain is asleep, waking up or awake, on the GPU or the CPU, and when it will
-  go back to sleep; a button puts it to sleep right away (handy before a training run);
+- whether the brain is asleep, waking up or awake, which Gemma runs and on the GPU or the
+  CPU, and when it will go back to sleep; a button puts it to sleep right away (handy before
+  a training run);
+- **Puki's mind:** Gemma E4B or 12B (whichever are downloaded). The choice applies the next
+  time Puki wakes up; when 12B is chosen but the GPU is busy, E4B fills in;
 - the pairing code, the PC's address, and a QR code with both (for the app to scan once it
   can), plus a button that makes a new code;
 - how many idle minutes before it sleeps (saved to `config.json`);

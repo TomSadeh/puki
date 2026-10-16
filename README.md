@@ -92,7 +92,7 @@ tablet the whole stack could run on the device; contributions welcome.
 - On first launch, a short welcome screen asks for the language, the child's name, girl/boy,
   and the companion's PC address and pairing code (optional).
 - Parent settings: long-press the gear on the hub. There you can change all of the above,
-  plus sounds, music and a time limit.
+  plus separate volumes for music, voices (and Puki) and sound effects, and a time limit.
 - Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
   bedtime routine, dipping under the bedtime story. To use your own, replace
   `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.

@@ -60,7 +60,7 @@ def load_config():
         with open(local, encoding="utf-8") as f:
             cfg.update(json.load(f))
     # "~" in paths means the user's home folder
-    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "parakeet_model", "bluetts_dir"):
+    for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "parakeet_model", "model_12b", "mmproj_12b", "bluetts_dir"):
         cfg[key] = os.path.expanduser(cfg[key])
     return cfg
 
@@ -164,6 +164,31 @@ def http_ok(url, timeout=2):
         return False
 
 
+def models():
+    """The Gemmas this PC can run: (file, vision part, free VRAM needed on the GPU, name)."""
+    return {
+        "e4b": (CFG["model"], CFG.get("mmproj"), CFG["min_free_vram_mb"], "E4B"),
+        "12b": (CFG.get("model_12b", ""), CFG.get("mmproj_12b"), CFG.get("min_free_vram_mb_12b", 9500), "12B"),
+    }
+
+
+def installed(key):
+    return bool(models()[key][0]) and os.path.exists(models()[key][0])
+
+
+def pick_model(free_mb):
+    """(model, gpu_layers): the chosen Gemma if it fits the GPU, else one that does, else the
+    lightest installed one on the CPU."""
+    choice = CFG.get("model_choice", "e4b")
+    order = [k for k in ([choice] + [k for k in ("e4b", "12b") if k != choice]) if installed(k)] or ["e4b"]
+    # Only fall back to a smaller model, never up to a bigger one than chosen
+    order = [k for k in order if models()[k][2] <= models()[order[0]][2]]
+    for k in order:
+        if free_mb >= models()[k][2]:
+            return models()[k], 99
+    return min((models()[k] for k in order), key=lambda m: m[2]), 0
+
+
 class Brain:
     """Starts, watches and stops the two heavy processes."""
 
@@ -173,6 +198,7 @@ class Brain:
         self.state = "cold"
         self.last_used = 0.0
         self.device = None       # "GPU" or "CPU" while awake
+        self.model = None        # "E4B" or "12B" while awake
         self.awake_since = None
 
     def touch(self):
@@ -186,11 +212,13 @@ class Brain:
         threading.Thread(target=self._start, daemon=True).start()
 
     def _start(self):
-        # GPU if there's room (training runs may be using it), otherwise CPU
-        gpu_layers = 99 if free_vram_mb() >= CFG["min_free_vram_mb"] else 0
+        # The chosen Gemma on the GPU if there's room (training runs may be using it), else
+        # a smaller one that fits, else the lighter one on the CPU
+        (model, mmproj, _, name), gpu_layers = pick_model(free_vram_mb())
         self.device = "GPU" if gpu_layers else "CPU"
-        log(f"waking brain on {self.device}")
-        EVENTS.add("brain", text=f"waking up on the {self.device}")
+        self.model = name
+        log(f"waking brain: Gemma {name} on {self.device}")
+        EVENTS.add("brain", text=f"waking up: Gemma {name} on the {self.device}")
         flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
         # From the login shortcut (pythonw) there's no console: don't pop up console windows,
         # and keep the brain's errors in a file so a failed start can be explained
@@ -201,10 +229,10 @@ class Brain:
         # UTF-8 mode: otherwise BlueTTS reads its data files in the Windows code page and crashes
         env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
         llama = subprocess.Popen(
-            [os.path.join(CFG["llama_dir"], "llama-server"), "-m", CFG["model"],
+            [os.path.join(CFG["llama_dir"], "llama-server"), "-m", model,
              "--host", "127.0.0.1", "--port", str(CFG["llama_port"]),
              "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"]
-            + (["--mmproj", CFG["mmproj"]] if CFG.get("mmproj") and os.path.exists(CFG["mmproj"]) else []),
+            + (["--mmproj", mmproj] if mmproj and os.path.exists(mmproj) else []),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags,
         )
         brain = subprocess.Popen(
@@ -237,6 +265,7 @@ class Brain:
         with self.lock:
             self.state = "cold"
         self.device = None
+        self.model = None
         self.awake_since = None
         if reason:
             EVENTS.add("brain", text=f"asleep ({reason})")
@@ -437,6 +466,10 @@ class DashboardApp:
         return {
             "brain": BRAIN.state,
             "device": BRAIN.device,
+            "model": BRAIN.model,
+            "model_choice": CFG.get("model_choice", "e4b"),
+            "models_installed": {k: installed(k) for k in ("e4b", "12b")},
+            "min_free_vram_mb_12b": CFG.get("min_free_vram_mb_12b", 9500),
             "awake_since": BRAIN.awake_since,
             "sleeps_in_s": sleeps_in,
             "idle_minutes": CFG["idle_minutes"],
@@ -458,6 +491,11 @@ class DashboardApp:
         PAIRING_CODE = load_pairing_code(new=True)
         log(f"new pairing code: {pretty_code(PAIRING_CODE)}")
         EVENTS.add("pairing", text="made a new pairing code; tablets need the new one")
+
+    def set_model(self, choice):
+        CFG["model_choice"] = choice
+        save_local_config("model_choice", choice)
+        EVENTS.add("settings", text=f"Gemma {choice.upper()} from the next wake-up")
 
     def set_idle(self, minutes):
         CFG["idle_minutes"] = minutes

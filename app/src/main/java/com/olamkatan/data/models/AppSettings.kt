@@ -5,6 +5,10 @@ data class AppSettings(
     val gender: Gender = Gender.GIRL,
     val soundEnabled: Boolean = true,
     val musicEnabled: Boolean = true,
+    /** Volumes, 0..1: music, voices (recorded lines and Puki), sound effects. */
+    val musicVolume: Float = 1f,
+    val voiceVolume: Float = 1f,
+    val sfxVolume: Float = 1f,
     val timeLimitMinutes: Int = 0, // 0 = no limit
     val childName: String = "",
     val onboardingDone: Boolean = false,
