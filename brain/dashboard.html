@@ -58,7 +58,7 @@
   @media (max-width: 600px) { #log li { grid-template-columns: 1fr; } }
   .time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
   .kind { justify-self: start; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 6px; background: var(--chip); color: var(--muted); height: fit-content; }
-  .kind.denied, .kind.lockout { color: var(--bad); }
+  .kind.denied, .kind.lockout, .kind.gpu { color: var(--bad); }
   .kind.say, .kind.listen, .kind.look, .kind.story, .kind.speak, .kind.repeat { color: var(--accent); }
   .entry > div { overflow-wrap: anywhere; }
   .asked { color: var(--muted); }
@@ -131,7 +131,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const LABELS = { say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke", repeat: "say it",
-                 brain: "brain", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
+                 brain: "brain", gpu: "GPU", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
 const QUIET = new Set(["brain", "pairing", "settings"]);
 let lastId = 0, events = [], code = null, idleEdited = false;
 
@@ -173,7 +173,7 @@ function showStatus(s) {
       : "Switches the next time Puki wakes up (or put it to sleep now).") : "";
   $("awake").textContent = s.awake_since ? duration(s.now - s.awake_since) : "–";
   $("sleeps").textContent = s.sleeps_in_s == null ? "–" : duration(s.sleeps_in_s);
-  $("vram").textContent = s.free_vram_mb ? `${(s.free_vram_mb / 1024).toFixed(1)} GB` +
+  $("vram").textContent = s.gpu_error ? `nvidia-smi fails: ${s.gpu_error}` : s.free_vram_mb ? `${(s.free_vram_mb / 1024).toFixed(1)} GB` +
       (s.brain === "cold" ? (s.free_vram_mb >= s.min_free_vram_mb ? " (enough for the GPU)" : " (would use the CPU)") : "")
     : "no NVIDIA GPU";
   if (!idleEdited) $("idle").value = s.idle_minutes;

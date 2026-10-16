@@ -151,18 +151,32 @@ def hf_url(repo, path):
 # ---------- Checks ----------
 
 def nvidia():
-    """(name, VRAM MB, driver's CUDA version) of the NVIDIA GPU, or None."""
-    try:
-        q = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
-                           capture_output=True, text=True, timeout=15)
-        head = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=15).stdout
-        name, mem = [x.strip() for x in q.stdout.strip().splitlines()[0].split(",")]
-        cuda = 0.0
-        if "CUDA Version:" in head:
-            cuda = float(head.split("CUDA Version:")[1].split()[0])
-        return name, int(mem), cuda
-    except Exception:
+    """(name, VRAM MB, driver's CUDA version) of the NVIDIA GPU, or None when there's no NVIDIA driver.
+
+    A driver that's there but not working (most often: updated, and the PC not restarted since)
+    stops the setup: otherwise it would quietly pick the CPU build on a PC that has a GPU."""
+    if shutil.which("nvidia-smi") is None:
         return None
+    retry = "Restart the PC (after a driver update, that's usually it) and run the setup again" + \
+            ("." if FROZEN else ", or add --cpu to skip the GPU.")
+
+    def smi(*args):
+        try:
+            r = subprocess.run(["nvidia-smi", *args], capture_output=True, text=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            fail(f"nvidia-smi didn't answer within 15 seconds, so the NVIDIA driver seems stuck.\n    {retry}")
+        if r.returncode != 0:
+            why = (r.stdout + r.stderr).strip().splitlines() or [f"exit code {r.returncode}"]
+            fail(f"there's an NVIDIA driver, but nvidia-smi fails: {why[0]}\n    {retry}")
+        return r.stdout
+
+    rows = smi("--query-gpu=name,memory.total", "--format=csv,noheader,nounits").strip().splitlines()
+    head = smi()
+    # The CUDA version picks llama.cpp's build, so it can't be guessed
+    if not rows or "CUDA Version:" not in head:
+        fail(f"nvidia-smi answered without the GPU or its CUDA version:\n{head.strip()}")
+    name, mem = [x.strip() for x in rows[0].split(",")]
+    return name, int(mem), float(head.split("CUDA Version:")[1].split()[0])
 
 
 def long_paths_ok(root):
