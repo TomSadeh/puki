@@ -13,8 +13,9 @@ writes brain/config.json, adds the home-network firewall rule (one Windows admin
 starts Puki at login, and opens the dashboard with the pairing code.
 
 Safe to run again: finished steps and complete downloads are skipped, and an interrupted
-download resumes where it stopped. Every model file is checked against the SHA-256 its
-publisher lists. Before starting it shows how much it will download and about how long that
+download resumes where it stopped. Everything it downloads is pinned in pins.json (Hugging
+Face files at a fixed commit, and the SHA-256 of each file; make_pins.py writes it) and
+checked against it, so a file changed upstream never gets installed. Before starting it shows how much it will download and about how long that
 takes; everything it prints also goes to install.log in the folder. At the end it shows the
 pairing code and a QR code for the tablet. --gui shows all this in a window instead (Puki.exe
 always does). Standard library only, so any Python 3.10+ can run it.
@@ -185,9 +186,26 @@ def qr_text(text):
 
 # ---------- Downloads ----------
 
-def http_json(url):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=30) as r:
-        return json.load(r)
+def pins():
+    """pins.json: the SHA-256 of every file this installer downloads (make_pins.py writes it).
+    Only pinned files are downloaded, from pinned Hugging Face commits, and each must match."""
+    if "data" not in PINS:
+        try:
+            with open(os.path.join(HERE, "pins.json"), encoding="utf-8") as f:
+                PINS["data"] = json.load(f)
+        except (OSError, ValueError) as e:
+            fail(f"pins.json is missing or broken ({e}); get Puki again.")
+    return PINS["data"]
+
+
+PINS = {}
+
+
+def pinned(section, key):
+    entry = pins()[section].get(key)
+    if entry is None:
+        fail(f"pins.json has nothing for {key}: run brain/make_pins.py after changing a version.")
+    return entry
 
 
 # The plan: what still has to be downloaded (bytes), and how much of it is done
@@ -228,15 +246,17 @@ def file_sha256(path, label):
     return h.hexdigest()
 
 
-def download(url, dest, size=None, dry=False, sha256=None):
+def download(url, dest, size=None, dry=False, sha256=None, unpinned=False):
     """Downloads [url] to [dest] with a progress bar, resuming a partial .part file, and checks
-    it against [sha256] (from Hugging Face or GitHub) when there is one."""
+    it against [sha256] (from pins.json). Only Puki's own code (--update) comes [unpinned]."""
+    if not sha256 and not unpinned:
+        fail(f"no checksum pinned for {os.path.basename(dest)}; refusing to download it.")
     name = os.path.basename(dest)
     if os.path.exists(dest) and (size is None or os.path.getsize(dest) == size):
         if sha256 and not dry and VERIFIED["data"].get(os.path.abspath(dest)) != sha256:
             # Downloaded before checksums were checked (or by hand): check it once
             if file_sha256(dest, name) != sha256:
-                say(f"    ! {name} doesn't match its published checksum; downloading it again")
+                say(f"    ! {name} doesn't match its pinned checksum; downloading it again")
                 os.remove(dest)
                 return download(url, dest, size, dry, sha256)
             mark_verified(dest, sha256)
@@ -296,7 +316,7 @@ def download(url, dest, size=None, dry=False, sha256=None):
     if sha256:
         if file_sha256(part, name) != sha256:
             os.remove(part)
-            fail(f"{name} doesn't match its published checksum (a broken or tampered download), so it "
+            fail(f"{name} doesn't match its pinned checksum (a broken or tampered download), so it "
                  "was deleted. Run the installer again to download it again.")
     os.replace(part, dest)
     if sha256:
@@ -304,28 +324,30 @@ def download(url, dest, size=None, dry=False, sha256=None):
 
 
 def hf_files(repo):
-    """{path: (size, sha256 or None)} of a Hugging Face model repo (top level). Big files are
-    stored with Git LFS, whose id is the file's SHA-256."""
-    return {x["path"]: (x.get("size"), (x.get("lfs") or {}).get("oid"))
-            for x in http_json(f"https://huggingface.co/api/models/{repo}/tree/main") if x.get("type") == "file"}
+    """{path: (size, sha256)} of the files pinned for a Hugging Face model repo."""
+    return {path: tuple(v) for path, v in pinned("huggingface", repo)["files"].items()}
 
 
 def hf_download(repo, files, path, dest, dry):
-    size, sha = files.get(path, (None, None))
+    if path not in files:
+        fail(f"{repo}/{path} isn't in pins.json: run brain/make_pins.py.")
+    size, sha = files[path]
     download(hf_url(repo, path), dest, size, dry, sha)
 
 
 def github_assets(repo, tag):
-    """{name: (url, size, sha256 or None)} of a GitHub release (GitHub lists each asset's SHA-256)."""
-    out = {}
-    for a in http_json(f"https://api.github.com/repos/{repo}/releases/tags/{tag}")["assets"]:
-        digest = a.get("digest") or ""
-        out[a["name"]] = (a["browser_download_url"], a["size"], digest[7:] if digest.startswith("sha256:") else None)
-    return out
+    """{name: (url, size, sha256)} of the assets pinned for a GitHub release."""
+    return {name: (f"https://github.com/{repo}/releases/download/{tag}/{name}", size, sha)
+            for name, (size, sha) in pinned("github", f"{repo}@{tag}").items()}
 
 
 def hf_url(repo, path):
-    return f"https://huggingface.co/{repo}/resolve/main/{path}"
+    # The pinned commit, not main: what's downloaded is exactly what was pinned
+    return f"https://huggingface.co/{repo}/resolve/{pinned('huggingface', repo)['revision']}/{path}"
+
+
+def bluetts_archive_url():
+    return f"https://github.com/maxmelichov/BlueTTS/archive/{BLUETTS_COMMIT}.zip"
 
 
 # ---------- Checks ----------
@@ -519,7 +541,7 @@ def install_bluetts(root, dry):
         say("    ✓ BlueTTS code (already there)")
     else:
         z = os.path.join(root, "downloads", f"BlueTTS-{BLUETTS_COMMIT[:7]}.zip")
-        download(f"https://github.com/maxmelichov/BlueTTS/archive/{BLUETTS_COMMIT}.zip", z, None, dry)
+        download(bluetts_archive_url(), z, None, dry, pinned("archives", bluetts_archive_url()))
         if not dry:
             tmp = os.path.join(root, "downloads", "bluetts-unzip")
             shutil.rmtree(tmp, ignore_errors=True)
@@ -672,11 +694,15 @@ def setup_firewall(dry):
     if not WINDOWS:
         return setup_firewall_linux(dry)
     existing = port_rule()
-    if existing == FIREWALL_RULE and not rule_is_local(existing) and not dry:
-        # Older installs opened the port to any network marked Private; narrow it to this one
+    # Older installs (and rules made by hand, e.g. "Olam Katan companion") opened the port to any
+    # network marked Private; narrow whichever rule opens it to this one
+    wide = bool(existing) and "'" not in existing and not rule_is_local(existing)
+    if wide and dry:
+        say(f"    → would limit the firewall rule '{existing}' to your home network (asks for admin)")
+    elif wide:
         say("    Windows will ask for permission to limit the firewall rule to your home network...")
         powershell(f"Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "
-                   f"\"-NoProfile -Command Set-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -RemoteAddress LocalSubnet\"")
+                   f"\"-NoProfile -Command Set-NetFirewallRule -DisplayName '{existing}' -RemoteAddress LocalSubnet\"")
         say(f"    ✓ firewall rule '{existing}' (your home network only)" if rule_is_local(existing)
             else f"    ! the rule '{existing}' still lets in any private network (the prompt was declined?)")
     elif existing:
@@ -886,7 +912,8 @@ def update(args, root):
         else:
             if os.path.exists(z):
                 os.remove(z)
-            download(f"https://github.com/{REPO}/archive/refs/heads/main.zip", z)
+            # Puki's own code, the newest: nothing to pin it to (it brings the new pins.json)
+            download(f"https://github.com/{REPO}/archive/refs/heads/main.zip", z, unpinned=True)
             with zipfile.ZipFile(z) as f:
                 top = f.namelist()[0].split("/")[0] + "/"
                 for member in f.infolist():

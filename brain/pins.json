@@ -1,0 +1,186 @@
+{
+ "archives": {
+  "https://github.com/maxmelichov/BlueTTS/archive/0e38dbf08ed53f85863d1eab092bd9572c53a503.zip": "ca804330ce373a347e1774eb09742dd2bf4c732da8a6f7a4b9cda47d091db247"
+ },
+ "github": {
+  "astral-sh/uv@0.12.21": {
+   "uv-x86_64-pc-windows-msvc.zip": [
+    17992232,
+    "5d223efa0bf00208c3853246af09420419dfbd352536aa6bb8163d6170e23890"
+   ]
+  },
+  "ggml-org/llama.cpp@b11669": {
+   "cudart-llama-b11669-bin-ubuntu-cuda-12.8-x64.tar.gz": [
+    594377811,
+    "ab3eda89a82096bcba00b6448218c3c11eec2016b0f38d64884dc29736549f26"
+   ],
+   "cudart-llama-b11669-bin-ubuntu-cuda-13.4-x64.tar.gz": [
+    440236547,
+    "1108bd9300a281e8eabb18d3fa028d4240ecd983f9f90dbbbc3297671016d697"
+   ],
+   "cudart-llama-bin-win-cuda-12.4-x64.zip": [
+    391443627,
+    "8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6"
+   ],
+   "cudart-llama-bin-win-cuda-13.4-x64.zip": [
+    423535356,
+    "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668"
+   ],
+   "llama-b11669-bin-ubuntu-cuda-12.8-x64.tar.gz": [
+    172525113,
+    "4703ed1a3cd6e8504affb6cb9866f501e96d634d68a002dc9a8251c9e2819b49"
+   ],
+   "llama-b11669-bin-ubuntu-cuda-13.4-x64.tar.gz": [
+    153679828,
+    "80878473d27278dbe9c38fb7e704f292a51e889d3c28a1e863137cdee1e2ba4e"
+   ],
+   "llama-b11669-bin-ubuntu-x64.tar.gz": [
+    17851611,
+    "cf07c1c112d709bd67e522017471de57ed0ec8bea031d732c5422351c07f65ac"
+   ],
+   "llama-b11669-bin-win-cpu-x64.zip": [
+    19537886,
+    "37b3efcf962847ca869745fd4ccf7f5e7e8dacfeff9fa3523b4ca8cdc66d632b"
+   ],
+   "llama-b11669-bin-win-cuda-12.4-x64.zip": [
+    266582698,
+    "c2da1f73ed176ae093ac5aceb978a7b167a16113f6d74c6789eeaee2135cb8dc"
+   ],
+   "llama-b11669-bin-win-cuda-13.4-x64.zip": [
+    154582227,
+    "3b92d5c064f5032e603e531d3ec8961f3bd6613e5dfad047399a92dec8e95dbc"
+   ]
+  }
+ },
+ "huggingface": {
+  "istupakov/parakeet-tdt-0.6b-v2-onnx": {
+   "files": {
+    "config.json": [
+     97,
+     "666903c76b9798caf2c210afd4f6cd60b08a8dbf9800ec8d7a3bc0d2148ac466"
+    ],
+    "decoder_joint-model.int8.onnx": [
+     8998286,
+     "a449f49acd68979d418651dd2dcb737cc0f1bf0225e009e29ee326354edbf7d3"
+    ],
+    "encoder-model.int8.onnx": [
+     652184014,
+     "3e0581fda6ab843888b51e56d7ee78b6d5bc3237ec113af1f732d1d5286aa155"
+    ],
+    "nemo128.onnx": [
+     139764,
+     "a9fde1486ebfcc08f328d75ad4610c67835fea58c73ba57e3209a6f6cf019e9f"
+    ],
+    "vocab.txt": [
+     9384,
+     "ec182b70dd42113aff6c5372c75cac58c952443eb22322f57bbd7f53977d497d"
+    ]
+   },
+   "revision": "0bbb45a3365852604aef28b538a8f066f4ccaa85"
+  },
+  "ivrit-ai/whisper-large-v3-turbo-ct2": {
+   "files": {
+    "README.md": [
+     840,
+     "4170dc6da8a13f8dbf648e5956e571717796141353b191242e665629e14e8bd9"
+    ],
+    "config.json": [
+     1405,
+     "c805eff43fc2a1d00d5cfa315e4b2230895f34994257c185959808a116e7c4f0"
+    ],
+    "model.bin": [
+     1617884968,
+     "db2a2265aa012c16c7db9edda3d699c99f984efdd3f2e22a72a8ce7e9720f3a2"
+    ],
+    "preprocessor_config.json": [
+     357,
+     "654cf18d3e163b948ceaf9766da56ce0b52de265d58673cf61c9376f126bd499"
+    ],
+    "tokenizer.json": [
+     2710337,
+     "297b13372ac43916285644fb9687add3cc62ee2a1adb60da3dc25cc94c1871fd"
+    ],
+    "vocabulary.json": [
+     1068114,
+     "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+    ]
+   },
+   "revision": "72ad623a37947395efcc3933132353790e5a12f5"
+  },
+  "notmax123/BlueTTS2.5-onnx": {
+   "files": {
+    "duration_predictor.onnx": [
+     2151232,
+     "e0eaf2b784e5df37b8db0e39ad134204d2ad4cd9f9db628960ab54f4ac94ace2"
+    ],
+    "duration_predictor_style.onnx": [
+     1508749,
+     "3d0347cfc09234b78a20d5fa50b5c402d338fb99825f40ada8c70301edbb60ea"
+    ],
+    "manifest.json": [
+     2088,
+     "738daed3cdc24a7a35b598a0730f4b18f7af2b361f452dcd7f7cc0b4ffe497ef"
+    ],
+    "reference_encoder.onnx": [
+     15024793,
+     "f055b94219723dc71d4c679603260fe09316fa7a19c01e156dd1a1ff78da4014"
+    ],
+    "stats.npz": [
+     1920,
+     "20d44fae010d46b859ee6238609780eb7bd5bf82320bad17b826a5dcfa4ed658"
+    ],
+    "text_encoder.onnx": [
+     27419694,
+     "f971aa25315b93efff1850b39fe293aa93ae85df69fabf5e5022318cc632973c"
+    ],
+    "tts.json": [
+     9260,
+     "862d44194197de4873eccc8bfdab1835d15f98e469a90489df6da8f92a48c7ea"
+    ],
+    "uncond.npz": [
+     52732,
+     "1c71c2b2836fd97f4c56eb21e258227650bbe0dcd906f64e2bba58e6ac09e76b"
+    ],
+    "vector_estimator.onnx": [
+     132475789,
+     "50557b34acfafa4b34f21dae263faa74d3f3169f114ff927599a1eff110d0b6e"
+    ],
+    "vocab.json": [
+     3157,
+     "13fba5e735222fcf30d9c062d898982a1ba86d481f11560fbbdf6e0af79417b3"
+    ],
+    "vocoder.onnx": [
+     101411919,
+     "b0709df316ff44cc263c04fbf9d17371b16897071a48b79d3634d5f379fb3067"
+    ]
+   },
+   "revision": "468da64b4a51795a7594a3637727dbaf876b6df2"
+  },
+  "unsloth/gemma-4-12B-it-qat-GGUF": {
+   "files": {
+    "gemma-4-12B-it-qat-UD-Q4_K_XL.gguf": [
+     6716356800,
+     "90fd44e29e0d7cffeb0fd00dc73cfdab9ed0b0e95306ecf7821ea634c940c370"
+    ],
+    "mmproj-F16.gguf": [
+     175115840,
+     "ecc4e93128da8363b7dbf2193eab98cf1142353f52ceaa0c95c0872997aaadd3"
+    ]
+   },
+   "revision": "980b060c40a8539ac159e0501a3e0f66a6365af3"
+  },
+  "unsloth/gemma-4-E4B-it-GGUF": {
+   "files": {
+    "gemma-4-E4B-it-Q4_0.gguf": [
+     4836002944,
+     "4a403d2e4d80281063e4f517b1c061ded8476b4011a4fc2ba7dbff707075547e"
+    ],
+    "mmproj-F16.gguf": [
+     990372672,
+     "ddf46c21d7078e95338cfc22306b19b276a29a5ad089023449dd54d4b6170a51"
+    ]
+   },
+   "revision": "bfc15c382204943c3a8fff0c750b94ae2364d7a3"
+  }
+ }
+}

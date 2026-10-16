@@ -53,9 +53,11 @@ It shows what it will do, then:
    pairing code and QR code.
 
 Before it starts, it shows how much it will download and about how long that takes (from a
-short speed test). Every model file, llama.cpp and uv are checked against the SHA-256 their
-publishers list (Hugging Face, GitHub), so a broken or tampered download is caught and
-fetched again; a file is checked once and remembered. Everything it prints also goes to
+short speed test). Everything it downloads (the models, llama.cpp, uv, the BlueTTS code) is
+pinned in `pins.json`: the Hugging Face files at a fixed commit, and every file's SHA-256. A
+download that doesn't match is deleted and refused, so a file changed upstream, by accident
+or not, never reaches the PC; a file is checked once and remembered. After changing a version
+or a model in `install.py`, run `python brain/make_pins.py` and commit the new `pins.json`. Everything it prints also goes to
 `install.log` in the folder, to attach when asking for help. At the end it shows the pairing
 code and a QR code to scan with the tablet. `--gui` shows the same setup in a window, with
 progress bars.

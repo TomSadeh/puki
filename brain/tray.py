@@ -25,7 +25,7 @@ import webbrowser
 FROZEN = getattr(sys, "frozen", False)
 BUNDLE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 # The files the brain needs on disk (brain.py runs in its own Python environment)
-BRAIN_FILES = ["doorbell.py", "brain.py", "persona.py", "tls.py", "dashboard.py", "dashboard.html", "qr.py", "parakeet.py",
+BRAIN_FILES = ["doorbell.py", "brain.py", "persona.py", "tls.py", "pins.json", "dashboard.py", "dashboard.html", "qr.py", "parakeet.py",
                "install.py", "setup_gui.py", "config.example.json", "requirements.txt"]
 PORT = 8790
 DASHBOARD = "http://127.0.0.1:8793"

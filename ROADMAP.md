@@ -27,9 +27,10 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
 
 ## Next up
 
-1. **Security, performance and code hygiene pass** (in progress, M–L): reviews of the app,
-   the PC brain and the installer; fix what they find; add the first automated tests
-   (unit tests and CI are in).
+1. **Security, performance and code hygiene pass** (done in 0.5): HTTPS between the tablet
+   and the PC, pinned to the PC's own certificate; releases signed with Puki's own key; every
+   installer download pinned to a SHA-256; smoother drawing on the tablet; tests and CI.
+   Left: the hub at a steady 60 fps on the tablet (it's about 45).
 2. **Phone brain polish** (M each)
    - English on the phone: BlueTTS needs espeak there, or use Kokoro.
    - Faster start: Gemma takes about 18 s the first time.
