@@ -92,6 +92,16 @@
   }
   code { background: #f3ece4; border-radius: 6px; padding: 1px 6px; font-size: 0.92em; direction: ltr; unicode-bidi: embed; }
   .fp { word-break: break-all; font-size: 13px; }
+  .getit { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; background: #fff; border-radius: 22px; padding: 18px 22px; box-shadow: var(--shadow); margin-bottom: 22px; }
+  .getit img { width: 150px; height: 150px; image-rendering: pixelated; border-radius: 10px; }
+  .getit p { margin: 4px 0; }
+  .guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .guide .card b.n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--sun); margin-inline-end: 8px; font-size: 15px; }
+  .mock { margin-top: 12px; border: 2px solid #e0d6cc; border-radius: 14px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; background: #faf6f1; font-size: 15px; direction: ltr; }
+  .mock .sw { width: 44px; height: 24px; border-radius: 12px; background: #43a047; position: relative; flex: none; }
+  .mock .sw::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #fff; top: 2px; right: 2px; }
+  .note { background: #fff8e1; border: 2px solid #ffe082; border-radius: 16px; padding: 12px 16px; margin-top: 16px; }
+  @media (max-width: 560px) { .getit { grid-template-columns: 1fr; justify-items: center; text-align: center; } }
   footer { padding: 30px 0 40px; color: var(--muted); font-size: 15px; text-align: center; }
 
   @media (max-width: 820px) {
@@ -234,10 +244,20 @@
   <section class="band" id="start">
     <div class="wrap">
       <h2><span lang="he">איך מתחילים</span><span lang="en">Getting started</span></h2>
+      <div class="getit">
+        <img src="download-qr.svg" alt="">
+        <div>
+          <p><b><span lang="he">על הטאבלט: סורקים עם המצלמה</span><span lang="en">On the tablet: scan with the camera</span></b></p>
+          <p><span lang="he">הקוד פותח את ההורדה של הגרסה החדשה ביותר. או פותחים בטאבלט את הכתובת</span><span lang="en">The code opens the newest version's download. Or open this address on the tablet:</span>
+            <a href="get.html">tomsadeh.github.io/puki/get.html</a></p>
+          <p><span lang="he">רוצים עדכונים אוטומטיים מ-GitHub? </span><span lang="en">Want automatic updates from GitHub? </span><a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/TomSadeh/puki">Obtainium</a>
+            <span lang="he">(עם "לכלול גרסאות טרום-שחרור").</span><span lang="en">(with "include prereleases" on).</span></p>
+        </div>
+      </div>
       <ol class="steps">
         <li><b><span lang="he">מתקינים את המשחק בטאבלט</span><span lang="en">Install the game on the tablet</span></b><br>
-          <span lang="he">מורידים את ה-<a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (אנדרואיד 8 ומעלה) ומאשרים התקנה. אחר כך המשחק מתעדכן לבד מההגדרות של ההורים.</span>
-          <span lang="en">Download the <a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (Android 8 or newer) and allow the install. After that the game updates itself from the parent settings.</span></li>
+          <span lang="he">מורידים את ה-<a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (אנדרואיד 8 ומעלה) ומאשרים התקנה; <a href="#install">כך זה נראה</a>. אחר כך המשחק מתעדכן לבד מההגדרות של ההורים.</span>
+          <span lang="en">Download the <a data-apk href="https://github.com/TomSadeh/puki/releases">APK</a> (Android 8 or newer) and allow the install; <a href="#install">here's what you'll see</a>. After that the game updates itself from the parent settings.</span></li>
         <li><b><span lang="he">מתקינים את המוח של פוקי במחשב (לא חובה)</span><span lang="en">Set up Puki's brain on a PC (optional)</span></b><br>
           <span lang="he">בווינדוס מריצים את <a data-exe href="https://github.com/TomSadeh/puki/releases">Puki.exe</a>; בלינוקס <code>python3 brain/install.py</code>. ההתקנה מורידה כ-9GB ומגדירה הכול.</span>
           <span lang="en">On Windows run <a data-exe href="https://github.com/TomSadeh/puki/releases">Puki.exe</a>; on Linux <code>python3 brain/install.py</code>. It downloads about 9 GB and sets everything up.</span></li>
@@ -247,12 +267,35 @@
       </ol>
     </div>
   </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2><span lang="he">התקנה מחוץ לחנות, צעד אחר צעד</span><span lang="en">Installing from outside the store, step by step</span></h2>
+      <p class="sub"><span lang="he">פוקי עוד לא בחנות של Google, אז אנדרואיד שואל כמה שאלות בפעם הראשונה. זה נראה מפחיד, אבל זה רגיל לכל אפליקציה מחוץ לחנות.</span><span lang="en">Puki isn't on Google Play yet, so Android asks a few questions the first time. It looks alarming, but it's the same for any app from outside the store.</span></p>
+      <div class="guide">
+        <div class="card"><h3><b class="n">1</b><span lang="he">מורידים</span><span lang="en">Download</span></h3>
+          <p><span lang="he">בטאבלט: סורקים את הקוד למעלה או לוחצים "הורדה לאנדרואיד". אם Chrome אומר שהקובץ "עלול להזיק", לוחצים "להוריד בכל זאת".</span><span lang="en">On the tablet, scan the code above or tap "Download for Android". If Chrome says the file "may be harmful", tap "Download anyway".</span></p></div>
+        <div class="card"><h3><b class="n">2</b><span lang="he">מאשרים התקנה מהדפדפן</span><span lang="en">Allow the browser to install</span></h3>
+          <p><span lang="he">פותחים את הקובץ שהורד. אנדרואיד מבקש רשות: "הגדרות", ומדליקים את המתג (פעם אחת בלבד).</span><span lang="en">Open the downloaded file. Android asks for permission: tap "Settings" and turn on the switch (just once).</span></p>
+          <div class="mock"><span>Allow from this source</span><span class="sw"></span></div></div>
+        <div class="card"><h3><b class="n">3</b><span lang="he">מתקינים</span><span lang="en">Install</span></h3>
+          <p><span lang="he">חוזרים אחורה ולוחצים "התקנה". אם Play Protect אומר "אפליקציה לא מוכרת", לוחצים "פרטים נוספים" ואז "להתקין בכל זאת". כל APK חתום במפתח של פוקי.</span><span lang="en">Go back and tap "Install". If Play Protect says "unrecognized app", tap "More details", then "Install anyway". Every APK is signed with Puki's key.</span></p></div>
+        <div class="card"><h3><b class="n">4</b><span lang="he">משחקים</span><span lang="en">Play</span></h3>
+          <p><span lang="he">פותחים את פוקי: מסך פתיחה קצר שואל שפה, שם, בת או בן, ואת המחשב של פוקי (לא חובה). מכאן העדכונים מגיעים מתוך המשחק.</span><span lang="en">Open Puki: a short welcome asks for the language, a name, girl or boy, and Puki's PC (optional). From here on, updates come from inside the game.</span></p></div>
+      </div>
+      <div class="note">
+        <b><span lang="he">בטאבלט או בטלפון של Samsung?</span><span lang="en">On a Samsung tablet or phone?</span></b>
+        <span lang="he">ההגדרה "חוסם אוטומטי" (Auto Blocker) חוסמת בשקט כל התקנה מחוץ לחנויות. מכבים אותה לרגע בהגדרות &gt; אבטחה ופרטיות &gt; חוסם אוטומטי, מתקינים, ומדליקים שוב.</span>
+        <span lang="en">Its "Auto Blocker" setting quietly blocks every install from outside the stores. Turn it off for a moment in Settings &gt; Security and privacy &gt; Auto Blocker, install, then turn it back on.</span>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <span lang="he">קוד פתוח ברישיון MIT · <a href="https://github.com/TomSadeh/puki">GitHub</a> · <a href="https://tomsadeh.github.io/">תום שדה</a></span>
-    <span lang="en">Open source, MIT license · <a href="https://github.com/TomSadeh/puki">GitHub</a> · <a href="https://tomsadeh.github.io/">Tom Sadeh</a></span>
+    <span lang="he">קוד פתוח ברישיון MIT · <a href="https://github.com/TomSadeh/puki">GitHub</a> · <a href="https://tomsadeh.github.io/">תום שדה</a> · <a href="privacy.html">פרטיות</a></span>
+    <span lang="en">Open source, MIT license · <a href="https://github.com/TomSadeh/puki">GitHub</a> · <a href="https://tomsadeh.github.io/">Tom Sadeh</a> · <a href="privacy.html">Privacy</a></span>
   </div>
 </footer>
 

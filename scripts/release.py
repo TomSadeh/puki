@@ -71,8 +71,8 @@ def main():
             sys.exit("Stopping: commit first, so the release matches the code on GitHub.")
 
     gradlew = os.path.join(ROOT, "gradlew.bat" if os.name == "nt" else "gradlew")
-    run([gradlew, "-q", "assembleRelease"])
-    apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "release", "app-release.apk")
+    run([gradlew, "-q", "assembleGithubRelease"])
+    apk = os.path.join(ROOT, "app", "build", "outputs", "apk", "github", "release", "app-github-release.apk")
     os.makedirs(os.path.join(ROOT, "dist"), exist_ok=True)
     out = os.path.join(ROOT, "dist", f"Puki-{version}.apk")
     shutil.copyfile(apk, out)

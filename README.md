@@ -132,7 +132,7 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
 **The app** (Android Studio, or the command line):
 
 ```
-./gradlew installDebug
+./gradlew installGithubDebug
 ```
 
 - Minimum Android 8 (API 26). Built for tablets in landscape.
@@ -203,7 +203,7 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
   is signed with the debug key (releases use the key in `~/keys`, see `app/build.gradle.kts`).
   When the PC side changed, also build Puki.exe (`python brain/build_exe.py`) and attach it:
   it carries its own copy of the brain's code.
-- **Tests:** `./gradlew testDebugUnitTest`, `python -m pytest brain/tests` and
+- **Tests:** `./gradlew testGithubDebugUnitTest`, `python -m pytest brain/tests` and
   `python scripts/check_voices.py` (CI runs all three). On a device, the debug build's
   self-test: `adb shell am broadcast -n io.github.tomsadeh.puki/.SelfTestReceiver`
   (`adb logcat -s PukiSelfTest`), with `-e host <ip:port> -e code <CODE> -e pin <fingerprint>`

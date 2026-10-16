@@ -14,5 +14,5 @@ requests and replies in Hebrew and English. -->
 - [ ] New text and voice lines in Hebrew and English, Hebrew in girl and boy forms
 - [ ] Nothing leaves the home: no analytics, cloud calls or new runtime downloads
 - [ ] No personal data (names, voices, photos) in code, screenshots or commits
-- [ ] Builds (`./gradlew assembleDebug`); `scripts/check_voices.py` passes if voice lines changed
+- [ ] Builds (`./gradlew assembleGithubDebug`); `scripts/check_voices.py` passes if voice lines changed
 - [ ] New dependencies or assets: explained, license compatible with MIT, versions pinned

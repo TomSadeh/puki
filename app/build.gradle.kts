@@ -26,7 +26,7 @@ android {
     defaultConfig {
         applicationId = "io.github.tomsadeh.puki"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = pukiVersion.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
         versionName = pukiVersion
 
@@ -67,6 +67,21 @@ android {
         }
     }
 
+    // Two ways out: "github" (the APKs on the GitHub releases, which update themselves from there)
+    // and "play" (Google Play, which does the updating: no updater and no install permission,
+    // as Play requires; src/play/AndroidManifest.xml removes them)
+    flavorDimensions += "store"
+    productFlavors {
+        create("github") {
+            dimension = "store"
+            buildConfigField("boolean", "SELF_UPDATE", "true")
+        }
+        create("play") {
+            dimension = "store"
+            buildConfigField("boolean", "SELF_UPDATE", "false")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -75,6 +90,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

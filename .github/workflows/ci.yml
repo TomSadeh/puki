@@ -18,7 +18,7 @@ jobs:
       - name: Unit tests and a debug build
         run: |
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug
+          ./gradlew testGithubDebugUnitTest assembleGithubDebug
       - name: Keep the test report
         if: failure()
         uses: actions/upload-artifact@v4

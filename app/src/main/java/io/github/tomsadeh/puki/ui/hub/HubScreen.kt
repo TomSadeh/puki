@@ -3,6 +3,7 @@ package io.github.tomsadeh.puki.ui.hub
 import androidx.compose.foundation.clickable
 import io.github.tomsadeh.puki.ui.components.LongPressGate
 import androidx.compose.runtime.collectAsState
+import io.github.tomsadeh.puki.BuildConfig
 import io.github.tomsadeh.puki.update.Updater
 import io.github.tomsadeh.puki.ui.common.LocalLanguage
 import io.github.tomsadeh.puki.ui.common.LocalVoicePlayer
@@ -64,7 +65,7 @@ fun HubScreen(
     // Look for a game update now and then (at most once a day); a dot on the settings button shows one
     val context = LocalContext.current
     val update by Updater.available.collectAsState()
-    LaunchedEffect(Unit) { Updater.checkDaily(context) }
+    LaunchedEffect(Unit) { if (BuildConfig.SELF_UPDATE) Updater.checkDaily(context) }
 
     // Say hello (by name, if the personal lines exist) the first time the hub opens
     LaunchedEffect(Unit) {

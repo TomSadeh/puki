@@ -140,7 +140,7 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 
 ### Testing Considerations
 
-- JVM unit tests in `app/src/test` (`./gradlew testDebugUnitTest`): the phone brain's Persona and
+- JVM unit tests in `app/src/test` (`./gradlew testGithubDebugUnitTest`): the phone brain's Persona and
   voice text, the level rule, pairing links, and `RegexPortabilityTest` (no Java-only regex flags:
   Android's ICU engine rejects `(?U)`, which crashed 0.3.0 at start).
 - The PC brain's persona: `python -m pytest brain/tests`.
@@ -185,18 +185,23 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 
 ```bash
 # Build debug APK
-./gradlew assembleDebug
+./gradlew assembleGithubDebug
 
 # Install on connected device/emulator
-./gradlew installDebug
+./gradlew installGithubDebug
 
 # Run tests
-./gradlew testDebugUnitTest
+./gradlew testGithubDebugUnitTest
 python -m pytest brain/tests
 ```
 
 Test on a real tablet or phone over adb; the x86 emulator is very heavy. Releases: `python scripts/release.py --publish`
 (builds the shrunk release APK and uploads it as a GitHub pre-release; installed apps offer the update).
+Two flavors: `github` (those APKs; updates itself from the GitHub releases) and `play` (Google Play:
+no updater, no REQUEST_INSTALL_PACKAGES, via `BuildConfig.SELF_UPDATE` and `app/src/play/AndroidManifest.xml`).
+The Play bundle: `./gradlew bundlePlayRelease` (app/build/outputs/bundle/playRelease/app-play-release.aab).
+The Play listing (texts, icon, feature graphic, screenshots) is in `fastlane/metadata/android/`, and the
+steps and form answers in `fastlane/PLAY_CHECKLIST.md`; the privacy policy is `docs/privacy.html`.
 All builds are signed with the release key in `~/keys` (puki-release.jks + puki-signing.properties,
 never in git); without it they fall back to the debug key, which release.py won't publish.
 

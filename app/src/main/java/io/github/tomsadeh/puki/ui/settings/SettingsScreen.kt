@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.tomsadeh.puki.R
+import io.github.tomsadeh.puki.BuildConfig
 import io.github.tomsadeh.puki.data.models.BilingualText
 import io.github.tomsadeh.puki.data.models.Gender
 import io.github.tomsadeh.puki.data.models.Language
@@ -357,7 +358,13 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            UpdateCard()
+            // The Play build gets its updates from Play: just the version, for bug reports
+            if (BuildConfig.SELF_UPDATE) UpdateCard()
+            else Text(
+                text = "Puki ${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = EarthBrown
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 

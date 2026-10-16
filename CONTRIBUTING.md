@@ -52,7 +52,7 @@ A PR that breaks any of these won't be merged, however good it is otherwise.
 
 | If you change... | Show that... |
 |---|---|
-| Anything in the app | `./gradlew assembleDebug` builds, and you played the changed screen on a tablet or emulator (landscape). For visual changes, **before and after screenshots**, in Hebrew (RTL) if layout is involved. |
+| Anything in the app | `./gradlew assembleGithubDebug` builds, and you played the changed screen on a tablet or emulator (landscape). For visual changes, **before and after screenshots**, in Hebrew (RTL) if layout is involved. |
 | Voice lines | They're added to `scripts/generate_voices.py` and generated with BlueTTS (Noa); `python scripts/check_voices.py` reports nothing missing. Plain text without nikud; ambiguous words go in `PHONEMES`. |
 | The brain (`brain/`) | It runs, and you tried the endpoints you touched, in Hebrew and English (a few sample requests and replies in the PR). `doorbell.py`, `dashboard.py`, `qr.py` and `install.py` stay standard-library only. |
 | The installer | A `--dry-run` on a fresh folder, and a real run of the steps you changed. Pin versions you download (not "latest"), check sizes, and keep it safe to run twice. Say which OS you tested (Windows, Linux). |
