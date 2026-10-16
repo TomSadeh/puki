@@ -18,6 +18,8 @@
 /brain/puki_cert.pem
 /brain/puki_key.pem
 /brain/brain_errors.log
+/brain/reports.jsonl
+safety_results.json
 __pycache__/
 
 # Puki.exe builds (brain/build_exe.py)

@@ -75,6 +75,51 @@ class Companion(
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
     private var scene = ""
 
+    /** A line Puki said, kept for the parent's "What Puki said" card (מלשין לרנינג). */
+    data class SaidLine(
+        val id: Long,
+        val said: String,
+        val heard: String,
+        val situation: String,
+        val game: String,
+        val lang: String,
+        val reported: Boolean = false
+    )
+
+    private val _recentLines = MutableStateFlow<List<SaidLine>>(emptyList())
+
+    /** The last lines Puki said this session (memory only), newest last. */
+    val recentLines: StateFlow<List<SaidLine>> = _recentLines
+
+    /**
+     * A parent says [line] wasn't right. Kept on the tablet (reports.jsonl) and sent to the PC
+     * when there is one (its dashboard keeps them too): each becomes a case to fix Puki by.
+     */
+    fun report(line: SaidLine) {
+        if (line.reported) return
+        _recentLines.value = _recentLines.value.map { if (it.id == line.id) it.copy(reported = true) else it }
+        val json = JSONObject().put("said", line.said).put("heard", line.heard).put("situation", line.situation)
+            .put("game", line.game).put("lang", line.lang).put("source", "tablet")
+            .put("t", java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date()))
+        scope.launch(Dispatchers.IO) {
+            runCatching { File(context.filesDir, "reports.jsonl").appendText(json.toString() + "\n") }
+            if (code.isNotBlank()) {
+                runCatching { pcBrain.request("POST", "/report", json.toString().toByteArray(Charsets.UTF_8), 5000, "application/json; charset=utf-8") }
+            }
+        }
+    }
+
+    private fun recordSaid(route: String, body: ByteArray?) {
+        val said = brain.lastSaid() ?: return
+        val situation = when (route) {
+            "/say" -> runCatching { JSONObject(String(body ?: ByteArray(0), Charsets.UTF_8)).optString("situation") }.getOrDefault("")
+            "/look" -> pick("ציור", "a drawing")
+            else -> ""
+        }
+        val line = SaidLine(System.nanoTime(), said.text, said.heard, situation, game, lang())
+        _recentLines.value = (_recentLines.value + line).takeLast(20)
+    }
+
     /** The screen the child is on (its route), sent with what she says: the brain's safety
      *  word lists let a game use its own words (a knife in the kitchen). */
     var game = ""
@@ -440,7 +485,10 @@ class Companion(
             val sep = if ("?" in path) "&" else "?"
             path + sep + "name=" + URLEncoder.encode(childName, "UTF-8") + "&gender=" + (if (childGirl) "girl" else "boy")
         } else path
-        return brain.request(method, full, body, timeoutMs, contentType)
+        val result = brain.request(method, full, body, timeoutMs, contentType)
+        val route = path.substringBefore('?')
+        if (result != null && result.isNotEmpty() && route in setOf("/say", "/listen", "/look")) recordSaid(route, body)
+        return result
     }
 
     private companion object {

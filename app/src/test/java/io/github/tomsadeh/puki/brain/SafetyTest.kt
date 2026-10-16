@@ -17,6 +17,7 @@ class SafetyTest {
             Triple("אני רוצה אמא", "he", "parent"),
             Triple("בוא נשחק עם סכין", "he", "danger"),
             Triple("בוא נדליק אש", "he", "danger"),
+            Triple("בוא נעשה מדורה", "he", "danger"),  // from a (test) report: the first מלשין לרנינג case
             Triple("אני רוצה לאכול את התרופה", "he", "danger"),
             Triple("הכלב מת?", "he", "big_question"),
             Triple("בוא נסתיר מאמא", "he", "secrets"),

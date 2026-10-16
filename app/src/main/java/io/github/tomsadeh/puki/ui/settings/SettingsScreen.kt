@@ -358,6 +358,13 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // מלשין לרנינג: what Puki said, with a flag for anything that wasn't right
+            val talker = LocalCompanion.current
+            if (talker != null) {
+                ReportCard(talker)
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
             // The Play build gets its updates from Play: just the version, for bug reports
             if (BuildConfig.SELF_UPDATE) UpdateCard()
             else Text(

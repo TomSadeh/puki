@@ -65,6 +65,8 @@
   .heard::before { content: "heard: "; color: var(--muted); }
   .reply { font-weight: 600; }
   .reply::before { content: "🦜 "; }
+  .flag { margin-inline-start: 8px; font-size: 13px; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--chip); background: transparent; cursor: pointer; }
+  .flag.done { cursor: default; opacity: .7; }
   .meta { color: var(--muted); font-size: 12px; }
   .empty { color: var(--muted); padding: 12px 0; }
 </style>
@@ -132,7 +134,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const LABELS = { say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke", repeat: "say it",
+const LABELS = { report: "reported", say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke", repeat: "say it",
                  brain: "brain", gpu: "GPU", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
 const QUIET = new Set(["brain", "pairing", "settings"]);
 let lastId = 0, events = [], code = null, idleEdited = false;
@@ -189,6 +191,8 @@ function showStatus(s) {
   }
 }
 
+const reported = new Set();  // lines flagged from this page
+
 function renderLog() {
   const list = $("log");
   const shown = events.filter(e => !($("quiet").checked && QUIET.has(e.kind))).slice().reverse();
@@ -201,7 +205,23 @@ function renderLog() {
     const body = el("div", "entry");
     if (e.text) body.append(el("div", "asked", e.text));
     if (e.heard) body.append(el("div", "heard", e.heard));
-    if (e.reply) body.append(el("div", "reply", e.reply));
+    if (e.reply) {
+      const reply = el("div", "reply", e.reply);
+      // מלשין לרנינג: flag a line that wasn't right; it's kept on this PC to fix Puki by
+      if (e.kind !== "report") {
+        const flag = el("button", "flag" + (reported.has(e.id) ? " done" : ""), reported.has(e.id) ? "reported" : "🚩 report");
+        flag.title = "This wasn't right for a toddler: keep it to fix Puki (it stays on this PC)";
+        flag.onclick = async () => {
+          if (reported.has(e.id)) return;
+          const r = await post("/api/report", { id: e.id });
+          if (r.error) { alert(r.error); return; }
+          reported.add(e.id);
+          renderLog();
+        };
+        reply.append(flag);
+      }
+      body.append(reply);
+    }
     else if (e.status === 204) body.append(el("div", "meta", "no safe line came out; the game used its recorded voice"));
     const meta = [];
     if (e.ip) meta.push(e.ip);

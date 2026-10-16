@@ -15,6 +15,7 @@ import safety  # noqa: E402
     ("אני רוצה אמא", "he", "parent"),
     ("בוא נשחק עם סכין", "he", "danger"),
     ("בוא נדליק אש", "he", "danger"),
+    ("בוא נעשה מדורה", "he", "danger"),   # from a (test) report: the first מלשין לרנינג case
     ("אני רוצה לאכול את התרופה", "he", "danger"),
     ("הכלב מת?", "he", "big_question"),
     ("בוא נסתיר מאמא", "he", "secrets"),

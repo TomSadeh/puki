@@ -54,6 +54,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dashboard
+import reports
 import tls
 
 # Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
@@ -482,6 +483,17 @@ class Handler(BaseHTTPRequestHandler):
             BRAIN.wake()
             BRAIN.touch()
             self._json(200, {"brain": BRAIN.state})
+        elif path == "/report":
+            # מלשין לרנינג: a parent flagged a line of Puki's on the tablet (kept here, see reports.py)
+            try:
+                req = json.loads(body[:8000] or b"{}")
+            except ValueError:
+                self._json(400, {"error": "not JSON"})
+                return
+            entry = reports.add("tablet", req.get("said"), req.get("heard"), req.get("situation"),
+                                req.get("lang"), req.get("game"), req.get("note"))
+            EVENTS.add("report", text="reported from the tablet", reply=entry["said"], heard=entry["heard"])
+            self._json(200, {"ok": True})
         elif path in ("/say", "/listen", "/speak", "/look", "/story", "/repeat"):
             BRAIN.wake()
             BRAIN.touch()
@@ -548,7 +560,8 @@ def describe_request(path, full_path, body):
         return {"text": "say it: " + query.get("target", [""])[0], "lang": query.get("lang", ["he"])[0]}
     if path == "/listen":
         context = query.get("context", [""])[0]
-        return {"text": "listened" + (f" ({context})" if context else ""), "lang": query.get("lang", ["he"])[0]}
+        return {"text": "listened" + (f" ({context})" if context else ""), "lang": query.get("lang", ["he"])[0],
+                "game": query.get("game", [""])[0]}
     return {"text": path}
 
 
@@ -650,6 +663,16 @@ class DashboardApp:
         CFG["model_choice"] = choice
         save_local_config("model_choice", choice)
         EVENTS.add("settings", text=f"Gemma {choice.upper()} from the next wake-up")
+
+    def report(self, event_id):
+        """מלשין לרנינג: a parent flagged a line in the dashboard's log. False if it's gone."""
+        event = next((e for e in list(EVENTS.items) if e["id"] == event_id), None)
+        if not event or not event.get("reply"):
+            return False
+        reports.add("dashboard", event["reply"], event.get("heard", ""), event.get("text", ""),
+                    event.get("lang", "he"), event.get("game", ""))
+        EVENTS.add("report", text="reported from the dashboard", reply=event["reply"], heard=event.get("heard", ""))
+        return True
 
     def set_idle(self, minutes):
         CFG["idle_minutes"] = minutes

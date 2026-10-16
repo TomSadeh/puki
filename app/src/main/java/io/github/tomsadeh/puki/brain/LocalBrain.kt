@@ -76,7 +76,14 @@ class LocalBrain(private val models: DeviceModels) : Brain {
         }
     }
 
+    @Volatile private var last: Said? = null
+    private var heardNow = ""  // what she said, for the line that answers it
+
+    override fun lastSaid(): Said? = last
+
     override fun request(method: String, path: String, body: ByteArray?, timeoutMs: Int, contentType: String): ByteArray? {
+        last = null
+        heardNow = ""
         val route = path.substringBefore('?')
         val query = parseQuery(path.substringAfter('?', ""))
         if (method == "GET" && route == "/health") return JSONObject().put("brain", state).toString().toByteArray()
@@ -123,6 +130,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         // She talked to Puki (optionally answering ?context=, what he just asked)
                         val lang = if (query["lang"]?.firstOrNull() == "en") "en" else "he"
                         val heard = ears().transcribe(body ?: ByteArray(0), lang, if (lang == "he") persona.hotwords() else "")
+                        heardNow = heard
                         // Hurt, danger, big questions and the like get a fixed, kind reply (Safety)
                         guardedReply(mind, heard, lang, query["game"]?.firstOrNull()?.take(40) ?: "")?.let { (cat, text) ->
                             Log.i(TAG, "heard something careful: [$cat]")  // (not what she said)
@@ -172,6 +180,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
     private fun reply(text: String?, lang: String, voice: BlueVoice, speed: Float = 0.92f): ByteArray? {
         if (text.isNullOrBlank()) return ByteArray(0)
         if (lang == "en") return ByteArray(0)  // no English voice here yet: the game uses its recorded line
+        last = Said(text, heardNow)
         return voice.speak(persona.forVoice(text), speed)
     }
 

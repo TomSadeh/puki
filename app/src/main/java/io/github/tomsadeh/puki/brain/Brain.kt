@@ -17,9 +17,15 @@ package io.github.tomsadeh.puki.brain
  *
  * Every POST also carries ?name=&gender= (the child, from the app's settings).
  */
+/** What a brain last said aloud, and what it heard the child say just before (for reports). */
+data class Said(val text: String, val heard: String)
+
 interface Brain {
     /** The response body (audio or JSON), empty for "nothing to say", or null if it failed. */
     fun request(method: String, path: String, body: ByteArray?, timeoutMs: Int, contentType: String): ByteArray?
+
+    /** The line the last request had Puki say, or null if it said nothing (a parent may report it). */
+    fun lastSaid(): Said? = null
 }
 
 /**
@@ -33,8 +39,13 @@ class HttpBrain(
     private val pin: () -> String,
     private val learnPin: (String) -> Unit
 ) : Brain {
+    @Volatile private var last: Said? = null
+
+    override fun lastSaid(): Said? = last
+
     override fun request(method: String, path: String, body: ByteArray?, timeoutMs: Int, contentType: String): ByteArray? =
         runCatching {
+            last = null
             val pinned = pin()
             var seen = ""
             val conn = PinnedTls.open(baseUrl() + path, pinned) { seen = it }
@@ -51,7 +62,12 @@ class HttpBrain(
                 val status = conn.responseCode
                 if (pinned.isEmpty() && seen.isNotEmpty() && (status == 200 || status == 204)) learnPin(seen)
                 when (status) {
-                    200 -> conn.inputStream.use { it.readBytes() }
+                    200 -> conn.inputStream.use { it.readBytes() }.also {
+                        // The words of what Puki said (and what he heard), as the brain sends them
+                        val text = conn.getHeaderField("X-Text")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                        val heard = conn.getHeaderField("X-Heard")?.let { java.net.URLDecoder.decode(it, "UTF-8") } ?: ""
+                        if (text.isNotBlank()) last = Said(text, heard)
+                    }
                     204 -> ByteArray(0)
                     else -> null
                 }

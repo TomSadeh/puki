@@ -65,7 +65,7 @@ object Safety {
 
     class Rule(val category: String, val he: List<String>, val en: List<String>)
 
-    /** The first match wins, so the more specific rules come first (generated from safety.py: copy, don't edit by hand). */
+    /** The first match wins, so the more specific rules come first (copied from brain/safety.py by scripts/sync_safety_kt.py: don't edit by hand). */
     val RULES = listOf(
         Rule("quiet",
             listOf("=שקט", "די פוקי", "תשתוק", "תשתקי", "=שתוק", "=ששש"),
@@ -75,14 +75,14 @@ object Safety {
             listOf("don't want to sleep", "don't want to go to bed", "not going to bed")),
         Rule("danger",
             listOf("=סכין", "=סכינים", "=מספריים", "עם אש", "בוא נדליק", "בואי נדליק", "להדליק אש", "מדליק אש",
-                "מדליקה אש", "=גפרור", "=גפרורים", "=מצית", "לקפוץ מה", "קופצת מה", "קופץ מה", "מטפס על החלון",
-                "מטפסת על החלון", "תרופ", "רצה לכביש", "רץ לכביש", "הולכת לכביש", "הולך לכביש", "=שקע", "=שקעים",
-                "נוגע בחשמל", "נוגעת בחשמל", "החוצה לבד", "לבד בחוץ", "יוצאת לבד", "יוצא לבד", "נוגעת בתנור",
-                "נוגע בתנור"),
-            listOf("=knife", "=knives", "scissors", "=matches", "=lighter", "play with fire", "make a fire",
-                "light a fire", "jump out the window", "jump off", "climb the window", "medicine", "=pills",
-                "outside alone", "go outside by myself", "run to the road", "run to the street", "=socket",
-                "=outlet", "touch the stove", "touching the stove")),
+                "מדליקה אש", "=גפרור", "=גפרורים", "=מצית", "=מדורה", "למדורה", "לקפוץ מה", "קופצת מה", "קופץ מה",
+                "מטפס על החלון", "מטפסת על החלון", "תרופ", "רצה לכביש", "רץ לכביש", "הולכת לכביש", "הולך לכביש",
+                "=שקע", "=שקעים", "נוגע בחשמל", "נוגעת בחשמל", "החוצה לבד", "לבד בחוץ", "יוצאת לבד", "יוצא לבד",
+                "נוגעת בתנור", "נוגע בתנור"),
+            listOf("=knife", "=knives", "scissors", "=matches", "=lighter", "campfire", "bonfire", "play with fire",
+                "make a fire", "light a fire", "jump out the window", "jump off", "climb the window", "medicine",
+                "=pills", "outside alone", "go outside by myself", "run to the road", "run to the street",
+                "=socket", "=outlet", "touch the stove", "touching the stove")),
         Rule("hurt",
             listOf("כואב", "כואבת", "=כאב", "נפלתי", "=דם", "נשרטתי", "עשיתי מכה", "קיבלתי מכה", "=בוכה", "=בוכים",
                 "=בכיתי", "=מפחד", "=מפחדת", "=פוחד", "=פוחדת", "=עזרה", "=הצילו"),
