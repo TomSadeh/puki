@@ -26,7 +26,7 @@ FROZEN = getattr(sys, "frozen", False)
 BUNDLE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 # The files the brain needs on disk (brain.py runs in its own Python environment)
 BRAIN_FILES = ["doorbell.py", "brain.py", "dashboard.py", "dashboard.html", "qr.py", "parakeet.py",
-               "install.py", "config.example.json", "requirements.txt"]
+               "install.py", "setup_gui.py", "config.example.json", "requirements.txt"]
 PORT = 8790
 DASHBOARD = "http://127.0.0.1:8793"
 
@@ -100,8 +100,16 @@ def is_set_up(brain_dir):
 
 
 def run_setup():
-    """Runs the installer in a console window (its questions and progress bars need one)."""
-    in_console("Puki setup", ["--no-start"] + (["--dir", home()] if FROZEN else []))
+    """Runs the installer in the setup window (or a console window if there's no tkinter)."""
+    with_window("Setting up Puki", ["--no-start"] + (["--dir", home()] if FROZEN else []))
+
+
+def with_window(title, args):
+    try:
+        import setup_gui
+    except Exception:
+        return in_console(title, args)
+    setup_gui.run(args, title)
 
 
 def in_console(title, args):
@@ -214,7 +222,7 @@ def main():
                    "firewall rule, the downloaded models (several GB) and the settings.", "Puki", 0x34) != 6:
             return
         quit_(icon, None)
-        in_console("Uninstall Puki", ["--uninstall"] + (["--dir", root] if root else []))
+        with_window("Uninstall Puki", ["--uninstall"] + (["--dir", root] if root else []))
         if FROZEN:
             message("Puki is uninstalled. To finish, delete Puki.exe.")
         os._exit(0)

@@ -52,6 +52,14 @@ It shows what it will do, then:
 6. makes Puki start at login, starts it, and opens the [dashboard](#dashboard) with the
    pairing code and QR code.
 
+Before it starts, it shows how much it will download and about how long that takes (from a
+short speed test). Every model file, llama.cpp and uv are checked against the SHA-256 their
+publishers list (Hugging Face, GitHub), so a broken or tampered download is caught and
+fetched again; a file is checked once and remembered. Everything it prints also goes to
+`install.log` in the folder, to attach when asking for help. At the end it shows the pairing
+code and a QR code to scan with the tablet. `--gui` shows the same setup in a window, with
+progress bars.
+
 Downloads show progress and resume if interrupted, and running it again only does what's
 missing. Options: `--dry-run` (just show the plan), `--model e4b|12b|both`, `--dir D:\puki-brain`, `--cpu`,
 `--only firewall,autostart` (repeat single steps), `--no-firewall`, `--no-autostart`.
@@ -75,7 +83,8 @@ first puts new tray icons behind the **^** arrow; drag it onto the taskbar to ke
 
 `python brain\build_exe.py` builds **Puki.exe** (about 17 MB): the same tray app with the
 brain's files inside. The first time it runs, it unpacks them into `%LOCALAPPDATA%\Puki`
-and opens a window that runs this installer there. Python comes along via
+and runs this installer there in a setup window (the model choice, progress bars, and the QR
+code at the end). Python comes along via
 [uv](https://github.com/astral-sh/uv), kept inside that folder, so the PC needs no Python.
 After that it's just the tray icon, and it starts at login. It's unsigned, so Windows
 SmartScreen may warn the first time; the build prints its SHA-256 to compare against.

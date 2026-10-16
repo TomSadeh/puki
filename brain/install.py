@@ -13,13 +13,18 @@ writes brain/config.json, adds the home-network firewall rule (one Windows admin
 starts Puki at login, and opens the dashboard with the pairing code.
 
 Safe to run again: finished steps and complete downloads are skipped, and an interrupted
-download resumes where it stopped. Standard library only, so any Python 3.10+ can run it.
+download resumes where it stopped. Every model file is checked against the SHA-256 its
+publisher lists. Before starting it shows how much it will download and about how long that
+takes; everything it prints also goes to install.log in the folder. At the end it shows the
+pairing code and a QR code for the tablet. --gui shows all this in a window instead (Puki.exe
+always does). Standard library only, so any Python 3.10+ can run it.
 
     python brain\\install.py --update      # the latest Puki, then only what changed
     python brain\\install.py --uninstall   # remove it all (asks before each part)
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -65,19 +70,117 @@ NEEDED_GB = 12  # with E4B; 13 with 12B, 19 with both
 UA = {"User-Agent": "puki-installer"}
 
 
-# ---------- Output ----------
+# ---------- Output: the console, or the setup window (setup_gui.py) ----------
+
+class ConsoleUI:
+    """Everything the installer shows or asks goes through here, so a window can replace it."""
+
+    def __init__(self):
+        self.log = None
+        self.quiet = False  # while planning: work out what's needed without printing it
+
+    def open_log(self, path):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            self.log = open(path, "a", encoding="utf-8")
+            self.log.write(f"\n===== {time.strftime('%Y-%m-%d %H:%M:%S')}  {' '.join(sys.argv[1:])}\n")
+        except OSError:
+            self.log = None
+
+    def write_log(self, msg):
+        if self.log:
+            self.log.write(msg + "\n")
+            self.log.flush()
+
+    def say(self, msg=""):
+        if self.quiet:
+            return
+        print(msg, flush=True)
+        self.write_log(msg)
+
+    def step(self, n, total, title):
+        self.say(f"\n[{n}/{total}] {title}")
+
+    def progress(self, name, done, total, speed, overall):
+        line = f"\r    {name}: {done * 100 // max(total, 1):3d}%  {done / 1e6:,.0f}/{total / 1e6:,.0f} MB  {speed:.1f} MB/s"
+        if overall:
+            line += f"   (all downloads: {overall[0] / 1e9:.1f}/{overall[1] / 1e9:.1f} GB)"
+        print(line + "   ", end="", flush=True)
+
+    def progress_done(self):
+        print()
+
+    def ask(self, question, default=False):
+        hint = "[Y/n]" if default else "[y/N]"
+        answer = input(f"{question} {hint} ").strip().lower()
+        self.write_log(f"{question} {hint} {answer}")
+        return default if not answer else answer in ("y", "yes")
+
+    def choose(self, title, options, default):
+        """[options]: [(key, description)]; returns a key."""
+        self.say(f"\n  {title}")
+        for key, text in options:
+            self.say(f"    {key:5} {text}")
+        while True:
+            answer = input(f"  [{default}] ").strip().lower() or default
+            if answer in dict(options):
+                self.write_log(f"  -> {answer}")
+                return answer
+            print(f"  Please type one of: {', '.join(k for k, _ in options)}")
+
+    def finish(self, code, url):
+        if code:
+            self.say(f"\n  Pairing code: {code}")
+        if url:
+            qr_lines = qr_text(url)
+            if qr_lines:
+                print("\n  Scan this with the tablet (parent settings → scan the QR code):\n")
+                for line in qr_lines:
+                    print("  " + line)
+
+    def fail(self, msg):
+        self.say(f"\n  ✗ {msg}")
+
+
+UI = ConsoleUI()
+
 
 def say(msg=""):
-    print(msg, flush=True)
+    UI.say(msg)
+
+
+STEPS = 8
 
 
 def step(n, title):
-    say(f"\n[{n}] {title}")
+    UI.step(n, STEPS, title)
 
 
 def fail(msg):
-    say(f"\n  ✗ {msg}")
+    UI.quiet = False  # a failure during the silent planning pass still has to be seen
+    UI.fail(msg)
     sys.exit(1)
+
+
+def qr_text(text):
+    """A QR code in block characters, dark on light (reads right on a dark console)."""
+    try:
+        sys.path.insert(0, HERE)
+        import qr
+        m = qr.matrix(text)
+    except Exception:
+        return None
+    pad = 2
+    n = len(m) + 2 * pad
+    light = lambda r, c: not (pad <= r < len(m) + pad and pad <= c < len(m) + pad and m[r - pad][c - pad])  # noqa: E731
+    lines = []
+    for r in range(0, n, 2):
+        row = ""
+        for c in range(n):
+            top, bottom = light(r, c), (light(r + 1, c) if r + 1 < n else True)
+            row += "█" if top and bottom else "▀" if top else "▄" if bottom else " "
+        lines.append(row)
+    return lines
 
 
 # ---------- Downloads ----------
@@ -87,17 +190,69 @@ def http_json(url):
         return json.load(r)
 
 
-def download(url, dest, size=None, dry=False):
-    """Downloads [url] to [dest] with a progress bar, resuming a partial .part file."""
+# The plan: what still has to be downloaded (bytes), and how much of it is done
+PLAN = {"total": 0, "done": 0, "files": []}
+VERIFIED = {"path": None, "data": {}}  # files already checked against their SHA-256
+
+
+def load_verified(root):
+    VERIFIED["path"] = os.path.join(root, "downloads", "verified.json")
+    try:
+        with open(VERIFIED["path"], encoding="utf-8") as f:
+            VERIFIED["data"] = json.load(f)
+    except (OSError, ValueError):
+        VERIFIED["data"] = {}
+
+
+def mark_verified(dest, sha256):
+    if not VERIFIED["path"]:
+        return
+    VERIFIED["data"][os.path.abspath(dest)] = sha256
+    os.makedirs(os.path.dirname(VERIFIED["path"]), exist_ok=True)
+    with open(VERIFIED["path"], "w", encoding="utf-8") as f:
+        json.dump(VERIFIED["data"], f, indent=1)
+
+
+def file_sha256(path, label):
+    h = hashlib.sha256()
+    total = os.path.getsize(path)
+    done, start = 0, time.time()
+    with open(path, "rb") as f:
+        while chunk := f.read(1 << 22):
+            h.update(chunk)
+            done += len(chunk)
+            if total > 50_000_000:
+                UI.progress(f"checking {label}", done, total, done / max(time.time() - start, 0.1) / 1e6, None)
+    if total > 50_000_000:
+        UI.progress_done()
+    return h.hexdigest()
+
+
+def download(url, dest, size=None, dry=False, sha256=None):
+    """Downloads [url] to [dest] with a progress bar, resuming a partial .part file, and checks
+    it against [sha256] (from Hugging Face or GitHub) when there is one."""
     name = os.path.basename(dest)
     if os.path.exists(dest) and (size is None or os.path.getsize(dest) == size):
+        if sha256 and not dry and VERIFIED["data"].get(os.path.abspath(dest)) != sha256:
+            # Downloaded before checksums were checked (or by hand): check it once
+            if file_sha256(dest, name) != sha256:
+                say(f"    ! {name} doesn't match its published checksum; downloading it again")
+                os.remove(dest)
+                return download(url, dest, size, dry, sha256)
+            mark_verified(dest, sha256)
+            say(f"    ✓ {name} (already there, checked)")
+            return
         say(f"    ✓ {name} (already there)")
         return
+    part = dest + ".part"
     if dry:
+        have = os.path.getsize(part) if os.path.exists(part) else 0
+        if size:
+            PLAN["total"] += max(size - have, 0)
+            PLAN["files"].append((url, size - have))
         say(f"    → would download {name}" + (f" ({size / 1e6:,.0f} MB)" if size else ""))
         return
     os.makedirs(os.path.dirname(dest), exist_ok=True)
-    part = dest + ".part"
     have = os.path.getsize(part) if os.path.exists(part) else 0
     headers = dict(UA)
     if have:
@@ -111,6 +266,7 @@ def download(url, dest, size=None, dry=False):
                 mode = "ab" if have else "wb"
                 start = time.time()
                 done = have
+                started_at = done
                 with open(part, mode) as f:
                     while True:
                         chunk = r.read(1 << 20)
@@ -118,14 +274,15 @@ def download(url, dest, size=None, dry=False):
                             break
                         f.write(chunk)
                         done += len(chunk)
+                        PLAN["done"] += len(chunk)
                         if total:
-                            pct = done * 100 // total
-                            speed = (done - have) / max(time.time() - start, 0.1) / 1e6
-                            print(f"\r    {name}: {pct:3d}%  {done / 1e6:,.0f}/{total / 1e6:,.0f} MB  {speed:.1f} MB/s   ", end="", flush=True)
-            print()
+                            speed = (done - started_at) / max(time.time() - start, 0.1) / 1e6
+                            overall = (PLAN["done"], PLAN["total"]) if PLAN["total"] else None
+                            UI.progress(name, done, total, speed, overall)
+            UI.progress_done()
             break
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-            print()
+            UI.progress_done()
             say(f"    connection problem ({e}); retrying...")
             time.sleep(3 * (attempt + 1))
             have = os.path.getsize(part) if os.path.exists(part) else 0
@@ -136,13 +293,35 @@ def download(url, dest, size=None, dry=False):
         fail(f"couldn't download {name}. Check the internet connection and run the installer again; it resumes.")
     if size is not None and os.path.getsize(part) != size:
         fail(f"{name} came out the wrong size. Run the installer again to retry.")
+    if sha256:
+        if file_sha256(part, name) != sha256:
+            os.remove(part)
+            fail(f"{name} doesn't match its published checksum (a broken or tampered download), so it "
+                 "was deleted. Run the installer again to download it again.")
     os.replace(part, dest)
+    if sha256:
+        mark_verified(dest, sha256)
 
 
 def hf_files(repo):
-    """{path: size} of a Hugging Face model repo (top level)."""
-    return {x["path"]: x.get("size") for x in http_json(f"https://huggingface.co/api/models/{repo}/tree/main")
-            if x.get("type") == "file"}
+    """{path: (size, sha256 or None)} of a Hugging Face model repo (top level). Big files are
+    stored with Git LFS, whose id is the file's SHA-256."""
+    return {x["path"]: (x.get("size"), (x.get("lfs") or {}).get("oid"))
+            for x in http_json(f"https://huggingface.co/api/models/{repo}/tree/main") if x.get("type") == "file"}
+
+
+def hf_download(repo, files, path, dest, dry):
+    size, sha = files.get(path, (None, None))
+    download(hf_url(repo, path), dest, size, dry, sha)
+
+
+def github_assets(repo, tag):
+    """{name: (url, size, sha256 or None)} of a GitHub release (GitHub lists each asset's SHA-256)."""
+    out = {}
+    for a in http_json(f"https://api.github.com/repos/{repo}/releases/tags/{tag}")["assets"]:
+        digest = a.get("digest") or ""
+        out[a["name"]] = (a["browser_download_url"], a["size"], digest[7:] if digest.startswith("sha256:") else None)
+    return out
 
 
 def hf_url(repo, path):
@@ -168,7 +347,7 @@ def nvidia(interactive=False):
             fail(f"{problem}\n    {retry}")
         say(f"\n  ! {problem}")
         say(f"    {retry}")
-        if input("    Continue without the GPU instead (everything on the CPU, slower)? [y/N] ").strip().lower() in ("y", "yes"):
+        if UI.ask("    Continue without the GPU instead (everything on the CPU, slower)?", default=False):
             return None
         sys.exit(1)
 
@@ -260,14 +439,13 @@ def install_llama(root, gpu, dry):
             say("    → would replace it")
         else:
             shutil.rmtree(dest)
-    assets = {a["name"]: (a["browser_download_url"], a["size"])
-              for a in http_json(f"https://api.github.com/repos/ggml-org/llama.cpp/releases/tags/{LLAMA_TAG}")["assets"]}
+    assets = github_assets("ggml-org/llama.cpp", LLAMA_TAG)
     for name in wanted:
         if name not in assets:
             fail(f"llama.cpp {LLAMA_TAG} has no {name}")
-        url, size = assets[name]
+        url, size, sha = assets[name]
         z = os.path.join(root, "downloads", name)
-        download(url, z, size, dry)
+        download(url, z, size, dry, sha)
         if not dry:
             extract(z, dest)
     if not dry:
@@ -302,18 +480,19 @@ def install_models(root, model, dry):
     models = os.path.join(root, "models")
     if model in ("e4b", "both"):
         gemma = hf_files(GEMMA_REPO)
-        download(hf_url(GEMMA_REPO, GEMMA_FILE), os.path.join(models, GEMMA_FILE), gemma.get(GEMMA_FILE), dry)
-        download(hf_url(GEMMA_REPO, MMPROJ_FILE), os.path.join(models, "mmproj-gemma-4-E4B-F16.gguf"), gemma.get(MMPROJ_FILE), dry)
+        hf_download(GEMMA_REPO, gemma, GEMMA_FILE, os.path.join(models, GEMMA_FILE), dry)
+        hf_download(GEMMA_REPO, gemma, MMPROJ_FILE, os.path.join(models, "mmproj-gemma-4-E4B-F16.gguf"), dry)
     if model in ("12b", "both"):
         gemma12 = hf_files(GEMMA12_REPO)
-        download(hf_url(GEMMA12_REPO, GEMMA12_FILE), os.path.join(models, GEMMA12_FILE), gemma12.get(GEMMA12_FILE), dry)
-        download(hf_url(GEMMA12_REPO, MMPROJ_FILE), os.path.join(models, MMPROJ12_NAME), gemma12.get(MMPROJ_FILE), dry)
-    for path, size in hf_files(WHISPER_REPO).items():
+        hf_download(GEMMA12_REPO, gemma12, GEMMA12_FILE, os.path.join(models, GEMMA12_FILE), dry)
+        hf_download(GEMMA12_REPO, gemma12, MMPROJ_FILE, os.path.join(models, MMPROJ12_NAME), dry)
+    whisper = hf_files(WHISPER_REPO)
+    for path in whisper:
         if not path.startswith("."):
-            download(hf_url(WHISPER_REPO, path), os.path.join(models, "whisper-ivrit-turbo", path), size, dry)
+            hf_download(WHISPER_REPO, whisper, path, os.path.join(models, "whisper-ivrit-turbo", path), dry)
     parakeet = hf_files(PARAKEET_REPO)
     for path in PARAKEET_FILES:
-        download(hf_url(PARAKEET_REPO, path), os.path.join(models, "parakeet-tdt-0.6b-v2-onnx", path), parakeet.get(path), dry)
+        hf_download(PARAKEET_REPO, parakeet, path, os.path.join(models, "parakeet-tdt-0.6b-v2-onnx", path), dry)
 
 
 def install_bluetts(root, dry):
@@ -347,9 +526,10 @@ def install_bluetts(root, dry):
             shutil.rmtree(tmp, ignore_errors=True)
             write_marker(dest, BLUETTS_COMMIT)
             say("    ✓ BlueTTS code")
-    for path, size in hf_files(BLUETTS_ONNX_REPO).items():
+    onnx = hf_files(BLUETTS_ONNX_REPO)
+    for path, (size, _) in onnx.items():
         if not path.startswith(".") and path != "README.md" and size:
-            download(hf_url(BLUETTS_ONNX_REPO, path), os.path.join(dest, "onnx_models", path), size, dry)
+            hf_download(BLUETTS_ONNX_REPO, onnx, path, os.path.join(dest, "onnx_models", path), dry)
 
 
 def get_uv(root, dry):
@@ -358,7 +538,8 @@ def get_uv(root, dry):
     if os.path.exists(uv):
         return uv
     z = os.path.join(root, "downloads", f"uv-{UV_VERSION}.zip")
-    download(f"https://github.com/astral-sh/uv/releases/download/{UV_VERSION}/uv-x86_64-pc-windows-msvc.zip", z, None, dry)
+    url, size, sha = github_assets("astral-sh/uv", UV_VERSION)["uv-x86_64-pc-windows-msvc.zip"]
+    download(url, z, size, dry, sha)
     if not dry:
         with zipfile.ZipFile(z) as f:
             f.extractall(os.path.dirname(uv))
@@ -442,16 +623,8 @@ def port_rule():
 
 def lan_subnet():
     """The home network, e.g. 192.168.1.0/24, for a firewall rule that only lets it in."""
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("10.255.255.255", 1))
-        ip = s.getsockname()[0]
-    except OSError:
-        return None
-    finally:
-        s.close()
-    return ".".join(ip.split(".")[:3]) + ".0/24"
+    ip = lan_address()
+    return ".".join(ip.split(".")[:3]) + ".0/24" if ip else None
 
 
 def ufw_active():
@@ -471,7 +644,7 @@ def setup_firewall_linux(dry):
         return
     say(f"    ufw is on. Puki needs TCP {PORT} open to your home network ({subnet}) only:")
     say(f"      {shlex.join(cmd)}")
-    if input("    Run it now (asks for your password)? [Y/n] ").strip().lower() in ("", "y", "yes"):
+    if UI.ask("    Run it now (asks for your password)?", default=True):
         r = subprocess.run(cmd)
         say("    ✓ firewall rule added" if r.returncode == 0 else "    ! that didn't work; run the command above yourself")
 
@@ -581,13 +754,38 @@ def start_puki(pythonw, doorbell, dry):
                 break
             time.sleep(0.5)
         say("    ✓ Puki is running" if port_open(PORT) else "    ! Puki didn't start; run  python brain/doorbell.py  to see why")
-    code_file = os.path.join(HERE, "pairing_code.txt")
-    if os.path.exists(code_file):
-        with open(code_file, encoding="utf-8") as f:
-            say(f"\n  Pairing code: {f.read().strip()}")
     import webbrowser
     webbrowser.open(DASHBOARD)
-    say(f"  The dashboard ({DASHBOARD}) shows it too, with a QR code.")
+    say(f"  The dashboard ({DASHBOARD}) shows the pairing code too.")
+
+
+def lan_address():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        return s.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+
+
+def pairing():
+    """The pairing code (made now if the doorbell hasn't run yet) and the link the app scans."""
+    code_file = os.path.join(HERE, "pairing_code.txt")
+    if not os.path.exists(code_file):
+        # Same format as the doorbell's: 8 characters without 0/O or 1/I
+        import secrets
+        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        raw = "".join(secrets.choice(alphabet) for _ in range(8))
+        with open(code_file, "w", encoding="utf-8") as f:
+            f.write(f"{raw[:4]}-{raw[4:]}\n")
+    with open(code_file, encoding="utf-8") as f:
+        code = f.read().strip()
+    ip = lan_address()
+    url = f"puki://pair?host={ip}:{PORT}&code={code.replace('-', '')}" if ip else None
+    return code, url
 
 
 def startup_folder():
@@ -705,7 +903,7 @@ def uninstall_windows_firewall(dry, ask):
 
 def uninstall(args, root):
     dry = args.dry_run
-    ask = lambda q: dry or args.yes or input(f"  {q} [y/N] ").strip().lower() in ("y", "yes")  # noqa: E731
+    ask = lambda q: dry or args.yes or UI.ask(f"  {q}", default=False)  # noqa: E731
     say("Puki: uninstall\n")
     step(1, "Stop Puki")
     stop_puki(root, dry)
@@ -776,13 +974,20 @@ def main():
                          "(12B when the GPU has room, E4B when it's busy). Default: asks, recommending 12b on a 12 GB+ GPU")
     ap.add_argument("--update", action="store_true", help="get the latest Puki and redo only what changed")
     ap.add_argument("--uninstall", action="store_true", help="stop Puki and remove everything it installed")
+    ap.add_argument("--gui", action="store_true", help="show the setup in a window (Puki.exe always does)")
     ap.add_argument("--only", help="run just these steps, e.g. --only firewall,autostart "
                     "(llama, models, bluetts, venv, config, firewall, autostart, start)")
     args = ap.parse_args()
+    if args.gui and UI.__class__ is ConsoleUI:
+        import setup_gui  # runs this same main() in a window
+        return setup_gui.run(sys.argv[1:])
     root = os.path.abspath(os.path.expanduser(args.dir))
+    if not args.dry_run:  # a dry run changes nothing, not even a log file
+        UI.open_log(os.path.join(root, "install.log"))
     dry = args.dry_run
     only = set(args.only.split(",")) if args.only else None
     run = lambda name: only is None or name in only  # noqa: E731
+    load_verified(root)
     if args.uninstall:
         return uninstall(args, root)
     if args.update:
@@ -811,22 +1016,29 @@ def main():
     model = args.model
     if model is None:
         default = "both" if big_gpu else "e4b"
-        say("\n  Which Gemma (Puki's mind)?")
-        say("    e4b   lighter and faster; fine on any PC (5.8 GB download)")
-        say("    12b   smarter, better Hebrew; needs about 9 GB of free GPU memory (6.9 GB download)")
-        say("    both  12B when the GPU has room, E4B when something else is using it (12.7 GB)")
-        if dry or args.yes:
-            model = default
-        else:
-            model = input(f"  [{default}] ").strip().lower() or default
-            if model not in ("e4b", "12b", "both"):
-                fail(f"unknown choice {model!r}")
+        options = [("e4b", "lighter and faster; fine on any PC (5.8 GB download)"),
+                   ("12b", "smarter, better Hebrew; needs about 9 GB of free GPU memory (6.9 GB download)"),
+                   ("both", "12B when the GPU has room, E4B when something else is using it (12.7 GB)")]
+        model = default if dry or args.yes else UI.choose("Which Gemma (Puki's mind)?", options, default)
         say(f"  Model:   {model}")
     if model in ("12b", "both") and not big_gpu:
         say("  ! Without a GPU with 12 GB or more, the 12B runs on the CPU and answers slowly.")
     say("\n  Gemma is subject to Google's Gemma terms of use: https://ai.google.dev/gemma/terms")
+
+    # The plan: what's missing, how big, and about how long it takes
+    if not dry:
+        UI.quiet = True
+        try:
+            for name, fn in (("llama", lambda: install_llama(root, gpu, True)), ("models", lambda: install_models(root, model, True)),
+                             ("bluetts", lambda: install_bluetts(root, True))):
+                if run(name):
+                    fn()
+        finally:
+            UI.quiet = False
+        say(f"\n  To download: {PLAN['total'] / 1e9:.1f} GB" + (estimate() if PLAN["total"] > 100e6 else "")
+            + ("" if os.path.exists(os.path.join(root, VENV_PY)) else ", plus Python packages (1 to 3 GB)"))
     if not dry and not args.yes:
-        if input("\n  Start? [Y/n] ").strip().lower() not in ("", "y", "yes"):
+        if not UI.ask("\n  Start?", default=True):
             return
 
     py = os.path.join(root, VENV_PY)
@@ -853,8 +1065,30 @@ def main():
         say("    skipped")
     step(8, "Start Puki")
     start_puki(pythonw, doorbell, dry) if run("start") and not args.no_start else say("    skipped")
-    say("\nDone. In the app, open parent settings (long-press the gear) and scan the QR code or")
-    say("type the PC address and pairing code. The first reply takes about 30 seconds while Puki wakes up.")
+    if dry:
+        return
+    say("\nDone. In the app, open parent settings (long-press the gear) and scan the QR code, or type")
+    say(f"this PC's address ({lan_address()}:{PORT}) and the pairing code. The first reply takes about")
+    say("30 seconds while Puki wakes up.")
+    UI.finish(*pairing())
+
+
+def estimate():
+    """", about N minutes at X MB/s", from a short speed test on the biggest download."""
+    if not PLAN["files"]:
+        return ""
+    url = max(PLAN["files"], key=lambda f: f[1])[0]
+    try:
+        req = urllib.request.Request(url, headers=dict(UA, Range="bytes=0-8388607"))
+        start = time.time()
+        with urllib.request.urlopen(req, timeout=20) as r:
+            got = len(r.read())
+        speed = got / max(time.time() - start, 0.05)
+    except Exception:
+        return ""
+    minutes = PLAN["total"] / speed / 60
+    when = f"about {minutes:.0f} minutes" if minutes >= 2 else "a minute or two"
+    return f", {when} at {speed / 1e6:.0f} MB/s"
 
 
 if __name__ == "__main__":

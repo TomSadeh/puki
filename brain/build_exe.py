@@ -51,7 +51,7 @@ def main():
            "--distpath", os.path.join(HERE, "dist"), "--workpath", os.path.join(BUILD, "work"),
            "--specpath", BUILD, "--paths", HERE,
            "--hidden-import", "doorbell", "--hidden-import", "dashboard", "--hidden-import", "qr",
-           "--hidden-import", "install", "--hidden-import", "pystray._win32"]
+           "--hidden-import", "install", "--hidden-import", "setup_gui", "--hidden-import", "pystray._win32"]
     for d in data:
         cmd += ["--add-data", d]
     run(*cmd, os.path.join(HERE, "tray.py"))
