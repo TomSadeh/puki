@@ -187,6 +187,18 @@ voice_lines = [
     ("voice_prompt_count_along", "Let's count together!", ("בואי נספור ביחד!", "בוא נספור ביחד!")),
     ("voice_prompt_how_many", "How many are there?", "כמה יש?"),
     ("voice_prompt_whose_shadow", "Whose shadow is this?", "של מי הצל הזה?"),
+    # --- Kitchen: baking a cake ---
+    ("voice_cook_lets_bake", "Let's bake a cake! Put everything in the bowl.", ("בואי נאפה עוגה! תשימי הכול בקערה.", "בוא נאפה עוגה! תשים הכול בקערה.")),
+    ("voice_cook_add", "Put everything in the bowl!", ("תשימי הכול בקערה!", "תשים הכול בקערה!")),
+    ("voice_cook_flour", "Flour", "זה קמח."),
+    ("voice_cook_sugar", "Sugar", "זה סוכר."),
+    ("voice_cook_eggs", "Eggs", "אלה ביצים."),
+    ("voice_cook_milk", "Milk", "זה חלב."),
+    ("voice_cook_stir", "Now stir, round and round!", ("עכשיו תערבבי, סביב סביב!", "עכשיו תערבב, סביב סביב!")),
+    ("voice_cook_oven", "Into the oven! Tap the oven.", ("עכשיו לתנור! תלחצי על התנור.", "עכשיו לתנור! תלחץ על התנור.")),
+    ("voice_cook_ready", "Ding! The cake is ready!", "דינג! העוגה מוכנה!"),
+    ("voice_cook_decorate", "Let's decorate the cake!", ("בואי נקשט את העוגה!", "בוא נקשט את העוגה!")),
+    ("voice_cook_yum", "Yummy! What a delicious cake!", "יאמי! איזו עוגה טעימה!"),
 
     # --- My Day prompts ---
     ("voice_prompt_bath", "Let's take a bath!", ("בואי נתרחץ!", "בוא נתרחץ!")),

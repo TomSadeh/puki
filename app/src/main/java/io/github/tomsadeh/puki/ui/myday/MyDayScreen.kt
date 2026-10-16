@@ -70,12 +70,13 @@ private val rooms = listOf(
     RoomDef(Routes.MY_DAY_TIDY, BilingualText("סידור חדר", "Tidy Up"), R.drawable.ic_tidy_teddy, Color(0xFFFFCC80)),
     RoomDef(Routes.MY_DAY_DRESS, BilingualText("להתלבש", "Getting Dressed"), R.drawable.ic_clothing_shirt, Color(0xFFEF9A9A)),
     RoomDef(Routes.MY_DAY_TABLE, BilingualText("ארוחה", "Table Time"), R.drawable.ic_table_plate, Color(0xFFA5D6A7)),
-    RoomDef(Routes.MY_DAY_BEDTIME, BilingualText("שינה", "Bedtime"), R.drawable.ic_bedtime_moon, Color(0xFF7E57C2))
+    RoomDef(Routes.MY_DAY_BEDTIME, BilingualText("שינה", "Bedtime"), R.drawable.ic_bedtime_moon, Color(0xFF7E57C2)),
+    RoomDef(Routes.MY_DAY_KITCHEN, BilingualText("מטבח", "Kitchen"), R.drawable.ic_myday_cake, Color(0xFFFFAB91))
 )
 
-// Upstairs are the bedroom rooms, downstairs the bathroom and kitchen
-private val upstairs = listOf(rooms[2], rooms[3], rooms[5])
-private val downstairs = listOf(rooms[0], rooms[1], rooms[4])
+// Upstairs: toys, dressing, teeth and bed; downstairs: the bath, the table and the kitchen
+private val upstairs = listOf(rooms[2], rooms[3], rooms[1], rooms[5])
+private val downstairs = listOf(rooms[0], rooms[4], rooms[6])
 
 // The house occupies this part of the screen (fractions of width / height)
 private const val HOUSE_LEFT = 0.12f
@@ -114,7 +115,7 @@ fun MyDayScreen(
                     .idleBob(amount = 1.2f)
             )
 
-            // Rooms, laid out inside the house walls as a 2 x 3 cutaway
+            // Rooms, laid out inside the house walls as a cutaway, two floors
             val left = maxWidth * HOUSE_LEFT
             val top = maxHeight * WALL_TOP
             val width = maxWidth * (HOUSE_RIGHT - HOUSE_LEFT)
@@ -134,7 +135,7 @@ fun MyDayScreen(
                         floor.forEachIndexed { i, room ->
                             RoomButton(
                                 room = room,
-                                index = f * 3 + i,
+                                index = f * 4 + i,
                                 onClick = { onRoomClick(room.route) },
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             )

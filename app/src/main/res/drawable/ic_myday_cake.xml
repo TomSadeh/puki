@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="100dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <!-- Plate -->
+    <path android:fillColor="#E0E0E0" android:pathData="M8,88 A42,7 0 1,0 92,88 A42,7 0 1,0 8,88 Z"/>
+    <!-- Sponge and the cream layer -->
+    <path android:fillColor="#D7A15E" android:pathData="M16,52 L84,52 L84,86 L16,86 Z"/>
+    <path android:fillColor="#FFF59D" android:pathData="M16,68 L84,68 L84,72 L16,72 Z"/>
+    <!-- Pink icing with drips -->
+    <path android:fillColor="#F48FB1" android:pathData="M14,52 A36,10 0 1,0 86,52 A36,10 0 1,0 14,52 Z"/>
+    <path android:fillColor="#F48FB1" android:pathData="M22,54 L28,54 L28,64 A3,3 0 0,1 22,64 Z"/>
+    <path android:fillColor="#F48FB1" android:pathData="M46,56 L52,56 L52,68 A3,3 0 0,1 46,68 Z"/>
+    <path android:fillColor="#F48FB1" android:pathData="M70,54 L76,54 L76,62 A3,3 0 0,1 70,62 Z"/>
+    <!-- A candle and its flame -->
+    <path android:fillColor="#64B5F6" android:pathData="M46,24 L54,24 L54,48 L46,48 Z"/>
+    <path android:fillColor="#FFB300" android:pathData="M50,8 Q57,16 50,22 Q43,16 50,8 Z"/>
+    <!-- Strawberries -->
+    <path android:fillColor="#E53935" android:pathData="M26,48 A6,6 0 1,0 38,48 A6,6 0 1,0 26,48 Z"/>
+    <path android:fillColor="#E53935" android:pathData="M62,48 A6,6 0 1,0 74,48 A6,6 0 1,0 62,48 Z"/>
+</vector>
