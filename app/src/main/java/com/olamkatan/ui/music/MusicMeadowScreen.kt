@@ -1,5 +1,9 @@
 package com.olamkatan.ui.music
 
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.common.LocalCompanion
 import android.app.Application
 import androidx.compose.animation.core.animateFloatAsState
@@ -167,6 +171,7 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
     }
 
     GameBackground(
+            scene = Scene.STAGE,
         colors = listOf(Color(0xFFFFF3E0), Color(0xFFFFE0B2), Color(0xFFFFCC80))
     ) {
         Column(
@@ -182,16 +187,14 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = when (state.phase) {
+            PromptBubble(
+                when (state.phase) {
                     MusicPhase.FREE_PLAY -> BilingualText("תלחץ על הכלים ותנגן!", "Tap the instruments and play!", heGirl = "תלחצי על הכלים ותנגני!").localized()
                     MusicPhase.SHOW_PATTERN -> BilingualText("תקשיב ותזכור...", "Listen and remember...", heGirl = "תקשיבי ותזכרי...").localized()
                     MusicPhase.PLAYER_TURN -> BilingualText("עכשיו תורך!", "Your turn!").resolve(language)
                     MusicPhase.SUCCESS -> BilingualText("מצוין!", "Awesome!").resolve(language)
                     MusicPhase.SESSION_COMPLETE -> ""
-                },
-                style = MaterialTheme.typography.titleLarge,
-                color = EarthBrown
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -216,10 +219,13 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
                         label = "inst_scale"
                     )
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.popIn(index).then(if (isHighlighted) Modifier else Modifier.idleBob(index, 0.7f))
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(150.dp)
+                                .size(180.dp)
                                 .graphicsLayer { scaleX = scale; scaleY = scale }
                                 .shadow(if (isHighlighted) 16.dp else 8.dp, RoundedCornerShape(24.dp))
                                 .clip(RoundedCornerShape(24.dp))
@@ -251,13 +257,13 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
                                 androidx.compose.foundation.Image(
                                     painter = androidx.compose.ui.res.painterResource(id = instrument.drawableRes),
                                     contentDescription = instrument.name.en,
-                                    modifier = androidx.compose.ui.Modifier.size(110.dp)
+                                    modifier = androidx.compose.ui.Modifier.size(135.dp)
                                 )
                             } else {
                                 Text(instrument.emoji, fontSize = 52.sp)
                             }
                         }
-                        Text(instrument.name.resolve(language), style = MaterialTheme.typography.labelLarge, color = EarthBrown)
+                        Text(instrument.name.resolve(language), style = MaterialTheme.typography.titleMedium, color = CloudWhite, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
             }

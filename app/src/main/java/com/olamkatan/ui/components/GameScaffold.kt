@@ -44,6 +44,8 @@ fun GameBackground(
     withBubbles: Boolean = true,
     /** False where the game shows Puki itself (Say it with Puki). */
     withCompanion: Boolean = true,
+    /** An illustrated backdrop; replaces the plain gradient. */
+    scene: Scene? = null,
     content: @Composable () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "bg_anim")
@@ -58,15 +60,16 @@ fun GameBackground(
     )
 
     Box(modifier = modifier.fillMaxSize()) {
+        if (scene != null) SceneBackdrop(scene)
         // Gradient background
-        Box(
+        if (scene == null) Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Brush.verticalGradient(colors))
         )
 
         // Floating decorative circles
-        if (withBubbles) {
+        if (withBubbles && scene == null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -130,9 +133,9 @@ fun GameTopBar(
         // Back button with soft circle
         Box(
             modifier = Modifier
-                .size(52.dp)
+                .size(60.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.25f))
+                .background(Color.Black.copy(alpha = 0.22f))
                 .clickable { onBack() },
             contentAlignment = Alignment.Center
         ) {
@@ -156,7 +159,7 @@ fun GameTopBar(
                             when {
                                 i < roundIndex -> Color(0xFFFFD700)
                                 i == roundIndex -> Color.White
-                                else -> Color.White.copy(alpha = 0.35f)
+                                else -> Color.Black.copy(alpha = 0.18f)
                             }
                         )
                 )
@@ -167,8 +170,8 @@ fun GameTopBar(
         Box(
             modifier = Modifier
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.2f))
-                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .background(Color.Black.copy(alpha = 0.22f))
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),

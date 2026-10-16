@@ -1,5 +1,11 @@
 package com.olamkatan.ui.words
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.lerp
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.reaction
 import com.olamkatan.ui.components.rememberReactionState
@@ -70,6 +76,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/** Toy-block colors for the letters. */
+private val LETTER_BLOCKS = listOf(Color(0xFFEF5350), Color(0xFF42A5F5), Color(0xFF66BB6A), Color(0xFFFFA726), Color(0xFFAB47BC))
 
 data class WordState(
     val targetLetter: LetterDef = hebrewLetters[0],
@@ -151,6 +160,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
     }
 
     GameBackground(
+            scene = Scene.GARDEN,
         colors = listOf(Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFFA5D6A7))
     ) {
         Column(
@@ -173,7 +183,12 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                         painter = painterResource(state.targetLetter.exampleIcon),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(96.dp)
+                            .popIn(key = state.roundIndex)
+                            .size(170.dp)
+                            .shadow(8.dp, RoundedCornerShape(32.dp))
+                            .clip(RoundedCornerShape(32.dp))
+                            .background(Color.White)
+                            .padding(20.dp)
                             .clickable {
                                 val letter = state.targetLetter
                                 val fallback = { voicePlayer.play("voice_letter_${letter.id}", language) }
@@ -187,10 +202,9 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                         style = MaterialTheme.typography.titleLarge,
                         color = EarthBrown
                     )
-                    Text(
-                        BilingualText("תמצא את: ${state.targetLetter.hebrewLetter}", "Find: ${state.targetLetter.englishLetter}", heGirl = "תמצאי את: ${state.targetLetter.hebrewLetter}").localized(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = EarthBrown
+                    Spacer(Modifier.height(8.dp))
+                    PromptBubble(
+                        BilingualText("תמצא את: ${state.targetLetter.hebrewLetter}", "Find: ${state.targetLetter.englishLetter}", heGirl = "תמצאי את: ${state.targetLetter.hebrewLetter}").localized()
                     )
                 }
             }
@@ -203,7 +217,8 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                state.letterChoices.forEach { letter ->
+                state.letterChoices.forEachIndexed { index, letter ->
+                    val block = LETTER_BLOCKS[index % LETTER_BLOCKS.size]
                     val letterReaction = rememberReactionState(state.roundIndex, letter.id)
                     val interactionSource = remember(letter.id) { MutableInteractionSource() }
                     val isPressed by interactionSource.collectIsPressedAsState()
@@ -215,13 +230,15 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
 
                     Box(
                         modifier = Modifier
+                            .popIn(index, state.roundIndex)
+                            .idleBob(index)
                             .reaction(letterReaction)
-                            .size(120.dp)
+                            .size(160.dp)
                             .graphicsLayer { scaleX = scale; scaleY = scale }
-                            .shadow(8.dp, RoundedCornerShape(24.dp))
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White)
-                            .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                            .shadow(10.dp, RoundedCornerShape(32.dp))
+                            .clip(RoundedCornerShape(32.dp))
+                            .background(Brush.verticalGradient(listOf(lerp(block, Color.White, 0.25f), block, lerp(block, Color.Black, 0.2f))))
+                            .border(5.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(32.dp))
                             .clickable(interactionSource = interactionSource, indication = null) {
                                 val correct = viewModel.onLetterTapped(letter.id)
                                 if (correct) {
@@ -246,7 +263,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                             Language.HEBREW -> letter.hebrewLetter
                             Language.ENGLISH -> letter.englishLetter
                         }
-                        Text(displayLetter, fontSize = 56.sp, color = EarthBrown)
+                        Text(displayLetter, fontSize = 88.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.say
 
+import com.olamkatan.ui.components.Scene
 import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
@@ -214,6 +215,7 @@ fun SayItScreen(onBack: () -> Unit, viewModel: SayItViewModel = viewModel()) {
     }
 
     GameBackground(
+            scene = Scene.SUNSET,
         colors = listOf(Color(0xFFFFF59D), Color(0xFFFFE082), Color(0xFFFFCC80), Color(0xFFFFB74D)),
         withCompanion = false
     ) {

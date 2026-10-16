@@ -1,5 +1,9 @@
 package com.olamkatan.ui.myday.bath
 
+import androidx.compose.foundation.border
+import com.olamkatan.ui.components.idleBob
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.annotation.DrawableRes
@@ -111,6 +115,7 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(
+            scene = Scene.BATH,
             colors = listOf(Color(0xFFB3E5FC), Color(0xFF81D4FA), Color(0xFF4FC3F7))
         ) {
             Column(
@@ -126,11 +131,11 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
                         modifier = Modifier
                             .size(52.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.25f))
+                            .background(Color.Black.copy(alpha = 0.22f))
                             .clickable { onBack() },
                         contentAlignment = Alignment.Center
                     ) { BackArrowIcon() }
-                    Text(BilingualText("אמבטיה", "Bath Time").resolve(language), style = MaterialTheme.typography.headlineMedium, color = CloudWhite)
+                    PromptBubble(BilingualText("אמבטיה", "Bath Time").resolve(language))
                     Spacer(modifier = Modifier.width(52.dp))
                 }
 
@@ -138,7 +143,7 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
 
                 // Body parts as drop zones
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -146,15 +151,17 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
                         DropZone(zoneId = part.id) {
                             Box(
                                 modifier = Modifier
-                                    .size(100.dp)
-                                    .shadow(4.dp, RoundedCornerShape(16.dp))
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (part.cleaned) Color(0xFFE1F5FE) else Color(0xFF8D6E63)),
+                                    .idleBob(state.bodyParts.indexOf(part), 0.5f)
+                                    .size(170.dp)
+                                    .shadow(8.dp, RoundedCornerShape(32.dp))
+                                    .clip(RoundedCornerShape(32.dp))
+                                    .background(if (part.cleaned) Color.White else Color(0xFFBCAAA4))
+                                    .border(6.dp, if (part.cleaned) Color(0xFF81D4FA) else Color(0xFF8D6E63), RoundedCornerShape(32.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(painter = painterResource(part.icon), contentDescription = null, modifier = Modifier.size(52.dp))
-                                    if (part.cleaned) Image(painter = painterResource(R.drawable.ic_myday_sparkle), contentDescription = null, modifier = Modifier.size(22.dp))
+                                    Image(painter = painterResource(part.icon), contentDescription = null, modifier = Modifier.size(110.dp))
+                                    if (part.cleaned) Image(painter = painterResource(R.drawable.ic_myday_sparkle), contentDescription = null, modifier = Modifier.size(34.dp))
                                 }
                             }
                         }
@@ -192,9 +199,9 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
                         }
                     ) {
                         Box(
-                            modifier = Modifier.size(100.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Color(0xFFFFF9C4)),
+                            modifier = Modifier.idleBob(0).size(140.dp).shadow(8.dp, CircleShape).clip(CircleShape).background(Color(0xFFFFF9C4)),
                             contentAlignment = Alignment.Center
-                        ) { Image(painter = painterResource(R.drawable.ic_myday_soap), contentDescription = null, modifier = Modifier.size(66.dp)) }
+                        ) { Image(painter = painterResource(R.drawable.ic_myday_soap), contentDescription = null, modifier = Modifier.size(96.dp)) }
                     }
                 }
 

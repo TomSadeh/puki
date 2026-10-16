@@ -1,5 +1,7 @@
 package com.olamkatan.ui.myday.table
 
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.annotation.DrawableRes
@@ -101,6 +103,7 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(
+            scene = Scene.HOME,
             colors = listOf(Color(0xFFC8E6C9), Color(0xFFA5D6A7), Color(0xFF81C784))
         ) {
             Column(
@@ -116,11 +119,11 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
                         modifier = Modifier
                             .size(52.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.25f))
+                            .background(Color.Black.copy(alpha = 0.22f))
                             .clickable { onBack() },
                         contentAlignment = Alignment.Center
                     ) { BackArrowIcon() }
-                    Text(BilingualText("ארוחה", "Table Time").resolve(language), style = MaterialTheme.typography.headlineMedium, color = CloudWhite)
+                    PromptBubble(BilingualText("ארוחה", "Table Time").resolve(language))
                     Spacer(modifier = Modifier.width(52.dp))
                 }
 
@@ -144,13 +147,13 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
                             DropZone(zoneId = item.id) {
                                 Box(
                                     modifier = Modifier
-                                        .size(80.dp)
+                                        .size(130.dp)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(if (item.placed) Color.White else Color.White.copy(alpha = 0.3f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (item.placed) {
-                                        Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(52.dp))
+                                        Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(90.dp))
                                     } else {
                                         Text("?", fontSize = 28.sp, color = Color.Gray)
                                     }
@@ -185,14 +188,14 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(90.dp)
+                                    .size(140.dp)
                                     .shadow(6.dp, RoundedCornerShape(20.dp))
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(Color.White),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(56.dp))
+                                    Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(100.dp))
                                     Text(item.name.resolve(language), fontSize = 10.sp, color = EarthBrown)
                                 }
                             }

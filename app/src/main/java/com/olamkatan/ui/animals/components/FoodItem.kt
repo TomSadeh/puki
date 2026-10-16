@@ -1,5 +1,13 @@
 package com.olamkatan.ui.animals.components
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import com.olamkatan.ui.components.idleBob
 import com.olamkatan.ui.common.LocalVoicePlayer
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
@@ -36,18 +44,30 @@ fun FoodItem(
             modifier = Modifier.padding(8.dp)
         ) {
             if (food.drawableRes != 0) {
-                Image(
-                    painter = painterResource(id = food.drawableRes),
-                    contentDescription = food.name.en,
-                    modifier = Modifier.size(140.dp)
-                )
+                // On a plate, so it reads as something to pick up
+                Box(
+                    modifier = Modifier
+                        .idleBob(food.id.length)
+                        .size(150.dp)
+                        .shadow(6.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.9f))
+                        .border(6.dp, Color(0xFFFFE0B2), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = food.drawableRes),
+                        contentDescription = food.name.en,
+                        modifier = Modifier.size(115.dp)
+                    )
+                }
             } else {
                 Text(text = food.emoji, fontSize = 56.sp)
             }
             Text(
                 text = food.name.resolve(language),
-                fontSize = 14.sp,
-                color = CloudWhite,
+                fontSize = 16.sp,
+                color = Color(0xFF33691E),
                 modifier = Modifier.padding(top = 4.dp)
             )
         }

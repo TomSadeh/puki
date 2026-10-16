@@ -1,5 +1,9 @@
 package com.olamkatan.ui.counting
 
+import androidx.compose.ui.graphics.ColorFilter
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.reaction
 import com.olamkatan.ui.components.ReactionState
@@ -89,6 +93,7 @@ fun CountingGardenScreen(
     }
 
     GameBackground(
+            scene = Scene.GARDEN,
         colors = listOf(Color(0xFFC8E6C9), Color(0xFFA5D6A7), Color(0xFF81C784))
     ) {
         Column(
@@ -104,13 +109,24 @@ fun CountingGardenScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Big number display
-            Text(
-                text = "${state.currentCount}",
-                fontSize = 80.sp,
-                color = CloudWhite,
-                style = MaterialTheme.typography.headlineLarge
-            )
+            // Big number in a sun; it bounces with every count
+            Box(
+                modifier = Modifier
+                    .popIn(key = state.currentCount)
+                    .size(110.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(Color(0xFFFFF59D), Color(0xFFFFCA28))))
+                    .border(BorderStroke(5.dp, Color.White), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${state.currentCount}",
+                    fontSize = 64.sp,
+                    color = Color(0xFF5D4037),
+                    style = MaterialTheme.typography.headlineLarge
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -120,9 +136,10 @@ fun CountingGardenScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 32.dp)
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(Brush.verticalGradient(listOf(Color(0xFFE8F5E9), Color(0xFFA5D6A7))))
-                    .border(BorderStroke(6.dp, Color.White.copy(alpha = 0.8f)), RoundedCornerShape(32.dp)),
+                    .shadow(10.dp, RoundedCornerShape(40.dp))
+                    .clip(RoundedCornerShape(40.dp))
+                    .background(Brush.verticalGradient(listOf(Color(0xFFD7B899), Color(0xFFBC9A78), Color(0xFFA1887F))))
+                    .border(BorderStroke(10.dp, Color(0xFF8BC34A)), RoundedCornerShape(40.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 // A faded outline for every item to count; each tap fills the next one in
@@ -151,7 +168,9 @@ fun CountingGardenScreen(
                                 .size(itemSize)
                                 .reaction(itemReactions[i])
                                 .graphicsLayer { scaleX = itemScale; scaleY = itemScale }
-                                .alpha(if (filled) 1f else 0.22f)
+                                .then(if (filled) Modifier.idleBob(i, 0.6f) else Modifier.alpha(0.55f)),
+                            // Still to count: a soft white silhouette
+                            colorFilter = if (filled) null else ColorFilter.tint(Color.White)
                         )
                     }
                 }

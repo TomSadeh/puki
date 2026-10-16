@@ -1,5 +1,7 @@
 package com.olamkatan.ui.myday.tidy
 
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.annotation.DrawableRes
@@ -110,6 +112,7 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(
+            scene = Scene.HOME,
             colors = listOf(Color(0xFFFFE0B2), Color(0xFFFFCC80), Color(0xFFFFB74D))
         ) {
             Column(
@@ -125,11 +128,11 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
                         modifier = Modifier
                             .size(52.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.25f))
+                            .background(Color.Black.copy(alpha = 0.22f))
                             .clickable { onBack() },
                         contentAlignment = Alignment.Center
                     ) { BackArrowIcon() }
-                    Text(BilingualText("סידור חדר", "Tidy Up").resolve(language), style = MaterialTheme.typography.headlineMedium, color = CloudWhite)
+                    PromptBubble(BilingualText("סידור חדר", "Tidy Up").resolve(language))
                     Spacer(modifier = Modifier.width(52.dp))
                 }
 
@@ -144,14 +147,14 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
                         DropZone(zoneId = home.id) {
                             Box(
                                 modifier = Modifier
-                                    .size(90.dp)
+                                    .size(140.dp)
                                     .shadow(4.dp, RoundedCornerShape(16.dp))
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color.White.copy(alpha = 0.8f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Image(painter = painterResource(home.icon), contentDescription = null, modifier = Modifier.size(50.dp))
+                                    Image(painter = painterResource(home.icon), contentDescription = null, modifier = Modifier.size(90.dp))
                                     Text(home.name.resolve(language), fontSize = 10.sp, color = EarthBrown)
                                 }
                             }
@@ -184,12 +187,12 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(90.dp)
+                                    .size(140.dp)
                                     .shadow(6.dp, RoundedCornerShape(20.dp))
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(Color(0xFFFFF3E0)),
                                 contentAlignment = Alignment.Center
-                            ) { Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(62.dp)) }
+                            ) { Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(100.dp)) }
                         }
                     }
                 }

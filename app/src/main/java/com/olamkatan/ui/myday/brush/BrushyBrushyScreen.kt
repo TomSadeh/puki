@@ -1,5 +1,7 @@
 package com.olamkatan.ui.myday.brush
 
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.compose.animation.core.RepeatMode
@@ -99,6 +101,7 @@ fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = vi
     }
 
     GameBackground(
+            scene = Scene.BATH,
         colors = listOf(Color(0xFFB2EBF2), Color(0xFF80DEEA), Color(0xFF4DD0E1))
     ) {
         Column(
@@ -114,11 +117,11 @@ fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = vi
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.25f))
+                        .background(Color.Black.copy(alpha = 0.22f))
                         .clickable { onBack() },
                     contentAlignment = Alignment.Center
                 ) { BackArrowIcon() }
-                Text(BilingualText("צחצוח שיניים", "Brushy Brushy").resolve(language), style = MaterialTheme.typography.headlineMedium, color = CloudWhite)
+                PromptBubble(BilingualText("צחצוח שיניים", "Brushy Brushy").resolve(language))
                 Spacer(modifier = Modifier.width(52.dp))
             }
 
@@ -140,7 +143,7 @@ fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = vi
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     // Top teeth
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         for (i in 0..3) {
                             Tooth(
                                 isClean = state.teeth[i],
@@ -152,7 +155,7 @@ fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = vi
                         }
                     }
                     // Bottom teeth
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         for (i in 4..7) {
                             Tooth(
                                 isClean = state.teeth[i],
@@ -170,11 +173,7 @@ fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = vi
 
             // Toothbrush
             Image(painter = painterResource(R.drawable.ic_myday_toothbrush), contentDescription = null, modifier = Modifier.size(84.dp))
-            Text(
-                BilingualText("תלחץ על כל שן!", "Tap each tooth!", heGirl = "תלחצי על כל שן!").localized(),
-                style = MaterialTheme.typography.bodyLarge,
-                color = CloudWhite
-            )
+            PromptBubble(BilingualText("תלחץ על כל שן!", "Tap each tooth!", heGirl = "תלחצי על כל שן!").localized())
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -199,16 +198,16 @@ private fun Tooth(isClean: Boolean, onClick: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .size(60.dp, 70.dp)
+            .size(110.dp, 130.dp)
             .graphicsLayer { rotationZ = wiggle }
-            .shadow(4.dp, RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (isClean) Color.White else Color(0xFFFFF9C4))
+            .shadow(6.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 40.dp, bottomEnd = 40.dp))
+            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 40.dp, bottomEnd = 40.dp))
+            .background(if (isClean) Color.White else Color(0xFFFFE082))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         if (isClean) {
-            Image(painter = painterResource(R.drawable.ic_myday_sparkle), contentDescription = null, modifier = Modifier.size(34.dp))
+            Image(painter = painterResource(R.drawable.ic_myday_sparkle), contentDescription = null, modifier = Modifier.size(60.dp))
         }
     }
 }

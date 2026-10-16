@@ -1,5 +1,12 @@
 package com.olamkatan.ui.shapes
 
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PathEffect
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.reaction
 import com.olamkatan.ui.components.rememberReactionState
@@ -84,6 +91,7 @@ fun ShapePlaygroundScreen(
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(
+            scene = Scene.PLAYGROUND,
             colors = listOf(Color(0xFFBBDEFB), Color(0xFF90CAF9), Color(0xFF64B5F6))
         ) {
             Column(
@@ -99,14 +107,12 @@ fun ShapePlaygroundScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = BilingualText(
+                PromptBubble(
+                    BilingualText(
                         "תזיז את ה${state.targetShape.name.he}!",
                         "Drag the ${state.targetShape.name.en}!",
                         heGirl = "תזיזי את ה${state.targetShape.name.he}!"
-                    ).localized(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = CloudWhite
+                    ).localized()
                 )
 
                 // Target outline (drop zone) in center
@@ -115,7 +121,7 @@ fun ShapePlaygroundScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     DropZone(zoneId = "target") {
-                        Canvas(modifier = Modifier.size(150.dp).reaction(targetReaction)) {
+                        Canvas(modifier = Modifier.size(230.dp).reaction(targetReaction)) {
                             drawShapeOutline(state.targetShape, size)
                         }
                     }
@@ -124,10 +130,10 @@ fun ShapePlaygroundScreen(
                 // Draggable shapes at bottom
                 if (!state.roundComplete) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(36.dp),
                         modifier = Modifier.padding(bottom = 16.dp)
                     ) {
-                        state.shapeChoices.forEach { shape ->
+                        state.shapeChoices.forEachIndexed { index, shape ->
                             val shapeReaction = rememberReactionState(state.roundIndex, shape.id)
                             DragTarget(
                                 itemId = shape.id,
@@ -153,7 +159,7 @@ fun ShapePlaygroundScreen(
                                     }
                                 }
                             ) {
-                                Canvas(modifier = Modifier.size(100.dp).reaction(shapeReaction)) {
+                                Canvas(modifier = Modifier.size(140.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)) {
                                     drawShapeFilled(shape, size)
                                 }
                             }
@@ -178,25 +184,63 @@ fun ShapePlaygroundScreen(
 private fun DrawScope.drawShapeOutline(shape: ShapeDef, canvasSize: Size) {
     val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
     val radius = canvasSize.minDimension / 2 * 0.8f
-    when (shape.sides) {
-        0 -> drawCircle(shape.color, radius, center, style = Stroke(width = 4f))
-        else -> {
-            val path = polygonPath(center, radius, shape.sides)
-            drawPath(path, shape.color, style = Stroke(width = 4f))
-        }
+    // A soft "hole" with a dashed rim, where the shape goes
+    val dash = Stroke(width = 10f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(26f, 18f)))
+    val path = shapePath(shape, center, radius)
+    if (path == null) {
+        drawCircle(Color.White.copy(alpha = 0.45f), radius, center)
+        drawCircle(shape.color, radius, center, style = dash)
+    } else {
+        drawPath(path, Color.White.copy(alpha = 0.45f))
+        drawPath(path, shape.color, style = dash)
     }
 }
 
 private fun DrawScope.drawShapeFilled(shape: ShapeDef, canvasSize: Size) {
     val center = Offset(canvasSize.width / 2, canvasSize.height / 2)
     val radius = canvasSize.minDimension / 2 * 0.8f
-    when (shape.sides) {
-        0 -> drawCircle(shape.color, radius, center)
-        else -> {
-            val path = polygonPath(center, radius, shape.sides)
-            drawPath(path, shape.color)
-        }
+    // Chunky toy pieces: a shadow, a top-lit fill and a white rim
+    val fill = Brush.verticalGradient(listOf(lerp(shape.color, Color.White, 0.3f), shape.color, lerp(shape.color, Color.Black, 0.15f)))
+    val shadow = Offset(0f, 8f)
+    val path = shapePath(shape, center, radius)
+    if (path == null) {
+        drawCircle(Color.Black.copy(alpha = 0.15f), radius, center + shadow)
+        drawCircle(fill, radius, center)
+        drawCircle(Color.White.copy(alpha = 0.8f), radius, center, style = Stroke(width = 6f))
+    } else {
+        drawPath(shapePath(shape, center + shadow, radius)!!, Color.Black.copy(alpha = 0.15f))
+        drawPath(path, fill)
+        drawPath(path, Color.White.copy(alpha = 0.8f), style = Stroke(width = 6f))
     }
+}
+
+/** The outline of [shape] (null for a circle). Square sits flat, diamond stands on a point. */
+private fun shapePath(shape: ShapeDef, c: Offset, r: Float): Path? = when (shape.id) {
+    "circle" -> null
+    "square" -> Path().apply {
+        val h = r * 0.78f
+        moveTo(c.x - h, c.y - h); lineTo(c.x + h, c.y - h); lineTo(c.x + h, c.y + h); lineTo(c.x - h, c.y + h); close()
+    }
+    "diamond" -> Path().apply {
+        moveTo(c.x, c.y - r); lineTo(c.x + r * 0.72f, c.y); lineTo(c.x, c.y + r); lineTo(c.x - r * 0.72f, c.y); close()
+    }
+    "heart" -> Path().apply {
+        moveTo(c.x, c.y + r * 0.9f)
+        cubicTo(c.x - r * 1.35f, c.y + r * 0.05f, c.x - r * 0.8f, c.y - r * 1.1f, c.x, c.y - r * 0.42f)
+        cubicTo(c.x + r * 0.8f, c.y - r * 1.1f, c.x + r * 1.35f, c.y + r * 0.05f, c.x, c.y + r * 0.9f)
+        close()
+    }
+    "star" -> Path().apply {
+        for (i in 0 until 10) {
+            val rr = if (i % 2 == 0) r else r * 0.45f
+            val a = (i * 36f - 90f) * Math.PI.toFloat() / 180f
+            val x = c.x + cos(a) * rr
+            val y = c.y + sin(a) * rr + r * 0.08f
+            if (i == 0) moveTo(x, y) else lineTo(x, y)
+        }
+        close()
+    }
+    else -> polygonPath(c, r, shape.sides)
 }
 
 private fun polygonPath(center: Offset, radius: Float, sides: Int): Path {

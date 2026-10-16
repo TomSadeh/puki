@@ -1,5 +1,7 @@
 package com.olamkatan.ui.myday.dress
 
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
 import android.app.Application
 import androidx.annotation.DrawableRes
@@ -122,6 +124,7 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
     }
 
     GameBackground(
+            scene = Scene.HOME,
         colors = listOf(Color(0xFFF8BBD0), Color(0xFFF48FB1), Color(0xFFEC407A))
     ) {
         Column(
@@ -137,11 +140,11 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.25f))
+                        .background(Color.Black.copy(alpha = 0.22f))
                         .clickable { onBack() },
                     contentAlignment = Alignment.Center
                 ) { BackArrowIcon() }
-                Text(BilingualText("להתלבש", "Getting Dressed").resolve(language), style = MaterialTheme.typography.headlineMedium, color = CloudWhite)
+                PromptBubble(BilingualText("להתלבש", "Getting Dressed").resolve(language))
                 Spacer(modifier = Modifier.width(52.dp))
             }
 
@@ -150,16 +153,16 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
             // Character with worn clothes
             Box(
                 modifier = Modifier
-                    .size(150.dp)
+                    .size(260.dp)
                     .clip(CircleShape)
                     .background(Color(0xFFFFE0B2)),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painter = painterResource(R.drawable.ic_myday_child), contentDescription = null, modifier = Modifier.size(64.dp))
+                    Image(painter = painterResource(R.drawable.ic_myday_child), contentDescription = null, modifier = Modifier.size(150.dp))
                     Row {
                         state.clothes.filter { it.order < state.currentStep }.forEach {
-                            Image(painter = painterResource(it.icon), contentDescription = null, modifier = Modifier.size(26.dp))
+                            Image(painter = painterResource(it.icon), contentDescription = null, modifier = Modifier.size(48.dp))
                         }
                     }
                 }
@@ -185,7 +188,7 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             modifier = Modifier
-                                .size(100.dp)
+                                .size(150.dp)
                                 .graphicsLayer { scaleX = scale; scaleY = scale }
                                 .shadow(6.dp, RoundedCornerShape(20.dp))
                                 .clip(RoundedCornerShape(20.dp))
@@ -201,7 +204,7 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
                                     }
                                 },
                             contentAlignment = Alignment.Center
-                        ) { Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(66.dp)) }
+                        ) { Image(painter = painterResource(item.icon), contentDescription = null, modifier = Modifier.size(110.dp)) }
                         Text(item.name.resolve(language), style = MaterialTheme.typography.labelLarge, color = CloudWhite)
                     }
                 }

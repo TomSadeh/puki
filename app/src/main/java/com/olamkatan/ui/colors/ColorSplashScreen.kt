@@ -1,5 +1,15 @@
 package com.olamkatan.ui.colors
 
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
+import com.olamkatan.ui.components.popIn
+import com.olamkatan.ui.components.idleBob
+import com.olamkatan.ui.components.PromptBubble
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.reaction
 import com.olamkatan.ui.components.rememberReactionState
@@ -80,6 +90,7 @@ fun ColorSplashScreen(
     }
 
     GameBackground(
+            scene = Scene.PLAYGROUND,
         colors = listOf(Color(0xFFE1BEE7), Color(0xFFCE93D8), Color(0xFFBA68C8))
     ) {
         Column(
@@ -96,27 +107,25 @@ fun ColorSplashScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Prompt
-            Text(
-                text = BilingualText(
+            PromptBubble(
+                BilingualText(
                     "תלחץ על ${state.targetColor.name.he}!",
                     "Tap the ${state.targetColor.name.en} one!",
                     heGirl = "תלחצי על ${state.targetColor.name.he}!"
-                ).localized(),
-                style = MaterialTheme.typography.headlineMedium,
-                color = CloudWhite
+                ).localized()
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
             // Color blobs
             Row(
-                horizontalArrangement = Arrangement.spacedBy(32.dp),
+                horizontalArrangement = Arrangement.spacedBy(40.dp),
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                state.colorChoices.forEach { color ->
+                state.colorChoices.forEachIndexed { i, color ->
                     val blobReaction = rememberReactionState(state.roundIndex, color.id)
-                    Box(modifier = Modifier.reaction(blobReaction)) {
+                    Box(modifier = Modifier.popIn(i, state.roundIndex).idleBob(i).reaction(blobReaction)) {
                     ColorBlob(
                         color = color.color,
                         onClick = {
@@ -155,28 +164,38 @@ fun ColorSplashScreen(
     }
 }
 
+/** A shiny balloon on a string, in [color]. */
 @Composable
 private fun ColorBlob(color: Color, onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.85f else 1f,
-        animationSpec = spring(dampingRatio = 0.4f, stiffness = 300f),
-        label = "blob_scale"
-    )
-
-    Box(
+    val light = lerp(color, Color.White, 0.4f)
+    val dark = lerp(color, Color.Black, 0.25f)
+    Canvas(
         modifier = Modifier
-            .size(120.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(8.dp, CircleShape)
-            .clip(CircleShape)
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(color.copy(alpha = 0.85f), color)
-                )
-            )
-            .border(2.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-            .clickable(interactionSource = interactionSource, indication = null) { onClick() }
-    )
+            .size(width = 170.dp, height = 250.dp)
+            .clickable(onClick = onClick)
+    ) {
+        val w = size.width
+        val h = size.height
+        val bodyW = w * 0.88f
+        val bodyH = h * 0.7f
+        val left = (w - bodyW) / 2
+        val string = Path().apply {
+            moveTo(w / 2, bodyH + h * 0.04f)
+            cubicTo(w * 0.36f, bodyH + h * 0.11f, w * 0.64f, bodyH + h * 0.2f, w * 0.47f, h)
+        }
+        drawPath(string, Color(0xFF8D6E63), style = Stroke(3.dp.toPx()))
+        val knot = Path().apply {
+            moveTo(w / 2, bodyH - 4f)
+            lineTo(w / 2 - 11.dp.toPx(), bodyH + h * 0.045f)
+            lineTo(w / 2 + 11.dp.toPx(), bodyH + h * 0.045f)
+            close()
+        }
+        drawPath(knot, dark)
+        drawOval(Color.Black.copy(alpha = 0.12f), Offset(left + 7.dp.toPx(), 9.dp.toPx()), Size(bodyW, bodyH))
+        drawOval(
+            Brush.radialGradient(listOf(light, color, dark), center = Offset(w * 0.38f, bodyH * 0.32f), radius = bodyW * 0.95f),
+            Offset(left, 0f), Size(bodyW, bodyH)
+        )
+        drawOval(Color.White.copy(alpha = 0.6f), Offset(left + bodyW * 0.17f, bodyH * 0.12f), Size(bodyW * 0.2f, bodyH * 0.27f))
+    }
 }

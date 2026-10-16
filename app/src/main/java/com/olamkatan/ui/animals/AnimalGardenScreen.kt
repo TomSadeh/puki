@@ -1,5 +1,6 @@
 package com.olamkatan.ui.animals
 
+import com.olamkatan.ui.components.Scene
 import com.olamkatan.data.models.Language
 import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.rememberReactionState
@@ -77,6 +78,7 @@ fun AnimalGardenScreen(
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {
         GameBackground(
+            scene = Scene.FARM,
             colors = listOf(Color(0xFF81C784), Color(0xFF66BB6A), Color(0xFF4CAF50), Color(0xFF388E3C))
         ) {
             Column(

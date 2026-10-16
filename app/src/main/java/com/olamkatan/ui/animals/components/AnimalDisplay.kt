@@ -106,14 +106,14 @@ fun AnimalDisplay(
             // Name label with background pill
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White.copy(alpha = 0.25f))
-                    .padding(horizontal = 20.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.White.copy(alpha = 0.93f))
+                    .padding(horizontal = 24.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = animal.name.resolve(language),
                     style = MaterialTheme.typography.headlineMedium,
-                    color = CloudWhite
+                    color = Color(0xFF5D4037)
                 )
             }
         }
