@@ -48,8 +48,7 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
    - ~~**Peekaboo barn:** animals pop out from behind doors and bushes.~~ Done in 0.6.
    - **Big and small:** "who gets the big apple?", with two choices.
    - **Sort it:** socks to the drawer, balls to the box.
-   - **A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves.
-     No countdown (warnings make the end harder, not easier).
+   - ~~**A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves.~~ Done in 0.6.
    - **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
    - **Echo parrot:** she says anything, and Puki says it back in a silly parrot voice.
 

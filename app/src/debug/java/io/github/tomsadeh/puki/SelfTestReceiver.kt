@@ -39,6 +39,11 @@ class SelfTestReceiver : BroadcastReceiver() {
             // The whisper library's functions are named after the package: this fails if they don't match
             WhisperNative.load()
             check("whisper binding", WhisperNative.init("/no/such/model.bin"), 0L)
+            // With -e timelimit <minutes>: set the parent's time limit (0 = off), to see the goodbye soon
+            intent.getStringExtra("timelimit")?.toIntOrNull()?.let { minutes ->
+                runBlocking { (context.applicationContext as PukiApplication).settingsRepository.updateTimeLimit(minutes) }
+                Log.i(tag, "time limit set to $minutes min")
+            }
             // With --es host <ip:port> --es code <CODE> --es pin <hex>: the app's real connection check
             // against that PC (right pin, wrong pin, and first use), off the main thread
             val host = intent.getStringExtra("host")

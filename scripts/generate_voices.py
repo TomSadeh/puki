@@ -194,6 +194,7 @@ voice_lines = [
     ("voice_prompt_set_table", "Let's set the table!", ("בואי נערוך את השולחן!", "בוא נערוך את השולחן!")),
     ("voice_prompt_good_night", "Good night!", "לילה טוב!"),
     ("voice_prompt_time_break", "Time for a break!", "הגיע הזמן להפסקה!"),
+    ("voice_prompt_see_you_soon", "See you soon!", "נתראה בקרוב!"),
 
     # --- Body parts ---
     ("voice_body_arms", "Arms", "אלה ידיים."),
