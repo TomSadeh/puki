@@ -156,6 +156,15 @@
    },
    "revision": "468da64b4a51795a7594a3637727dbaf876b6df2"
   },
+  "notmax123/RenikudPlus": {
+   "files": {
+    "model.onnx": [
+     1234209530,
+     "c3a2bdc35afbf53f28cdece4672dcca9b530dfa43a0d65b4c5bbc47150b32d0d"
+    ]
+   },
+   "revision": "679c56ca449d41873fb8ff7711ddf7563d28198f"
+  },
   "unsloth/gemma-4-12B-it-qat-GGUF": {
    "files": {
     "gemma-4-12B-it-qat-UD-Q4_K_XL.gguf": [

@@ -10,7 +10,8 @@ Its menu opens the dashboard, shows the pairing code, puts the brain to sleep, t
 
 As Puki.exe, the first run unpacks the brain's files into %LOCALAPPDATA%\\Puki and runs the
 installer in a window (Python comes along via uv, so the PC needs none). After that it's
-just the tray icon.
+just the tray icon. A newer Puki.exe unpacks its files again and re-runs the installer in a
+window, which only does what changed (like install.py --update), before Puki starts.
 """
 
 import ctypes
@@ -46,22 +47,35 @@ def home():
 
 
 def prepare():
-    """Where the brain's files are; as Puki.exe, unpacks them there first (again after an update)."""
+    """Where the brain's files are, and the build still to be set up there (else None). As
+    Puki.exe, unpacks its files there first when they're from another build (the first run, an
+    update); the build counts as set up only once its installer has run (set_up_done)."""
     if os.environ.get("PUKI_BRAIN_DIR"):
-        return os.environ["PUKI_BRAIN_DIR"]
+        return os.environ["PUKI_BRAIN_DIR"], None
+    pending = None
     if not FROZEN:
         brain_dir = os.path.dirname(os.path.abspath(__file__))
     else:
         brain_dir = os.path.join(home(), "brain")
         os.makedirs(brain_dir, exist_ok=True)
-        stamp = read(os.path.join(BUNDLE, "build.txt"))
-        if read(os.path.join(brain_dir, "build.txt")) != stamp:
+        if not build_is_set_up(brain_dir):
             for f in BRAIN_FILES:
                 shutil.copy2(os.path.join(BUNDLE, f), os.path.join(brain_dir, f))
-            with open(os.path.join(brain_dir, "build.txt"), "w", encoding="utf-8") as fh:
-                fh.write(stamp)
+            pending = read(os.path.join(BUNDLE, "build.txt"))
     os.environ["PUKI_BRAIN_DIR"] = brain_dir
-    return brain_dir
+    return brain_dir, pending
+
+
+def build_is_set_up(brain_dir):
+    """True if this Puki.exe's own build is the one unpacked and set up in [brain_dir]."""
+    return read(os.path.join(brain_dir, "build.txt")) == read(os.path.join(BUNDLE, "build.txt"))
+
+
+def set_up_done(brain_dir, build):
+    """Records that [build]'s files are unpacked and its installer has run; an update that
+    stopped halfway runs again the next time Puki.exe opens."""
+    with open(os.path.join(brain_dir, "build.txt"), "w", encoding="utf-8") as fh:
+        fh.write(build)
 
 
 def read(path):
@@ -99,9 +113,15 @@ def is_set_up(brain_dir):
     return bool(py) and os.path.exists(py)
 
 
-def run_setup():
-    """Runs the installer in the setup window (or a console window if there's no tkinter)."""
-    with_window("Setting up Puki", ["--no-start"] + (["--dir", home()] if FROZEN else []))
+def run_setup(brain_dir):
+    """Runs the installer in the setup window (or a console window if there's no tkinter);
+    returns its exit code. When Puki is already set up (a new Puki.exe), it runs as an update:
+    no questions, the same Gemma, and only what changed."""
+    if not is_set_up(brain_dir):
+        return with_window("Setting up Puki", ["--no-start"] + (["--dir", home()] if FROZEN else []))
+    import install
+    root = install_root(brain_dir)
+    return with_window("Updating Puki", ["--no-start", "--yes", "--dir", root, "--model", install.installed_model(root)])
 
 
 def with_window(title, args):
@@ -109,7 +129,7 @@ def with_window(title, args):
         import setup_gui
     except Exception:
         return in_console(title, args)
-    setup_gui.run(args, title)
+    return setup_gui.run(args, title)
 
 
 def in_console(title, args):
@@ -121,15 +141,18 @@ def in_console(title, args):
     ctypes.windll.kernel32.SetConsoleTitleW(title)
     import install
     sys.argv = ["install"] + args
+    code = 0
     try:
         install.main()
-    except SystemExit:
-        pass
+    except SystemExit as e:
+        code = e.code
     except Exception as e:  # show it, don't vanish
         print(f"\n  Setup stopped: {e}")
+        code = 1
     input("\n  Press Enter to close this window. ")
     sys.stdout = sys.stderr = None
     ctypes.windll.kernel32.FreeConsole()
+    return code
 
 
 # ---------- The icon ----------
@@ -160,16 +183,23 @@ def main():
         print("On Linux, Puki runs as a service (set up by  python3 brain/install.py); there's no tray icon.")
         print(f"The dashboard is at {DASHBOARD}, and  systemctl --user status puki  shows how it's doing.")
         return
-    brain_dir = prepare()
-    if port_open(PORT):
+    if port_open(PORT):  # before unpacking: a running Puki's brain.py must not change under it
+        if FROZEN and not build_is_set_up(os.path.join(home(), "brain")):
+            message("Another version of Puki is running. Quit it (right-click its tray icon, Quit Puki), "
+                    "then open this one again to update.")
+            return
         message("Puki is already running. Opening the dashboard.")
         webbrowser.open(DASHBOARD)
         return
-    if not is_set_up(brain_dir):
-        run_setup()
-        if not is_set_up(brain_dir):
-            message("Puki isn't set up yet. Run Puki again to finish the setup.", error=True)
+    brain_dir, new_build = prepare()
+    if new_build or not is_set_up(brain_dir):
+        updating = is_set_up(brain_dir)
+        if run_setup(brain_dir) not in (0, None) or not is_set_up(brain_dir):
+            message("Puki's update didn't finish. Open Puki again to retry." if updating
+                    else "Puki isn't set up yet. Run Puki again to finish the setup.", error=True)
             return
+        if new_build:
+            set_up_done(brain_dir, new_build)
 
     import doorbell
     import install

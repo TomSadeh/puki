@@ -72,6 +72,7 @@ def main():
     hf[I.PARAKEET_REPO] = hf_repo(I.PARAKEET_REPO, lambda p, s: p in I.PARAKEET_FILES)
     hf[I.BLUETTS_ONNX_REPO] = hf_repo(I.BLUETTS_ONNX_REPO,
                                       lambda p, s: "/" not in p and not p.startswith(".") and p != "README.md" and s > 0)
+    hf[I.RENIKUD_REPO] = hf_repo(I.RENIKUD_REPO, lambda p, s: p == I.RENIKUD_FILE)
 
     # Every build install_llama() may pick (Windows and Linux, CPU and CUDA), and uv for Windows
     tag = re.escape(I.LLAMA_TAG)

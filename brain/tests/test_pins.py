@@ -59,7 +59,8 @@ def test_everything_the_installer_picks_is_pinned():
     hf = install.pins()["huggingface"]
     for repo, path in [(install.GEMMA_REPO, install.GEMMA_FILE), (install.GEMMA_REPO, install.MMPROJ_FILE),
                        (install.GEMMA12_REPO, install.GEMMA12_FILE), (install.GEMMA12_REPO, install.MMPROJ_FILE)] + \
-                      [(install.PARAKEET_REPO, p) for p in install.PARAKEET_FILES]:
+                      [(install.PARAKEET_REPO, p) for p in install.PARAKEET_FILES] + \
+                      [(install.RENIKUD_REPO, install.RENIKUD_FILE)]:
         assert path in hf[repo]["files"], (repo, path)
     assert hf[install.WHISPER_REPO]["files"] and hf[install.BLUETTS_ONNX_REPO]["files"]
     # Every llama.cpp build install_llama() can choose
