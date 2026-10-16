@@ -54,7 +54,7 @@ val level1Animals = listOf(
     AnimalDef(
         id = "chicken",
         name = BilingualText("תרנגולת", "Chicken"),
-        sound = BilingualText("קוקוריקו!", "Cock-a-doodle-doo!"),
+        sound = BilingualText("קו קו קו!", "Cluck cluck!"),
         emoji = "\uD83D\uDC14",
         color = Color(0xFFFFF8DC),
         foodId = "seeds",

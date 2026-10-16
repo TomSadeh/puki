@@ -6,6 +6,71 @@ English) and **ivrit.ai Whisper** (hears Hebrew). Nothing here needs the cloud.
 
 Order is a suggestion. Real play-testing with a toddler decides what comes first.
 
+## Now: growing with her 🌱
+
+A code review and a research pass (October 2026) found that every game always plays its
+easiest level, a few toddler habits (double taps, idle moments) trip the games up, and the
+research points to what helps at two. This comes first.
+
+**Bugs.**
+- A double tap on the right answer gives two stars and skips a round (colors, letters, counting).
+- A double tap on the door button quits the game; settings open on an ordinary long press.
+  Both should need the 2-second hold.
+- The time limit counts time the game spends in the background.
+- In My Day, Puki still thinks she's in the previous game.
+- Long scribbles get slow in the drawing game.
+
+**Quick wins.**
+- "Continue" on the end card plays another round instead of going home.
+- Music: a big pictured start button, replay the same tune after a wrong note, and go
+  straight on after a right one, so the tune game needs no grown-up.
+- Getting dressed names each next item, including the first.
+- Letters start somewhere new each time, with 2 choices at first.
+- Say it with Puki: 4–5 words a session, and toddler forms count.
+- A wrong food teaches ("the cat eats fish"); the chicken clucks instead of crowing.
+- Layouts vary from session to session, not just from round to round.
+
+**Bigger steps.**
+- **Difficulty that grows:** the levels and their content already exist but aren't used. Move
+  up after a few clean rounds, keeping some easy ones mixed in.
+- **Hints:** after a quiet moment, Puki repeats the question; after two misses, the right
+  answer wiggles and glows.
+- **Tap instead of drag:** a tap sends a piece to its place, and drops that only overlap count.
+- A "new sticker!" moment at the end of a session, and more stickers, spaced further apart.
+- Counting by tapping each thing (one tap, one number).
+- Bedtime as a bedroom scene, like the other routines.
+- A fridge for her drawings, with Puki's comments.
+- A parent progress page: stars and level per game, words she said, reset and level override.
+- More variety in My Day: items drawn from a bigger pool.
+
+**New games and toys** (from the research; small first):
+- **Peekaboo barn:** animals pop out from behind doors and bushes. Nothing to get wrong.
+- **Big and small:** "who gets the big apple?", with two choices.
+- **Sort it:** socks to the drawer, balls to the box.
+- **A calm goodbye** when the time limit ends: Puki yawns, the lights dim, he waves. No
+  countdown (warnings make the end harder, not easier).
+- **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
+- **Echo parrot:** she says anything, and Puki says it back in a silly parrot voice.
+- **Family photos with Puki:** the parent adds a few photos with names, and Puki asks
+  "מי זה? זאת סבתא!" and waits for her answer. Photos stay on the tablet and the PC.
+- **Feelings:** Puki is sad because his balloon flew away, and she comforts him.
+- **Baby care corner:** open pretend play: feed, rock, bathe and tuck in a baby animal.
+- **Act out the word:** after Say it, the animals act the verb out ("קופץ!").
+- **A daytime picture book** where Puki pauses for her to finish the line.
+
+**Principles** (from the research):
+- Toy first, task second: as few wrong moves as possible.
+- Talk less, wait more: Puki asks, then leaves her a few seconds to answer.
+- Use the AI only where the reply depends on what she just did or said; recorded lines
+  everywhere else (they also hide the second of thinking).
+- Two choices, big targets, short bursts of play.
+- Built-in endings; no streaks, no autoplay.
+- Puki is a playmate, not a best friend: he never guilts her for leaving, and points her
+  back to her family.
+- The parent stays in the loop.
+
+After this: a **security, code hygiene and performance pass** over the app and the brain.
+
 ## 1. Puki sees her drawings 🎨
 
 **Status: drawings done. Show-and-tell with the camera is still open.**
@@ -122,8 +187,8 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
 - The brain announces itself on the home network (mDNS / DNS-SD as `_puki._tcp`), and the
   app lists what it finds. No IP addresses.
 - Fallback: the PC shows a QR code with its address, and the parent scans it in settings.
-  **Status:** the dashboard shows the QR code (`puki://pair?host=…&code=…`, address plus
-  pairing code); scanning it in the app is still open.
+  **Status: done.** The dashboard and the setup show the QR code (`puki://pair?host=…&code=…`,
+  address plus pairing code), and the app scans it in settings and on first launch.
 
 **English as a first-class language (small to medium). Status: done, except the voice comparison.**
 - Speech recognition: NVIDIA's Parakeet (int8 ONNX, on the CPU) when the app is in English.
@@ -158,13 +223,18 @@ Today, setting up Puki takes Android Studio and eight manual steps on the PC. Th
   aren't the developer's.
 
 **Getting the app onto tablets (medium).**
-- Signed APKs on GitHub Releases: enough for tech-savvy parents.
+- APKs on GitHub Releases: enough for tech-savvy parents. **Status: done.** The game also
+  updates itself from the releases (parent settings, with a dot on the gear), and
+  `scripts/release.py` builds and publishes them. Releases are signed with the developer's
+  local key for now; a proper release key is still open.
 - Google Play: its "Designed for Families" rules for kids' apps, plus microphone and
   local-network permissions, mean real paperwork. Worth it once the rest is solid.
 
 ## Ongoing
 
-- **Run the whole stack on a high-end tablet:** Gemma E2B/E4B through LiteRT-LM on device,
-  BlueTTS through ONNX Runtime Mobile, and a smaller Hebrew speech model. This would make
-  Puki work away from home.
+- **Run the whole stack on a high-end tablet or phone:** Gemma 4 E4B through LiteRT-LM on
+  the GPU, BlueTTS through ONNX Runtime, and ivrit.ai's Whisper through whisper.cpp. This
+  would make Puki work away from home. **Status:** a speed-test app is built (Gemma, the
+  voice and Whisper, models downloaded on the phone); the voice matches the PC's output.
+  Next: numbers from a Galaxy S25, then a "Puki's brain: on this device / on the PC" setting.
 - **Tuning the persona** from real logs: which lines delight, which fall flat.

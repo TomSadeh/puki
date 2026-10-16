@@ -62,6 +62,15 @@ fun OlamKatanNavGraph(navController: NavHostController) {
         }
     }
 
+    // "Continue" on a game's end card: the same game again, as a fresh screen (so a fresh game)
+    val playAgain: (String) -> () -> Unit = { route ->
+        {
+            if (navController.currentBackStackEntry?.destination?.route == route) {
+                navController.navigate(route) { popUpTo(route) { inclusive = true } }
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Routes.HUB
@@ -74,25 +83,25 @@ fun OlamKatanNavGraph(navController: NavHostController) {
             )
         }
         composable(Routes.ANIMALS) {
-            AnimalGardenScreen(onBack = safeBack)
+            AnimalGardenScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.ANIMALS))
         }
         composable(Routes.COLORS) {
-            ColorSplashScreen(onBack = safeBack)
+            ColorSplashScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.COLORS))
         }
         composable(Routes.SHAPES) {
-            ShapePlaygroundScreen(onBack = safeBack)
+            ShapePlaygroundScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.SHAPES))
         }
         composable(Routes.COUNTING) {
-            CountingGardenScreen(onBack = safeBack)
+            CountingGardenScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.COUNTING))
         }
         composable(Routes.MUSIC) {
-            MusicMeadowScreen(onBack = safeBack)
+            MusicMeadowScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MUSIC))
         }
         composable(Routes.WORDS) {
-            WordGardenScreen(onBack = safeBack)
+            WordGardenScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.WORDS))
         }
         composable(Routes.SAY) {
-            SayItScreen(onBack = safeBack)
+            SayItScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.SAY))
         }
         composable(Routes.MY_DAY) {
             MyDayScreen(
@@ -101,19 +110,19 @@ fun OlamKatanNavGraph(navController: NavHostController) {
             )
         }
         composable(Routes.MY_DAY_BATH) {
-            BathTimeScreen(onBack = safeBack)
+            BathTimeScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_BATH))
         }
         composable(Routes.MY_DAY_BRUSH) {
-            BrushyBrushyScreen(onBack = safeBack)
+            BrushyBrushyScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_BRUSH))
         }
         composable(Routes.MY_DAY_TIDY) {
-            TidyUpScreen(onBack = safeBack)
+            TidyUpScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_TIDY))
         }
         composable(Routes.MY_DAY_DRESS) {
-            GettingDressedScreen(onBack = safeBack)
+            GettingDressedScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_DRESS))
         }
         composable(Routes.MY_DAY_TABLE) {
-            TableTimeScreen(onBack = safeBack)
+            TableTimeScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MY_DAY_TABLE))
         }
         composable(Routes.MY_DAY_BEDTIME) {
             BedtimeRoutineScreen(onBack = safeBack)

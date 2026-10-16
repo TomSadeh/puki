@@ -80,7 +80,20 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import kotlin.math.sin
 
-data class DrawPath(val path: List<Offset>, val color: Color, val strokeWidth: Float)
+data class DrawPath(val path: List<Offset>, val color: Color, val strokeWidth: Float) {
+    /** The smoothed outline, built once (finished strokes never change), not on every frame. */
+    val smooth: Path by lazy {
+        // Through the midpoints, so lines look painted, not jagged
+        Path().apply {
+            moveTo(path[0].x, path[0].y)
+            for (i in 1 until path.size - 1) {
+                val mid = (path[i] + path[i + 1]) / 2f
+                quadraticBezierTo(path[i].x, path[i].y, mid.x, mid.y)
+            }
+            lineTo(path.last().x, path.last().y)
+        }
+    }
+}
 
 // Six pots on the left, three more under the brushes on the right
 private val leftColors = listOf(
@@ -101,7 +114,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
     var selectedColor by remember { mutableStateOf(leftColors[0]) }
     var brushDp by remember { mutableStateOf(brushWidths[1]) }
     val paths = remember { mutableStateListOf<DrawPath>() }
-    var currentPath by remember { mutableStateOf(listOf<Offset>()) }
+    val currentPath = remember { mutableStateListOf<Offset>() }  // grows in place as the finger moves
     val companion = LocalCompanion.current
     val sfxPlayer = LocalSfxPlayer.current
     val scope = rememberCoroutineScope()
@@ -169,16 +182,16 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                             }
                             .pointerInput(selectedColor, brushSize) {
                                 detectDragGestures(
-                                    onDragStart = { offset -> currentPath = listOf(offset) },
+                                    onDragStart = { offset -> currentPath.clear(); currentPath.add(offset) },
                                     onDrag = { change, _ ->
                                         change.consume()
-                                        currentPath = currentPath + change.position
+                                        currentPath.add(change.position)
                                     },
                                     onDragEnd = {
                                         if (currentPath.size > 1) {
-                                            paths.add(DrawPath(currentPath, selectedColor, brushSize))
+                                            paths.add(DrawPath(currentPath.toList(), selectedColor, brushSize))
                                         }
-                                        currentPath = emptyList()
+                                        currentPath.clear()
                                     }
                                 )
                             }
@@ -454,16 +467,7 @@ private fun DrawScope.drawStroke(stroke: DrawPath) {
         drawCircle(stroke.color, stroke.strokeWidth / 2, pts[0])
         return
     }
-    // Smooth the finger's path through the midpoints so lines look painted, not jagged
-    val path = Path().apply {
-        moveTo(pts[0].x, pts[0].y)
-        for (i in 1 until pts.size - 1) {
-            val mid = (pts[i] + pts[i + 1]) / 2f
-            quadraticBezierTo(pts[i].x, pts[i].y, mid.x, mid.y)
-        }
-        lineTo(pts.last().x, pts.last().y)
-    }
-    drawPath(path, stroke.color, style = Stroke(width = stroke.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawPath(stroke.smooth, stroke.color, style = Stroke(width = stroke.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 private fun DrawScope.drawArtwork(paths: List<DrawPath>) {

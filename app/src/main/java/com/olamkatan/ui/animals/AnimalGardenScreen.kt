@@ -1,5 +1,8 @@
 package com.olamkatan.ui.animals
 
+import com.olamkatan.ui.components.hintGlow
+import com.olamkatan.ui.components.noticeTouches
+import com.olamkatan.ui.components.rememberHelp
 import com.olamkatan.ui.components.Scene
 import com.olamkatan.data.models.Language
 import com.olamkatan.ui.common.LocalCompanion
@@ -52,6 +55,7 @@ private val FEMININE_ANIMALS = setOf("cow", "chicken", "sheep", "goat", "giraffe
 @Composable
 fun AnimalGardenScreen(
     onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
     animalViewModel: AnimalGardenViewModel = viewModel()
 ) {
     val state by animalViewModel.state.collectAsStateWithLifecycle()
@@ -66,6 +70,11 @@ fun AnimalGardenScreen(
     val animalReaction = rememberReactionState(state.roundIndex)
 
     if (state.isLoading) return
+
+    // Stuck? Ask again after a quiet moment; after misses, the right food wiggles
+    val help = rememberHelp(state.roundIndex, active = !state.roundComplete) {
+        voicePlayer.playSequence(listOf("voice_prompt_whos_hungry", "voice_animal_${state.currentAnimal.id}"), language)
+    }
 
     LaunchedEffect(state.roundIndex) {
         companion?.setScene("במשחק החיות: ${state.currentAnimal.name.he} מחכה לאוכל.", "In the animal game: the ${state.currentAnimal.name.en.lowercase()} is waiting for food.")
@@ -84,6 +93,7 @@ fun AnimalGardenScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .noticeTouches(help)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -121,6 +131,8 @@ fun AnimalGardenScreen(
                         state.foodChoices.forEach { food ->
                             FoodItem(
                                 food = food,
+                                hint = help.showHint && food.id == state.currentAnimal.foodId,
+                                tapToZone = state.currentAnimal.id,
                                 onDropped = { dropTargetId ->
                                     if (dropTargetId == state.currentAnimal.id) {
                                         val correct = animalViewModel.onFoodDropped(food.id)
@@ -151,7 +163,11 @@ fun AnimalGardenScreen(
                                             }
                                         } else {
                                             sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                            if (companion != null) companion.react("ניסו לתת ל${state.currentAnimal.name.he} ${food.name.he}, אבל זה לא האוכל שלו.", "The child tried to give the ${state.currentAnimal.name.en.lowercase()} ${food.name.en.lowercase()}, but that's not its food.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
+                                            // The animal shakes its head, makes its sound and says what it eats: a little fact, not a "no"
+                                            val animal = state.currentAnimal
+                                            val teach = { voicePlayer.playSequence(listOf("voice_sound_${animal.id}", "voice_eats_${animal.id}"), language) }
+                                            if (companion != null) companion.react("ניסו לתת ל${animal.name.he} ${food.name.he}, אבל זה לא האוכל שלו.", "The child tried to give the ${animal.name.en.lowercase()} ${food.name.en.lowercase()}, but that's not its food.", teach) else teach()
+                                            help.missed()
                                             scope.launch { animalReaction.shake() }
                                         }
                                     } else {
@@ -169,7 +185,7 @@ fun AnimalGardenScreen(
             if (state.sessionComplete) {
                 RoundCompleteSheet(
                     starsEarned = state.totalStarsEarned,
-                    onContinue = { onBack() },
+                    onContinue = onPlayAgain,
                     onHome = onBack
                 )
             }

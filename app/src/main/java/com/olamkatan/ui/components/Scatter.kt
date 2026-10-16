@@ -1,6 +1,7 @@
 package com.olamkatan.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import kotlin.random.Random
@@ -61,3 +62,8 @@ fun Scatter(
 
 /** A small tilt for the [index]th scattered thing, different each round. */
 fun scatterTilt(seed: Int, index: Int): Float = Random(seed * 131 + index).nextFloat() * 16f - 8f
+
+/** A random number picked once per visit to a screen: added to the round, so round 1 doesn't
+ *  look the same every time she plays. */
+@Composable
+fun rememberSessionSeed(): Int = remember { Random.nextInt(100_000) }

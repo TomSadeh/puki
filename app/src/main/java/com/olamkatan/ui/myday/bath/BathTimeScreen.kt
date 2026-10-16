@@ -1,5 +1,6 @@
 package com.olamkatan.ui.myday.bath
 
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.popIn
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
@@ -120,8 +121,21 @@ class BathTimeViewModel(application: Application) : AndroidViewModel(application
 }
 
 @Composable
-fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel()) {
+fun BathTimeScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: BathTimeViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val companion = LocalCompanion.current
+    // Puki knows where she is (tapping him talks about this routine), and wakes up on the way in
+    LaunchedEffect(Unit) {
+        companion?.setScene("באמבטיה: מסבנים את הבוץ מהפנים, מהידיים, מהבטן ומהרגליים, ואז שוטפים במקלחת.", "At bath time: soaping the mud off the face, arms, tummy and legs, then a rinse in the shower.")
+        companion?.wake()
+    }
+    LaunchedEffect(state.isComplete) {
+        if (state.isComplete) companion?.react("באמבטיה סיבנו את כל הבוץ ושטפו במקלחת. עכשיו הכול נקי!", "At bath time the child soaped off all the mud and rinsed in the shower. All clean!")
+    }
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val sfxPlayer = LocalSfxPlayer.current
@@ -192,6 +206,8 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
                         } else if (!state.showRinse) {
                             DragTarget(
                                 itemId = "soap",
+                                // A tap soaps the next muddy spot
+                                tapToZone = SPOTS.firstOrNull { spot -> state.bodyParts.none { it.id == spot.partId && it.cleaned } }?.zoneId,
                                 onDragEnd = { dropId ->
                                     val partId = dropId?.removeSuffix("2")  // each arm and leg is its own spot
                                     if (partId != null && state.bodyParts.any { it.id == partId }) {
@@ -214,7 +230,7 @@ fun BathTimeScreen(onBack: () -> Unit, viewModel: BathTimeViewModel = viewModel(
             }
 
             if (state.isComplete) {
-                RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
+                RoundCompleteSheet(starsEarned = 1, onContinue = onPlayAgain, onHome = onBack)
             }
         }
     }

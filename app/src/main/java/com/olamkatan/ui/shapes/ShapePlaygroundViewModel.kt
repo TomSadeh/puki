@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.olamkatan.OlamKatanApplication
 import com.olamkatan.data.content.ShapeDef
 import com.olamkatan.data.content.level1Shapes
+import com.olamkatan.data.content.shapesForLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,23 +27,33 @@ class ShapePlaygroundViewModel(application: Application) : AndroidViewModel(appl
 
     private val progressRepository = (application as OlamKatanApplication).progressRepository
     private var allShapes = level1Shapes
-    private var rounds = allShapes.shuffled().take(4)
+    private var rounds = emptyList<ShapeDef>()
+    private var level = 1
+    private var mistakes = 0
 
-    private val _state = MutableStateFlow(ShapeRoundState())
+    private val _state = MutableStateFlow(ShapeRoundState(isLoading = true))
     val state: StateFlow<ShapeRoundState> = _state.asStateFlow()
 
     init {
-        startRound(0)
+        viewModelScope.launch {
+            level = progressRepository.getDifficulty(ISLAND)
+            allShapes = shapesForLevel(level)  // later levels add shapes to the first four
+            rounds = allShapes.shuffled().take(4)
+            startRound(0)
+        }
     }
 
     private fun startRound(index: Int) {
         if (index >= rounds.size) {
             _state.value = _state.value.copy(sessionComplete = true)
+            viewModelScope.launch { progressRepository.recordSession(ISLAND, rounds.size, mistakes) }
             return
         }
+        val target = rounds[index]
+        val choiceCount = if (level == 1) 3 else 4
         _state.value = ShapeRoundState(
-            targetShape = rounds[index],
-            shapeChoices = allShapes.shuffled().take(4),
+            targetShape = target,
+            shapeChoices = (listOf(target) + allShapes.filter { it.id != target.id }.shuffled().take(choiceCount - 1)).shuffled(),
             roundIndex = index,
             totalRounds = rounds.size,
             totalStarsEarned = _state.value.totalStarsEarned,
@@ -56,6 +67,8 @@ class ShapePlaygroundViewModel(application: Application) : AndroidViewModel(appl
             val newStars = _state.value.totalStarsEarned + 1
             _state.value = _state.value.copy(roundComplete = true, totalStarsEarned = newStars)
             viewModelScope.launch { progressRepository.addStars(1) }
+        } else {
+            mistakes++
         }
         return isCorrect
     }
@@ -64,3 +77,5 @@ class ShapePlaygroundViewModel(application: Application) : AndroidViewModel(appl
         startRound(_state.value.roundIndex + 1)
     }
 }
+
+private const val ISLAND = "shapes"

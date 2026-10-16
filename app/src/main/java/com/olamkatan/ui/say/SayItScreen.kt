@@ -111,7 +111,7 @@ class SayItViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        const val ROUNDS = 8
+        const val ROUNDS = 5  // short: three tries a word adds up fast at two
         const val TRIES = 3
     }
 }
@@ -138,7 +138,11 @@ private suspend fun VoicePlayer.praise(language: Language) =
  * spoke, so any try counts.
  */
 @Composable
-fun SayItScreen(onBack: () -> Unit, viewModel: SayItViewModel = viewModel()) {
+fun SayItScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: SayItViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
@@ -284,7 +288,7 @@ fun SayItScreen(onBack: () -> Unit, viewModel: SayItViewModel = viewModel()) {
         if (state.sessionComplete) {
             RoundCompleteSheet(
                 starsEarned = state.starsEarned,
-                onContinue = onBack,
+                onContinue = onPlayAgain,
                 onHome = onBack
             )
         }

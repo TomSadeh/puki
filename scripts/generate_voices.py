@@ -71,7 +71,7 @@ voice_lines = [
     ("voice_sound_cow", "Moo!", "מוּ!"),
     ("voice_sound_dog", "Woof woof!", "הַב הַב!"),
     ("voice_sound_cat", "Meow!", "מיאו!"),
-    ("voice_sound_chicken", "Cock-a-doodle-doo!", "קוּקוּרִיקוּ!"),
+    ("voice_sound_chicken", "Cluck cluck!", "קוֹ קוֹ קוֹ!"),  # a hen clucks; the rooster crows
     ("voice_sound_horse", "Neigh!", "אִיהַהַהָה!"),
     ("voice_sound_pig", "Oink oink!", "חְרְר חְרְר!"),
     ("voice_sound_sheep", "Baa!", "מֶעֶעֶ!"),
@@ -83,6 +83,23 @@ voice_lines = [
     ("voice_sound_rabbit", "Hop hop hop!", "הוֹפּ, הוֹפּ, הוֹפּ!"),
     ("voice_sound_giraffe", "Munch munch!", "אָם, אָם, אָם!"),
     ("voice_sound_penguin", "Waddle waddle!", "טִיפּ, טִיפּ, טִיפּ!"),
+
+    # --- Who eats what (after a wrong food: the right one, as a little fact) ---
+    ("voice_eats_cow", "The cow eats grass!", "הפרה אוכלת עשב!"),
+    ("voice_eats_dog", "The dog eats a bone!", "הכלב אוכל עצם!"),
+    ("voice_eats_cat", "The cat eats fish!", "החתול אוכל דג!"),
+    ("voice_eats_chicken", "The chicken eats seeds!", "התרנגולת אוכלת גרעינים!"),
+    ("voice_eats_horse", "The horse eats hay!", "הסוס אוכל חציר!"),
+    ("voice_eats_pig", "The pig eats corn!", "החזיר אוכל תירס!"),
+    ("voice_eats_sheep", "The sheep eats clover!", "הכבשה אוכלת תלתן!"),
+    ("voice_eats_duck", "The duck eats bread!", "הברווז אוכל לחם!"),
+    ("voice_eats_rabbit", "The rabbit eats a carrot!", "הארנב אוכל גזר!"),
+    ("voice_eats_goat", "The goat eats leaves!", "העז אוכלת עלים!"),
+    ("voice_eats_lion", "The lion eats meat!", "האריה אוכל בשר!"),
+    ("voice_eats_elephant", "The elephant eats peanuts!", "הפיל אוכל בוטנים!"),
+    ("voice_eats_monkey", "The monkey eats a banana!", "הקוף אוכל בננה!"),
+    ("voice_eats_giraffe", "The giraffe eats leaves!", "הג'ירפה אוכלת עלים!"),
+    ("voice_eats_penguin", "The penguin eats fish!", "הפינגווין אוכל דג!"),
 
     # --- Food names ---
     ("voice_food_grass", "Grass", "זה עשב."),
@@ -292,7 +309,9 @@ name_lines = [
 # pronunciation is given as phonemes instead, keyed by output file name.
 PHONEMES = {
     "voice_sound_cow_he": "mˈuuu!",
-    "voice_sound_chicken_he": "kukuʁikˈu!",
+    "voice_sound_chicken_he": "ko ko kˈo!",
+    "voice_eats_pig_he": "haχazˈiʁ ʔoχˈel tiʁˈas!",  # plain spelling came out "טרס"
+    "voice_eats_sheep_he": "hakivsˈa ʔoχˈelet tiltˈan!",  # and "טלטן"
     "voice_sound_horse_he": "ʔihihihˈi!",
     "voice_sound_pig_he": "ʔˈojnk ʔˈojnk!",
     "voice_sound_sheep_he": "mˈeee!",

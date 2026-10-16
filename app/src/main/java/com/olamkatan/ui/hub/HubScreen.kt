@@ -1,5 +1,7 @@
 package com.olamkatan.ui.hub
 
+import androidx.compose.foundation.clickable
+import com.olamkatan.ui.components.LongPressGate
 import androidx.compose.runtime.collectAsState
 import com.olamkatan.update.Updater
 import com.olamkatan.ui.common.LocalLanguage
@@ -144,19 +146,19 @@ fun HubScreen(
             modifier = Modifier.align(Alignment.TopStart)
         )
 
-        // Settings — top end, long-press so the child doesn't open it by accident
+        // Settings — top end, a 2-second hold so the child doesn't open it by accident
         CornerButton(
             icon = R.drawable.ic_ui_settings,
-            onLongClick = onSettingsClick,
+            onHold = onSettingsClick,
             dot = update != null,
             modifier = Modifier.align(Alignment.TopEnd)
         )
 
-        // Quit — bottom start, double-tap to exit
+        // Quit — bottom start, a 2-second hold too (toddlers double-tap everything)
         val activity = LocalContext.current as? Activity
         CornerButton(
             icon = R.drawable.ic_ui_exit,
-            onDoubleClick = { activity?.finishAndRemoveTask() },
+            onHold = { activity?.finishAndRemoveTask() },
             modifier = Modifier.align(Alignment.BottomStart)
         )
 
@@ -169,32 +171,38 @@ fun HubScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/** A round corner button. With [onHold] it's for grown-ups: it needs a 2-second hold (a ring
+ *  fills up around it), so a toddler's taps and double taps do nothing. */
 @Composable
 private fun CornerButton(
     @DrawableRes icon: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
-    onLongClick: (() -> Unit)? = null,
-    onDoubleClick: (() -> Unit)? = null,
+    onHold: (() -> Unit)? = null,
     dot: Boolean = false
 ) {
   Box(modifier = modifier) {
-    Box(
-        modifier = Modifier
-            .padding(16.dp)
-            .size(64.dp)
-            .shadow(6.dp, CircleShape)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.9f))
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick, onDoubleClick = onDoubleClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(icon),
-            contentDescription = null,
-            modifier = Modifier.size(40.dp)
-        )
+    val circle = Modifier
+        .size(64.dp)
+        .shadow(6.dp, CircleShape)
+        .clip(CircleShape)
+        .background(Color.White.copy(alpha = 0.9f))
+    val face: @Composable (Modifier) -> Unit = { m ->
+        Box(modifier = m, contentAlignment = Alignment.Center) {
+            Image(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+    }
+    if (onHold != null) {
+        // The gap between the gate and the button leaves room for the ring to show
+        LongPressGate(holdDurationMs = 2000L, onUnlocked = onHold, modifier = Modifier.padding(10.dp)) {
+            face(Modifier.padding(6.dp).then(circle))
+        }
+    } else {
+        face(Modifier.padding(16.dp).then(circle).clickable(onClick = onClick))
     }
     if (dot) {
         // Something for the grown-up (a game update), small enough not to tempt the child

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.myday.table
 
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.popIn
 import com.olamkatan.ui.components.idleBob
 import androidx.compose.ui.graphics.graphicsLayer
@@ -105,8 +106,21 @@ class TableTimeViewModel(application: Application) : AndroidViewModel(applicatio
 }
 
 @Composable
-fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewModel()) {
+fun TableTimeScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: TableTimeViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val companion = LocalCompanion.current
+    // Puki knows where she is (tapping him talks about this routine), and wakes up on the way in
+    LaunchedEffect(Unit) {
+        companion?.setScene("בעריכת השולחן: שמים צלחת, כוס, מזלג וכף.", "Setting the table: plate, cup, fork and spoon.")
+        companion?.wake()
+    }
+    LaunchedEffect(state.isComplete) {
+        if (state.isComplete) companion?.react("ערכו את כל השולחן: צלחת, כוס, מזלג וכף!", "The child set the whole table: plate, cup, fork and spoon!")
+    }
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val sfxPlayer = LocalSfxPlayer.current
@@ -186,7 +200,7 @@ fun TableTimeScreen(onBack: () -> Unit, viewModel: TableTimeViewModel = viewMode
             }
 
             if (state.isComplete) {
-                RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
+                RoundCompleteSheet(starsEarned = 1, onContinue = onPlayAgain, onHome = onBack)
             }
         }
     }

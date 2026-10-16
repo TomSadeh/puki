@@ -22,6 +22,7 @@ RAW_DIR = os.path.join(ROOT, "app", "src", "main", "res", "raw")
 TEMPLATE_SOURCES = {
     "voice_animal_": "AnimalDef",
     "voice_sound_": "AnimalDef",
+    "voice_eats_": "AnimalDef",
     "voice_color_": "ColorDef",
     "voice_shape_": "ShapeDef",
     "voice_instrument_": "InstrumentDef",
@@ -32,6 +33,7 @@ TEMPLATE_SOURCES = {
     "voice_tidy_": "TidyItem",
     "voice_sticker_": "StickerDef",
     "voice_food_": "FoodDef",
+    "voice_say_": "SayWord",
     "voice_bedtime_": "BedtimeStep",
     "voice_number_": "CountingRound",  # ids are 1..max targetNumber
 }

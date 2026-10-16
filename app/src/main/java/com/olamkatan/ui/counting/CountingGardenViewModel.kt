@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.olamkatan.OlamKatanApplication
 import com.olamkatan.data.content.CountingRound
+import com.olamkatan.data.content.countingRoundsForLevel
 import com.olamkatan.data.content.level1CountingRounds
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,18 +26,25 @@ data class CountingState(
 class CountingGardenViewModel(application: Application) : AndroidViewModel(application) {
 
     private val progressRepository = (application as OlamKatanApplication).progressRepository
-    private var rounds = level1CountingRounds.shuffled().take(4)
+    private var rounds = emptyList<CountingRound>()
 
-    private val _state = MutableStateFlow(CountingState())
+    private val _state = MutableStateFlow(CountingState(isLoading = true))
     val state: StateFlow<CountingState> = _state.asStateFlow()
 
     init {
-        startRound(0)
+        viewModelScope.launch {
+            val level = progressRepository.getDifficulty(ISLAND)
+            // Bigger numbers at higher levels, with one easier round from the level below
+            rounds = if (level == 1) level1CountingRounds.shuffled().take(4)
+                else (countingRoundsForLevel(level).shuffled().take(3) + countingRoundsForLevel(level - 1).shuffled().take(1)).shuffled()
+            startRound(0)
+        }
     }
 
     private fun startRound(index: Int) {
         if (index >= rounds.size) {
             _state.value = _state.value.copy(sessionComplete = true)
+            viewModelScope.launch { progressRepository.recordSession(ISLAND, rounds.size, 0) }
             return
         }
         _state.value = CountingState(
@@ -50,8 +58,10 @@ class CountingGardenViewModel(application: Application) : AndroidViewModel(appli
     }
 
     /** Returns the new count (1-based), or -1 if round is complete. */
+    /** The new count, -1 when that completed the round, or 0 if the round was already done. */
     fun onItemTapped(): Int {
         val current = _state.value
+        if (current.roundComplete) return 0
         val newCount = current.currentCount + 1
         val isComplete = newCount >= current.currentRound.targetNumber
 
@@ -72,3 +82,5 @@ class CountingGardenViewModel(application: Application) : AndroidViewModel(appli
         startRound(_state.value.roundIndex + 1)
     }
 }
+
+private const val ISLAND = "counting"

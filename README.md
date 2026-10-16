@@ -14,9 +14,13 @@ your home.
 - **Animal Garden:** feed each animal the right food. The animal munches and does a happy hop.
 - **Colors, Shapes, Counting, Letters:** pop the right balloon, drag chunky shapes into place,
   count flowers into a garden bed, find the letter block, all with spoken Hebrew prompts.
-- **Music:** play instruments, then repeat a little melody.
-- **My Day:** a cutaway house with bath time, brushing teeth, getting dressed, setting the
-  table, tidying up and bedtime.
+  Nothing stands in rows: balloons float high and low, shapes lie around the target, and
+  every round is arranged a little differently.
+- **Music:** a drum, a xylophone, a tambourine and maracas on a stage, each with its own sound
+  (the xylophone walks up and down a scale), then repeat a little tune.
+- **My Day:** a cutaway house with a scene for each routine: soap the muddy spots off a child
+  in the bath, set the plate, cup, fork and spoon on a table, dress the child from an open
+  wardrobe, put the toys away around a room, brush teeth, and bedtime.
 - **Drawing** on paper taped to an easel, with big paint pots, and Puki looking at the picture.
   A **sticker album** fills up as stars are earned.
 - **Say it with Puki:** a picture appears, Puki says the word, and the child says it back.

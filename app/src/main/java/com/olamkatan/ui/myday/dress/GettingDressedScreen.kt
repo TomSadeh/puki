@@ -1,5 +1,9 @@
 package com.olamkatan.ui.myday.dress
 
+import com.olamkatan.ui.components.hintGlow
+import com.olamkatan.ui.components.noticeTouches
+import com.olamkatan.ui.components.rememberHelp
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.rememberReactionState
 import com.olamkatan.ui.components.reaction
 import com.olamkatan.ui.components.popIn
@@ -117,25 +121,41 @@ class GettingDressedViewModel(application: Application) : AndroidViewModel(appli
 }
 
 @Composable
-fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel = viewModel()) {
+fun GettingDressedScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: GettingDressedViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val companion = LocalCompanion.current
+    // Puki knows where she is (tapping him talks about this routine), and wakes up on the way in
+    LaunchedEffect(Unit) {
+        companion?.setScene("בהתלבשות: בוחרים בגדים מהארון ומתלבשים לפי הסדר.", "Getting dressed: picking clothes from the wardrobe, in order.")
+        companion?.wake()
+    }
+    LaunchedEffect(state.isComplete) {
+        if (state.isComplete) companion?.react("התלבשו מכף רגל ועד ראש, עד הנעליים!", "The child got dressed from head to toe, shoes and all!")
+    }
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val sfxPlayer = LocalSfxPlayer.current
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        delay(500)
-        voicePlayer.play("voice_prompt_get_dressed", language)
+    // Stuck? Name the next piece again after a quiet moment; after misses, it wiggles
+    val help = rememberHelp(state.currentStep, active = !state.isComplete) {
+        state.clothes.firstOrNull { it.order == state.currentStep }?.let { voicePlayer.play("voice_clothing_${it.id}", language) }
     }
 
+    // Always say what comes next: "get dressed… shirt!", then each next piece
     LaunchedEffect(state.currentStep) {
-        if (state.currentStep > 0 && !state.isComplete) {
-            val nextItem = state.clothes.getOrNull(state.currentStep)
-            if (nextItem != null) {
-                delay(300)
-                voicePlayer.play("voice_clothing_${nextItem.id}", language)
-            }
+        if (state.isComplete) return@LaunchedEffect
+        val nextItem = state.clothes.firstOrNull { it.order == state.currentStep } ?: return@LaunchedEffect
+        if (state.currentStep == 0) {
+            delay(500)
+            voicePlayer.playSequence(listOf("voice_prompt_get_dressed", "voice_clothing_${nextItem.id}"), language)
+        } else {
+            delay(1300)  // let the name of what she just put on finish first
+            voicePlayer.play("voice_clothing_${nextItem.id}", language)
         }
     }
 
@@ -144,7 +164,7 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
         colors = listOf(Color(0xFFF8BBD0), Color(0xFFF48FB1), Color(0xFFEC407A))
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().noticeTouches(help).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -187,6 +207,7 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
                                     .absoluteOffset(spot.x.dp, spot.y.dp)
                                     .idleBob(item.order, if (next) 1.4f else 0.4f)  // what comes next moves a little more
                                     .reaction(reaction)
+                                    .hintGlow(help.showHint && next)
                                     .size(spot.size.dp)
                                     .graphicsLayer { rotationZ = spot.tilt }
                                     .clickable {
@@ -196,7 +217,10 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
                                             voicePlayer.play("voice_clothing_${item.id}", language)
                                         } else {
                                             sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                            voicePlayer.play("voice_prompt_try_again", language)
+                                            // …and which piece it is now
+                                            val nextId = state.clothes.firstOrNull { it.order == state.currentStep }?.id
+                                            voicePlayer.playSequence(listOfNotNull("voice_prompt_try_again", nextId?.let { "voice_clothing_$it" }), language)
+                                            help.missed()
                                             scope.launch { reaction.shake() }
                                         }
                                     }
@@ -208,7 +232,7 @@ fun GettingDressedScreen(onBack: () -> Unit, viewModel: GettingDressedViewModel 
         }
 
         if (state.isComplete) {
-            RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
+            RoundCompleteSheet(starsEarned = 1, onContinue = onPlayAgain, onHome = onBack)
         }
     }
 }

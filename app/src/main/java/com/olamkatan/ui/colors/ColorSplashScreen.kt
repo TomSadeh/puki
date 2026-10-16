@@ -1,5 +1,9 @@
 package com.olamkatan.ui.colors
 
+import com.olamkatan.ui.components.hintGlow
+import com.olamkatan.ui.components.noticeTouches
+import com.olamkatan.ui.components.rememberHelp
+import com.olamkatan.ui.components.rememberSessionSeed
 import com.olamkatan.ui.components.scatterTilt
 import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.lerp
@@ -70,9 +74,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun ColorSplashScreen(
     onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
     viewModel: ColorSplashViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val sessionSeed = rememberSessionSeed()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val companion = LocalCompanion.current
@@ -81,6 +87,11 @@ fun ColorSplashScreen(
     var showRoundSuccess by remember { mutableStateOf(false) }
 
     if (state.isLoading) return
+
+    // Stuck? Ask again after a quiet moment; after misses, the right balloon wiggles
+    val help = rememberHelp(state.roundIndex, active = !showRoundSuccess) {
+        voicePlayer.playSequence(listOf("voice_prompt_tap_the", "voice_color_${state.targetColor.id}"), language)
+    }
 
     LaunchedEffect(state.roundIndex) {
         companion?.setScene("במשחק הצבעים: מחפשים את הצבע ${state.targetColor.name.he}.", "In the color game: we're looking for ${state.targetColor.name.en.lowercase()}.")
@@ -96,7 +107,7 @@ fun ColorSplashScreen(
         colors = listOf(Color(0xFFE1BEE7), Color(0xFFCE93D8), Color(0xFFBA68C8))
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().noticeTouches(help).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             GameTopBar(
@@ -120,15 +131,16 @@ fun ColorSplashScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Balloons floating about, high and low
-            Scatter(seed = state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Scatter(seed = sessionSeed + state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 state.colorChoices.forEachIndexed { i, color ->
                     val blobReaction = rememberReactionState(state.roundIndex, color.id)
                     Box(modifier = Modifier.popIn(i, state.roundIndex).idleBob(i).reaction(blobReaction)
-                        .graphicsLayer { rotationZ = scatterTilt(state.roundIndex, i) }) {
+                        .hintGlow(help.showHint && color.id == state.targetColor.id)
+                        .graphicsLayer { rotationZ = scatterTilt(sessionSeed + state.roundIndex, i) }) {
                     ColorBlob(
                         color = color.color,
                         onClick = {
-                            val correct = viewModel.onColorTapped(color.id)
+                            val correct = viewModel.onColorTapped(color.id) ?: return@ColorBlob
                             if (correct) {
                                 sfxPlayer.play(Sfx.SUCCESS)
                                 if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}. זה נכון!", "In the color game the child picked ${color.name.en.lowercase()}. That's right!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
@@ -142,6 +154,7 @@ fun ColorSplashScreen(
                             } else {
                                 sfxPlayer.play(Sfx.WRONG_GENTLE)
                                 if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}, אבל חיפשנו ${state.targetColor.name.he}.", "In the color game the child picked ${color.name.en.lowercase()}, but we were looking for ${state.targetColor.name.en.lowercase()}.") { voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language)
+                                help.missed()
                                 scope.launch { blobReaction.shake() }
                             }
                         }
@@ -156,7 +169,7 @@ fun ColorSplashScreen(
         if (state.sessionComplete) {
             RoundCompleteSheet(
                 starsEarned = state.totalStarsEarned,
-                onContinue = onBack,
+                onContinue = onPlayAgain,
                 onHome = onBack
             )
         }

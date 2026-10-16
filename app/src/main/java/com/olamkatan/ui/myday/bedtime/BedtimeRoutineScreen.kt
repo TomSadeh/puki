@@ -102,10 +102,14 @@ class BedtimeRoutineViewModel(application: Application) : AndroidViewModel(appli
 @Composable
 fun BedtimeRoutineScreen(onBack: () -> Unit, viewModel: BedtimeRoutineViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val companion = LocalCompanion.current  // waking now gets the story ready by the end
+    // Puki knows where she is (tapping him talks about this routine), and wakes up on the way in
+    LaunchedEffect(Unit) {
+        companion?.setScene("בשגרת השינה: פיג'מה, צחצוח שיניים, דובי, ולכבות את האור.", "Bedtime: pajamas, brushing teeth, teddy, and lights out.")
+        companion?.wake()
+    }
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
-    val companion = LocalCompanion.current
-    LaunchedEffect(Unit) { companion?.wake() }  // so the story is ready by the end
     // The calm night track while getting ready for bed, back to the main theme afterwards
     val musicPlayer = LocalMusicPlayer.current
     DisposableEffect(Unit) {

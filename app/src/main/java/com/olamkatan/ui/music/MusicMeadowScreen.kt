@@ -1,5 +1,11 @@
 package com.olamkatan.ui.music
 
+import androidx.compose.ui.graphics.Path
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.setValue
@@ -85,17 +91,27 @@ data class MusicState(
     val roundIndex: Int = 0,
     val totalRounds: Int = 4,
     val totalStarsEarned: Int = 0,
-    val patternLength: Int = 2
+    val patternLength: Int = 1,  // a one-note tune first: 1, 1, 2, 2
+    val isReplay: Boolean = false  // the same tune again, after a wrong note
 )
 
 class MusicMeadowViewModel(application: Application) : AndroidViewModel(application) {
     private val progressRepository = (application as OlamKatanApplication).progressRepository
     private val _state = MutableStateFlow(MusicState())
     val state: StateFlow<MusicState> = _state.asStateFlow()
+    private var mistakes = 0
+
+    init {
+        // Tunes start one note longer at each level
+        viewModelScope.launch {
+            val level = progressRepository.getDifficulty(ISLAND)
+            _state.value = _state.value.copy(patternLength = level)
+        }
+    }
 
     fun startSimonSays() {
         val pattern = List(_state.value.patternLength) { (0 until instruments.size).random() }
-        _state.value = _state.value.copy(phase = MusicPhase.SHOW_PATTERN, pattern = pattern, playerInput = emptyList())
+        _state.value = _state.value.copy(phase = MusicPhase.SHOW_PATTERN, pattern = pattern, playerInput = emptyList(), isReplay = false)
     }
 
     fun onShowPatternDone() {
@@ -114,8 +130,9 @@ class MusicMeadowViewModel(application: Application) : AndroidViewModel(applicat
         val expectedSoFar = current.pattern.take(newInput.size)
 
         if (newInput != expectedSoFar) {
-            // Wrong — restart this round
-            _state.value = current.copy(playerInput = emptyList(), phase = MusicPhase.FREE_PLAY)
+            // Wrong: play her the same tune again (no grown-up needed to start over)
+            _state.value = current.copy(playerInput = emptyList(), phase = MusicPhase.SHOW_PATTERN, isReplay = true)
+            mistakes++
             return false
         }
 
@@ -130,7 +147,10 @@ class MusicMeadowViewModel(application: Application) : AndroidViewModel(applicat
                 roundIndex = nextRound,
                 patternLength = current.patternLength + if (nextRound % 2 == 0) 1 else 0
             )
-            viewModelScope.launch { progressRepository.addStars(1) }
+            viewModelScope.launch {
+                progressRepository.addStars(1)
+                if (nextRound >= current.totalRounds) progressRepository.recordSession(ISLAND, current.totalRounds, mistakes)
+            }
             return true
         }
 
@@ -138,13 +158,16 @@ class MusicMeadowViewModel(application: Application) : AndroidViewModel(applicat
         return null // still going
     }
 
-    fun nextRound() {
-        _state.value = _state.value.copy(phase = MusicPhase.FREE_PLAY, playerInput = emptyList())
-    }
+    /** Straight on to the next tune. */
+    fun nextRound() = startSimonSays()
 }
 
 @Composable
-fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = viewModel()) {
+fun MusicMeadowScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: MusicMeadowViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
@@ -181,7 +204,8 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
             if (companion != null) companion.react("ניגנו את המנגינה בדיוק נכון!", "The child played the tune back just right!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
         }
         if (state.phase == MusicPhase.SHOW_PATTERN) {
-            // "Listen and remember!" first, then the pattern
+            // "Listen and remember!" first, then the pattern (after a wrong note, let "try again" finish)
+            if (state.isReplay) delay(1600)
             voicePlayer.play("voice_music_listen", language)
             delay(1800)
             for (noteIndex in state.pattern) {
@@ -290,18 +314,32 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
                 }
             }
 
-            // Start button (free play only)
+            // Start the tune game: a big round play button (no reading needed), gently pulsing
             if (state.phase == MusicPhase.FREE_PLAY) {
+                val pulse by rememberInfiniteTransition(label = "start").animateFloat(
+                    1f, 1.08f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "start_pulse"
+                )
                 Box(
                     modifier = Modifier
-                        .size(width = 160.dp, height = 60.dp)
-                        .shadow(6.dp, RoundedCornerShape(30.dp))
-                        .clip(RoundedCornerShape(30.dp))
-                        .background(Color(0xFF66BB6A))
+                        .graphicsLayer { scaleX = pulse; scaleY = pulse }
+                        .size(130.dp)
+                        .shadow(10.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(Color(0xFF81C784), Color(0xFF43A047))))
+                        .border(6.dp, Color.White, CircleShape)
                         .clickable { viewModel.startSimonSays() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(BilingualText("מתחילים!", "Let's go!").resolve(language), style = MaterialTheme.typography.titleLarge, color = CloudWhite)
+                    Canvas(modifier = Modifier.size(56.dp)) {
+                        // A play triangle, nudged right so it looks centered
+                        val tri = Path().apply {
+                            moveTo(size.width * 0.22f, size.height * 0.08f)
+                            lineTo(size.width * 0.98f, size.height * 0.5f)
+                            lineTo(size.width * 0.22f, size.height * 0.92f)
+                            close()
+                        }
+                        drawPath(tri, Color.White)
+                    }
                 }
             }
 
@@ -316,7 +354,7 @@ fun MusicMeadowScreen(onBack: () -> Unit, viewModel: MusicMeadowViewModel = view
         }
 
         if (state.phase == MusicPhase.SESSION_COMPLETE) {
-            RoundCompleteSheet(starsEarned = state.totalStarsEarned, onContinue = onBack, onHome = onBack)
+            RoundCompleteSheet(starsEarned = state.totalStarsEarned, onContinue = onPlayAgain, onHome = onBack)
         }
     }
 }
@@ -349,3 +387,5 @@ private fun NoteBurst(key: Int, color: Color) {
         }
     }
 }
+
+private const val ISLAND = "music"

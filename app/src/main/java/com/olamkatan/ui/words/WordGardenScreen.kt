@@ -1,5 +1,9 @@
 package com.olamkatan.ui.words
 
+import com.olamkatan.ui.components.hintGlow
+import com.olamkatan.ui.components.noticeTouches
+import com.olamkatan.ui.components.rememberHelp
+import com.olamkatan.ui.components.rememberSessionSeed
 import com.olamkatan.ui.components.scatterTilt
 import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.text.font.FontWeight
@@ -96,8 +100,11 @@ class WordGardenViewModel(application: Application) : AndroidViewModel(applicati
     private val progressRepository = (application as OlamKatanApplication).progressRepository
     private val _state = MutableStateFlow(WordState())
     val state: StateFlow<WordState> = _state.asStateFlow()
-    private var letters = emptyList<LetterDef>()
+    private var letters = emptyList<LetterDef>()  // the whole alphabet, for the other blocks
+    private var rounds = emptyList<LetterDef>()   // this session's letters
     private var currentLanguage = Language.HEBREW
+    private var choices = 2  // blocks to pick from: 2 at first, 3 from level 2
+    private var mistakes = 0
 
     fun initialize(language: Language) {
         currentLanguage = language
@@ -105,31 +112,41 @@ class WordGardenViewModel(application: Application) : AndroidViewModel(applicati
             Language.HEBREW -> hebrewLetters
             Language.ENGLISH -> englishLetters
         }
-        startRound(0)
+        viewModelScope.launch {
+            choices = if (progressRepository.getDifficulty(ISLAND) == 1) 2 else 3
+            // A short session of letters from anywhere in the alphabet, not always from א
+            rounds = letters.shuffled().take(4)
+            startRound(0)
+        }
     }
 
     private fun startRound(index: Int) {
-        if (index >= letters.size) {
+        if (index >= rounds.size) {
             _state.value = _state.value.copy(sessionComplete = true)
+            viewModelScope.launch { progressRepository.recordSession(ISLAND, rounds.size, mistakes) }
             return
         }
-        val target = letters[index]
-        val distractors = letters.filter { it.id != target.id }.shuffled().take(2)
+        val target = rounds[index]
+        val distractors = letters.filter { it.id != target.id }.shuffled().take(choices - 1)
         _state.value = WordState(
             targetLetter = target,
             letterChoices = (listOf(target) + distractors).shuffled(),
             roundIndex = index,
-            totalRounds = letters.size,
+            totalRounds = rounds.size,
             totalStarsEarned = _state.value.totalStarsEarned
         )
     }
 
-    fun onLetterTapped(letterId: String): Boolean {
+    /** True if right, false if not, null while the round is already won (a toddler's second tap). */
+    fun onLetterTapped(letterId: String): Boolean? {
+        if (_state.value.showSuccess || _state.value.sessionComplete) return null
         val isCorrect = letterId == _state.value.targetLetter.id
         if (isCorrect) {
             val newStars = _state.value.totalStarsEarned + 1
             _state.value = _state.value.copy(showSuccess = true, totalStarsEarned = newStars)
             viewModelScope.launch { progressRepository.addStars(1) }
+        } else {
+            mistakes++
         }
         return isCorrect
     }
@@ -140,8 +157,13 @@ class WordGardenViewModel(application: Application) : AndroidViewModel(applicati
 }
 
 @Composable
-fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewModel()) {
+fun WordGardenScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: WordGardenViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val sessionSeed = rememberSessionSeed()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val companion = LocalCompanion.current
@@ -153,7 +175,12 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
         viewModel.initialize(language)
     }
 
-    LaunchedEffect(state.roundIndex) {
+    // Stuck? Say the letter again after a quiet moment; after misses, the right block wiggles
+    val help = rememberHelp(state.roundIndex, active = !showRoundSuccess && state.letterChoices.isNotEmpty()) {
+        voicePlayer.play("voice_letter_${state.targetLetter.id}", language)
+    }
+
+    LaunchedEffect(state.roundIndex, state.letterChoices.isNotEmpty()) {
         companion?.setScene("במשחק האותיות: מחפשים את האות ${state.targetLetter.hebrewLetter}, כמו ${state.targetLetter.exampleWord.he}.", "In the letter game: we're looking for the letter ${state.targetLetter.englishLetter}, like ${state.targetLetter.exampleWord.en.lowercase()}.")
         if (state.letterChoices.isNotEmpty()) {
             delay(500)
@@ -166,7 +193,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
         colors = listOf(Color(0xFFE8F5E9), Color(0xFFC8E6C9), Color(0xFFA5D6A7))
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier.fillMaxSize().noticeTouches(help).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             GameTopBar(
@@ -214,7 +241,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
             Spacer(modifier = Modifier.height(24.dp))
 
             // Letter choices
-            Scatter(seed = state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Scatter(seed = sessionSeed + state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 state.letterChoices.forEachIndexed { index, letter ->
                     val block = LETTER_BLOCKS[index % LETTER_BLOCKS.size]
                     val letterReaction = rememberReactionState(state.roundIndex, letter.id)
@@ -231,14 +258,15 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                             .popIn(index, state.roundIndex)
                             .idleBob(index)
                             .reaction(letterReaction)
+                            .hintGlow(help.showHint && letter.id == state.targetLetter.id)
                             .size(160.dp)
-                            .graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = scatterTilt(state.roundIndex, index) }
+                            .graphicsLayer { scaleX = scale; scaleY = scale; rotationZ = scatterTilt(sessionSeed + state.roundIndex, index) }
                             .shadow(10.dp, RoundedCornerShape(32.dp))
                             .clip(RoundedCornerShape(32.dp))
                             .background(Brush.verticalGradient(listOf(lerp(block, Color.White, 0.25f), block, lerp(block, Color.Black, 0.2f))))
                             .border(5.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(32.dp))
                             .clickable(interactionSource = interactionSource, indication = null) {
-                                val correct = viewModel.onLetterTapped(letter.id)
+                                val correct = viewModel.onLetterTapped(letter.id) ?: return@clickable
                                 if (correct) {
                                     sfxPlayer.play(Sfx.SUCCESS)
                                     if (companion != null) companion.react("מצאו את האות ${letter.hebrewLetter}, כמו ${state.targetLetter.exampleWord.he}!", "The child found the letter ${letter.englishLetter}, like ${state.targetLetter.exampleWord.en.lowercase()}!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
@@ -252,6 +280,7 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
                                 } else {
                                     sfxPlayer.play(Sfx.WRONG_GENTLE)
                                     if (companion != null) companion.react("בחרו את האות ${letter.hebrewLetter}, אבל חיפשנו את ${state.targetLetter.hebrewLetter}.", "The child picked the letter ${letter.englishLetter}, but we were looking for ${state.targetLetter.englishLetter}.") { voicePlayer.playSequence(listOf("voice_letter_${letter.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_letter_${letter.id}", "voice_prompt_try_again"), language)
+                                    help.missed()
                                     scope.launch { letterReaction.shake() }
                                 }
                             },
@@ -272,7 +301,9 @@ fun WordGardenScreen(onBack: () -> Unit, viewModel: WordGardenViewModel = viewMo
         ConfettiOverlay(show = showRoundSuccess)
 
         if (state.sessionComplete) {
-            RoundCompleteSheet(starsEarned = state.totalStarsEarned, onContinue = onBack, onHome = onBack)
+            RoundCompleteSheet(starsEarned = state.totalStarsEarned, onContinue = onPlayAgain, onHome = onBack)
         }
     }
 }
+
+private const val ISLAND = "words"

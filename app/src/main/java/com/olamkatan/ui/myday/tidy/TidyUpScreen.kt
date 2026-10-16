@@ -1,5 +1,6 @@
 package com.olamkatan.ui.myday.tidy
 
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.popIn
 import com.olamkatan.ui.components.idleBob
 import androidx.compose.ui.graphics.graphicsLayer
@@ -104,8 +105,21 @@ class TidyUpViewModel(application: Application) : AndroidViewModel(application) 
 }
 
 @Composable
-fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
+fun TidyUpScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: TidyUpViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val companion = LocalCompanion.current
+    // Puki knows where she is (tapping him talks about this routine), and wakes up on the way in
+    LaunchedEffect(Unit) {
+        companion?.setScene("בסידור החדר: מחזירים כל צעצוע למקום שלו.", "Tidying up: putting every toy back where it belongs.")
+        companion?.wake()
+    }
+    LaunchedEffect(state.isComplete) {
+        if (state.isComplete) companion?.react("סידרו את כל החדר, כל צעצוע במקום!", "The child tidied the whole room, every toy in its place!")
+    }
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val sfxPlayer = LocalSfxPlayer.current
@@ -210,7 +224,7 @@ fun TidyUpScreen(onBack: () -> Unit, viewModel: TidyUpViewModel = viewModel()) {
             }
 
             if (state.isComplete) {
-                RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
+                RoundCompleteSheet(starsEarned = 1, onContinue = onPlayAgain, onHome = onBack)
             }
         }
     }

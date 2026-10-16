@@ -1,5 +1,6 @@
 package com.olamkatan.ui.animals.components
 
+import com.olamkatan.ui.components.hintGlow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
@@ -29,7 +30,9 @@ import com.olamkatan.ui.components.DragTarget
 fun FoodItem(
     food: FoodDef,
     onDropped: (dropTargetId: String?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hint: Boolean = false,  // wiggle and glow: this is the one
+    tapToZone: String? = null  // a tap sends it there (the hungry animal)
 ) {
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
@@ -37,6 +40,7 @@ fun FoodItem(
         itemId = food.id,
         onDragEnd = onDropped,
         onDragStart = { voicePlayer.play("voice_food_${food.id}", language) },
+        tapToZone = tapToZone,
         modifier = modifier
     ) {
         Column(
@@ -47,6 +51,7 @@ fun FoodItem(
                 // On a plate, so it reads as something to pick up
                 Box(
                     modifier = Modifier
+                        .hintGlow(hint)
                         .idleBob(food.id.length)
                         .size(165.dp)
                         .shadow(6.dp, CircleShape)

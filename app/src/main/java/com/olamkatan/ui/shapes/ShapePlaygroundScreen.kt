@@ -1,5 +1,9 @@
 package com.olamkatan.ui.shapes
 
+import com.olamkatan.ui.components.hintGlow
+import com.olamkatan.ui.components.noticeTouches
+import com.olamkatan.ui.components.rememberHelp
+import com.olamkatan.ui.components.rememberSessionSeed
 import androidx.compose.foundation.layout.fillMaxWidth
 import com.olamkatan.ui.components.scatterTilt
 import com.olamkatan.ui.components.Scatter
@@ -69,9 +73,11 @@ import kotlin.math.sin
 @Composable
 fun ShapePlaygroundScreen(
     onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
     viewModel: ShapePlaygroundViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val sessionSeed = rememberSessionSeed()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val companion = LocalCompanion.current
@@ -82,6 +88,11 @@ fun ShapePlaygroundScreen(
     val targetReaction = rememberReactionState(state.roundIndex)
 
     if (state.isLoading) return
+
+    // Stuck? Ask again after a quiet moment; after misses, the right piece wiggles
+    val help = rememberHelp(state.roundIndex, active = !showRoundSuccess) {
+        voicePlayer.playSequence(listOf("voice_prompt_drag_it", "voice_shape_${state.targetShape.id}"), language)
+    }
 
     LaunchedEffect(state.roundIndex) {
         companion?.setScene("במשחק הצורות: מחפשים ${state.targetShape.name.he}.", "In the shape game: we're looking for the ${state.targetShape.name.en.lowercase()}.")
@@ -98,7 +109,7 @@ fun ShapePlaygroundScreen(
             colors = listOf(Color(0xFFBBDEFB), Color(0xFF90CAF9), Color(0xFF64B5F6))
         ) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(24.dp),
+                modifier = Modifier.fillMaxSize().noticeTouches(help).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 GameTopBar(
@@ -131,11 +142,12 @@ fun ShapePlaygroundScreen(
 
                     // The pieces lie around the target, half on each side
                     if (!state.roundComplete) {
-                        Scatter(seed = state.roundIndex, aroundCenter = true, modifier = Modifier.fillMaxSize()) {
+                        Scatter(seed = sessionSeed + state.roundIndex, aroundCenter = true, modifier = Modifier.fillMaxSize()) {
                             state.shapeChoices.forEachIndexed { index, shape ->
                                 val shapeReaction = rememberReactionState(state.roundIndex, shape.id)
                                 DragTarget(
                                     itemId = shape.id,
+                                    tapToZone = "target",  // a tap tries it in the outline
                                     onDragStart = { voicePlayer.play("voice_shape_${shape.id}", language) },
                                     onDragEnd = { dropTargetId ->
                                         if (dropTargetId == "target") {
@@ -153,12 +165,14 @@ fun ShapePlaygroundScreen(
                                             } else {
                                                 sfxPlayer.play(Sfx.WRONG_GENTLE)
                                                 if (companion != null) companion.react("במשחק הצורות ניסו לשים ${shape.name.he} במקום של ${state.targetShape.name.he}.", "In the shape game the child tried to put the ${shape.name.en.lowercase()} where the ${state.targetShape.name.en.lowercase()} goes.") { voicePlayer.play("voice_prompt_try_again", language) } else voicePlayer.play("voice_prompt_try_again", language)
+                                                help.missed()
                                                 scope.launch { shapeReaction.shake() }
                                             }
                                         }
                                     }
                                 ) {
-                                    Canvas(modifier = Modifier.size(190.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)) {
+                                    Canvas(modifier = Modifier.size(190.dp).popIn(index, state.roundIndex).idleBob(index).reaction(shapeReaction)
+                                        .hintGlow(help.showHint && shape.id == state.targetShape.id)) {
                                         drawShapeFilled(shape, size)
                                     }
                                 }
@@ -173,7 +187,7 @@ fun ShapePlaygroundScreen(
             if (state.sessionComplete) {
                 RoundCompleteSheet(
                     starsEarned = state.totalStarsEarned,
-                    onContinue = onBack,
+                    onContinue = onPlayAgain,
                     onHome = onBack
                 )
             }

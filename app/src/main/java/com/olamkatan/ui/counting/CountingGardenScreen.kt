@@ -1,5 +1,6 @@
 package com.olamkatan.ui.counting
 
+import com.olamkatan.ui.components.rememberSessionSeed
 import com.olamkatan.ui.components.scatterTilt
 import com.olamkatan.ui.components.Scatter
 import androidx.compose.ui.graphics.ColorFilter
@@ -76,9 +77,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun CountingGardenScreen(
     onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
     viewModel: CountingGardenViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val sessionSeed = rememberSessionSeed()
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val companion = LocalCompanion.current
@@ -153,7 +156,7 @@ fun CountingGardenScreen(
                 }
                 val itemSize = if (target <= 5) 130.dp else 92.dp
                 // Dotted about the garden, high and low, but still counted one after another
-                Scatter(seed = state.roundIndex, modifier = Modifier.fillMaxSize().padding(28.dp)) {
+                Scatter(seed = sessionSeed + state.roundIndex, modifier = Modifier.fillMaxSize().padding(28.dp)) {
                     repeat(target) { i ->
                         val filled = i < state.currentCount
                         val itemScale by animateFloatAsState(
@@ -205,6 +208,7 @@ fun CountingGardenScreen(
                         .border(BorderStroke(6.dp, Color.White), CircleShape)
                         .clickable(interactionSource = interactionSource, indication = null) {
                             val newCount = viewModel.onItemTapped()
+                            if (newCount == 0) return@clickable  // a second tap after the last one
                             sfxPlayer.play(Sfx.POP)
                             if (newCount > 0) {
                                 voicePlayer.play("voice_number_$newCount", language)
@@ -242,7 +246,7 @@ fun CountingGardenScreen(
         if (state.sessionComplete) {
             RoundCompleteSheet(
                 starsEarned = state.totalStarsEarned,
-                onContinue = onBack,
+                onContinue = onPlayAgain,
                 onHome = onBack
             )
         }

@@ -1,5 +1,6 @@
 package com.olamkatan.ui.myday.brush
 
+import com.olamkatan.ui.common.LocalCompanion
 import com.olamkatan.ui.components.PromptBubble
 import com.olamkatan.ui.components.Scene
 import com.olamkatan.ui.components.BackArrowIcon
@@ -89,8 +90,21 @@ class BrushyBrushyViewModel(application: Application) : AndroidViewModel(applica
 }
 
 @Composable
-fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = viewModel()) {
+fun BrushyBrushyScreen(
+    onBack: () -> Unit,
+    onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    viewModel: BrushyBrushyViewModel = viewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val companion = LocalCompanion.current
+    // Puki knows where she is (tapping him talks about this routine), and wakes up on the way in
+    LaunchedEffect(Unit) {
+        companion?.setScene("בצחצוח שיניים: מצחצחים כל שן עד שהיא מבריקה.", "Brushing teeth: brushing each tooth until it sparkles.")
+        companion?.wake()
+    }
+    LaunchedEffect(state.isComplete) {
+        if (state.isComplete) companion?.react("צחצחו את כל השיניים, והן מבריקות!", "The child brushed every tooth, and they sparkle!")
+    }
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val sfxPlayer = LocalSfxPlayer.current
@@ -179,7 +193,7 @@ fun BrushyBrushyScreen(onBack: () -> Unit, viewModel: BrushyBrushyViewModel = vi
         }
 
         if (state.isComplete) {
-            RoundCompleteSheet(starsEarned = 1, onContinue = onBack, onHome = onBack)
+            RoundCompleteSheet(starsEarned = 1, onContinue = onPlayAgain, onHome = onBack)
         }
     }
 }
