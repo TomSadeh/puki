@@ -163,6 +163,7 @@ class MusicMeadowViewModel(application: Application) : AndroidViewModel(applicat
 fun MusicMeadowScreen(
     onBack: () -> Unit,
     onPlayAgain: () -> Unit = onBack,  // "Continue" on the end card: this game again, from the start
+    onDance: () -> Unit = {},  // the dancer on the stage opens Dance and Freeze
     viewModel: MusicMeadowViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -220,6 +221,10 @@ fun MusicMeadowScreen(
             scene = Scene.STAGE,
         colors = listOf(Color(0xFFFFF3E0), Color(0xFFFFE0B2), Color(0xFFFFCC80))
     ) {
+        // Dance and Freeze, waiting at the side of the stage
+        Box(modifier = Modifier.fillMaxSize()) {
+            DanceButton(onClick = onDance, modifier = Modifier.align(Alignment.TopStart).padding(start = 44.dp, top = 120.dp))
+        }
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally

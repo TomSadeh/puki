@@ -205,6 +205,13 @@ voice_lines = [
     ("voice_puki_fun", "Hooray! Playing is fun!", "יש! כיף לשחק!"),
     ("voice_puki_here", "Squawk squawk! Puki is here!", "קוואק קוואק! פוקי כאן!"),
     ("voice_puki_dance", "Look, I'm dancing!", "תראו, אני רוקד!"),
+    # --- Dance and Freeze ---
+    ("voice_dance_intro", "Let's dance! When the music stops, do what Puki says.", ("בואי נרקוד! כשהמוזיקה נעצרת, עושים מה שפוקי אומר.", "בוא נרקוד! כשהמוזיקה נעצרת, עושים מה שפוקי אומר.")),
+    ("voice_dance_freeze", "Freeze!", "קופאים!"),
+    ("voice_dance_jump", "Jump, jump!", "קופצים, קופצים!"),
+    ("voice_dance_clap", "Clap your hands!", "מוחאים כפיים!"),
+    ("voice_dance_spin", "Spin around!", "מסתובבים!"),
+    ("voice_dance_again", "And dance!", "ורוקדים!"),
     # --- Garage: the car wash ---
     ("voice_car_intro", "The car is all muddy! Scrub it with the sponge.", ("המכונית מלאה בוץ! תשפשפי אותה עם הספוג.", "המכונית מלאה בוץ! תשפשף אותה עם הספוג.")),
     ("voice_car_scrub", "Scrub off the mud!", ("תשפשפי את הבוץ!", "תשפשף את הבוץ!")),

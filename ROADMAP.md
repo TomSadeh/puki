@@ -51,7 +51,7 @@ is for polish and testers' reports.
 - **Car wash:** soap and rinse a muddy car (the bath's rub-to-clean, on wheels).
 - **Offline Puki:** without a brain, the parrot still stays and answers taps with recorded
   giggles and squawks, so every family meets him.
-- **Dance and Freeze** or **tracing letters and numbers**, whichever is ready.
+- **Dance and Freeze** (from the music stage) and **tracing letters and numbers** (pages in the easel).
 
 **Polish**
 - A parent setting to hide islands (fewer choices at two).
@@ -91,7 +91,7 @@ is for polish and testers' reports.
    - **Big and small:** "who gets the big apple?", with two choices.
    - **Sort it:** socks to the drawer, balls to the box.
    - **More recipes** and **fixing cars** (swap a flat tire, drag the parts into place).
-   - **Tracing** or **Dance and Freeze**, whichever didn't make v1.
+   - Tracing every letter, not just the six with voice lines.
    - **Toy phone:** call Grandma, the cow or Puki; with the brain, a real little chat.
    - **Teddy doctor:** find where Teddy hurts and put a bandage on it.
    - **Grow a garden:** seed, water, sun, bloom.

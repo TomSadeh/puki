@@ -6,7 +6,9 @@ import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -17,15 +19,20 @@ import androidx.compose.ui.graphics.vector.PathParser
  * A page to color in: shapes drawn in a 100x100 box, back to front. A tap inside a shape fills
  * it; the outlines are drawn over the paint, like a coloring book's lines.
  */
-class ColoringPage(val id: String, vararg shapes: String) {
+sealed interface CanvasPage
+
+class ColoringPage(val id: String, vararg shapes: String) : CanvasPage {
     val shapes: List<Path> = shapes.map { PathParser().parsePathString(it).toPath() }
 }
 
 private fun circle(cx: Float, cy: Float, r: Float) =
     "M${cx - r},$cy A$r,$r 0 1,0 ${cx + r},$cy A$r,$r 0 1,0 ${cx - r},$cy Z"
 
+/** A page with a big letter (or number) to paint over; each visit brings the next one. */
+class TracePage(val numbers: Boolean) : CanvasPage
+
 /** Blank paper first, then the pages, in the order the page button goes through them. */
-val coloringPages: List<ColoringPage?> = listOf(
+val coloringPages: List<CanvasPage?> = listOf(
     null,
     ColoringPage(
         "fish",
@@ -62,8 +69,56 @@ val coloringPages: List<ColoringPage?> = listOf(
         circle(28f, 68f, 10f), circle(74f, 68f, 10f),     // wheels
         circle(28f, 68f, 4f), circle(74f, 68f, 4f),       // hubs
         circle(88f, 58f, 2.5f)                            // light
-    )
+    ),
+    TracePage(numbers = false),
+    TracePage(numbers = true)
 )
+
+/** [text] as a big glyph from the font, centered on paper of [size]. */
+fun glyphPath(text: String, size: Size): Path {
+    val paint = android.graphics.Paint().apply {
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+        textSize = size.height * 0.78f
+        isAntiAlias = true
+    }
+    val path = android.graphics.Path()
+    paint.getTextPath(text, 0, text.length, 0f, 0f, path)
+    val bounds = android.graphics.RectF()
+    path.computeBounds(bounds, true)
+    path.offset(size.width / 2 - bounds.centerX(), size.height / 2 - bounds.centerY())
+    return path.asComposePath()
+}
+
+/** Points on a grid [step] apart that fall inside [glyph]: painting near them is what counts. */
+fun samplesInside(glyph: Path, step: Float): List<Offset> {
+    val b = glyph.getBounds()
+    if (b.isEmpty) return emptyList()
+    val region = android.graphics.Region().apply {
+        setPath(glyph.asAndroidPath(), android.graphics.Region(b.left.toInt() - 1, b.top.toInt() - 1, b.right.toInt() + 1, b.bottom.toInt() + 1))
+    }
+    val points = mutableListOf<Offset>()
+    var y = b.top + step / 2
+    while (y < b.bottom) {
+        var x = b.left + step / 2
+        while (x < b.right) {
+            if (region.contains(x.toInt(), y.toInt())) points.add(Offset(x, y))
+            x += step
+        }
+        y += step
+    }
+    return points
+}
+
+/** The letter to trace, pale (under the paint). */
+fun DrawScope.drawTraceGlyph(glyph: Path) {
+    drawPath(glyph, Color(0xFFEDE7F6))
+}
+
+/** The letter's dashed edge (over the paint, so its shape always shows). */
+fun DrawScope.drawTraceEdge(glyph: Path) {
+    val width = minOf(size.width, size.height) * 0.008f
+    drawPath(glyph, Color(0xFF9575CD), style = Stroke(width = width, pathEffect = PathEffect.dashPathEffect(floatArrayOf(width * 3, width * 2.5f))))
+}
 
 /** The page's shapes placed on paper of [size]: centered, as large as fits with a margin. */
 fun ColoringPage.placed(size: Size): List<Path> {

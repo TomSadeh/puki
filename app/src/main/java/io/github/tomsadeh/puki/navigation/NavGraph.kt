@@ -10,6 +10,7 @@ import io.github.tomsadeh.puki.ui.colors.ColorSplashScreen
 import io.github.tomsadeh.puki.ui.shapes.ShapePlaygroundScreen
 import io.github.tomsadeh.puki.ui.counting.CountingGardenScreen
 import io.github.tomsadeh.puki.ui.myday.kitchen.CakeScreen
+import io.github.tomsadeh.puki.ui.music.DanceScreen
 import io.github.tomsadeh.puki.ui.myday.garage.CarWashScreen
 import io.github.tomsadeh.puki.ui.music.MusicMeadowScreen
 import io.github.tomsadeh.puki.ui.words.WordGardenScreen
@@ -34,6 +35,7 @@ object Routes {
     const val SHAPES = "shapes"
     const val COUNTING = "counting"
     const val MUSIC = "music"
+    const val DANCE = "dance"
     const val WORDS = "words"
     const val SAY = "say"
     const val PEEKABOO = "peekaboo"
@@ -103,7 +105,10 @@ fun PukiNavGraph(navController: NavHostController) {
             CountingGardenScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.COUNTING))
         }
         composable(Routes.MUSIC) {
-            MusicMeadowScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MUSIC))
+            MusicMeadowScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.MUSIC), onDance = { safeNavigate(Routes.DANCE) })
+        }
+        composable(Routes.DANCE) {
+            DanceScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.DANCE))
         }
         composable(Routes.WORDS) {
             WordGardenScreen(onBack = safeBack, onPlayAgain = playAgain(Routes.WORDS))

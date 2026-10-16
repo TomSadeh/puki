@@ -1,5 +1,16 @@
 package io.github.tomsadeh.puki.ui.canvas
 
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import io.github.tomsadeh.puki.data.content.englishLetters
+import io.github.tomsadeh.puki.data.content.hebrewLetters
+import io.github.tomsadeh.puki.data.models.Language
+import io.github.tomsadeh.puki.ui.common.LocalLanguage
+import io.github.tomsadeh.puki.ui.common.LocalVoicePlayer
+import io.github.tomsadeh.puki.ui.components.ConfettiOverlay
+import kotlinx.coroutines.delay
+
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.unit.Dp
 
@@ -149,8 +160,51 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
     val brushSize = with(density) { brushDp.dp.toPx() }
     val stampSize = with(density) { 96.dp.toPx() }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val paperSize = Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
     val pageShapes = remember(pageIndex, canvasSize) {
-        coloringPages[pageIndex]?.placed(Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())) ?: emptyList()
+        (coloringPages[pageIndex] as? ColoringPage)?.placed(paperSize) ?: emptyList()
+    }
+
+    // Tracing: the next letter (or number) each time its page comes round
+    val language = LocalLanguage.current
+    val voicePlayer = LocalVoicePlayer.current
+    val tracePage = coloringPages[pageIndex] as? TracePage
+    var letterTurn by remember { mutableIntStateOf(-1) }
+    var numberTurn by remember { mutableIntStateOf(-1) }
+    val letters = if (language == Language.ENGLISH) englishLetters else hebrewLetters
+    val traceText = when {
+        tracePage == null -> null
+        tracePage.numbers -> "${numberTurn.coerceAtLeast(0) % 9 + 1}"
+        else -> letters[letterTurn.coerceAtLeast(0) % letters.size].let { if (language == Language.ENGLISH) it.englishLetter else it.hebrewLetter }
+    }
+    val traceGlyph = remember(traceText, canvasSize) { if (traceText == null || canvasSize.width == 0) null else glyphPath(traceText, paperSize) }
+    val traceStep = with(density) { 14.dp.toPx() }
+    val traceSamples = remember(traceGlyph) { traceGlyph?.let { samplesInside(it, traceStep) } ?: emptyList() }
+    val covered = remember(traceGlyph) { BooleanArray(traceSamples.size) }
+    var traced by remember(traceGlyph) { mutableStateOf(false) }
+    var tracedParty by remember { mutableStateOf(false) }
+    // After each stroke: which bits of the letter it painted, and the party once most of it is
+    LaunchedEffect(paths.size, traceGlyph) {
+        if (traceGlyph == null || traced) return@LaunchedEffect
+        if (paths.isEmpty()) { covered.fill(false); return@LaunchedEffect }
+        val stroke = paths.last()
+        val reach = stroke.strokeWidth / 2 + traceStep * 0.6f
+        traceSamples.forEachIndexed { i, s ->
+            if (!covered[i] && stroke.path.any { (it - s).getDistance() < reach }) covered[i] = true
+        }
+        if (traceSamples.isNotEmpty() && covered.count { it } >= traceSamples.size * 0.6f) {
+            traced = true
+            sfxPlayer.play(Sfx.SUCCESS)
+            tracedParty = true
+            val page = tracePage
+            voicePlayer.play(
+                if (page?.numbers == true) "voice_number_${numberTurn.coerceAtLeast(0) % 9 + 1}"
+                else "voice_letter_${letters[letterTurn.coerceAtLeast(0) % letters.size].id}",
+                language
+            )
+            delay(2200)
+            tracedParty = false
+        }
     }
 
     fun stampAt(offset: Offset) {
@@ -265,7 +319,9 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                         // The paper and the finished strokes, in a layer redrawn only when a stroke is added
                         Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
                             drawPaperGrain()
+                            traceGlyph?.let { drawTraceGlyph(it) }
                             drawArtwork(paths, pageShapes, fills, stamps, stampPainters)
+                            traceGlyph?.let { drawTraceEdge(it) }
                         }
                         // The stroke being drawn right now (the only thing redrawn as the finger moves)
                         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -355,14 +411,20 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                             .border(3.dp, Highlight, RoundedCornerShape(12.dp))
                             .clickable {
                                 pageIndex = (pageIndex + 1) % coloringPages.size
+                                (coloringPages[pageIndex] as? TracePage)?.let { if (it.numbers) numberTurn++ else letterTurn++ }
+                                if (coloringPages[pageIndex] is TracePage) paths.clear()  // a clean sheet to trace on
                                 fills.clear()
                                 sfxPlayer.play(Sfx.WHOOSH, 0.6f)
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        val next = coloringPages[(pageIndex + 1) % coloringPages.size]
-                        Canvas(modifier = Modifier.size(48.dp)) {
-                            next?.let { drawPageLines(it.placed(size)) }
+                        when (val next = coloringPages[(pageIndex + 1) % coloringPages.size]) {
+                            is ColoringPage -> Canvas(modifier = Modifier.size(48.dp)) { drawPageLines(next.placed(size)) }
+                            is TracePage -> Text(
+                                if (next.numbers) "1" else if (language == Language.ENGLISH) "A" else "א",
+                                fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF9575CD)
+                            )
+                            null -> {}
                         }
                     }
                 }
@@ -386,6 +448,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                 }
             }
         }
+        ConfettiOverlay(show = tracedParty)
     }
 }
 
