@@ -148,6 +148,10 @@ def icon_image(state):
 
 
 def main():
+    if os.name != "nt":
+        print("On Linux, Puki runs as a service (set up by  python3 brain/install.py); there's no tray icon.")
+        print(f"The dashboard is at {DASHBOARD}, and  systemctl --user status puki  shows how it's doing.")
+        return
     brain_dir = prepare()
     if port_open(PORT):
         message("Puki is already running. Opening the dashboard.")

@@ -96,7 +96,9 @@ tablet the whole stack could run on the device; contributions welcome.
   bedtime routine, dipping under the bedtime story. To use your own, replace
   `app/src/main/res/raw/music_hub.mp3` and `music_night.mp3`.
 
-**The companion:** on a Windows PC with Python, run `python brain\install.py`. It downloads
+**The companion:** on Windows, run **Puki.exe** from the
+[releases](https://github.com/TomSadeh/puki/releases) (or `python brain\install.py` from this
+repo); on Linux, `python3 brain/install.py`. It downloads
 everything (about 9 GB), sets up the firewall and autostart, and shows the pairing code; see
 [brain/README.md](brain/README.md). Ideally the PC has an NVIDIA GPU with about 6 GB of free
 VRAM (it falls back to the CPU otherwise).

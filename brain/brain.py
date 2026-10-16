@@ -351,7 +351,10 @@ def speak(text, lang, speed=0.92):
 # ---------- Speech to text (ivrit.ai Whisper for Hebrew, Parakeet for English) ----------
 
 def _add_cuda_dlls():
-    """Let CTranslate2 find the cuBLAS / cuDNN DLLs installed as nvidia-* pip packages."""
+    """Let CTranslate2 find the cuBLAS / cuDNN DLLs installed as nvidia-* pip packages.
+    (Windows only; on Linux the doorbell puts them in LD_LIBRARY_PATH before the brain starts.)"""
+    if os.name != "nt":
+        return
     base = os.path.join(sys.prefix, "Lib", "site-packages", "nvidia")
     if not os.path.isdir(base):
         return

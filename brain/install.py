@@ -22,9 +22,11 @@ download resumes where it stopped. Standard library only, so any Python 3.10+ ca
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 import urllib.error
 import urllib.request
@@ -35,6 +37,10 @@ HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__fil
 
 # The versions Puki was tested with
 FROZEN = getattr(sys, "frozen", False)  # running inside Puki.exe
+WINDOWS = os.name == "nt"
+VENV_PY = os.path.join(".venv", "Scripts", "python.exe") if WINDOWS else os.path.join(".venv", "bin", "python")
+LLAMA_SERVER = "llama-server.exe" if WINDOWS else "llama-server"
+SERVICE = os.path.expanduser("~/.config/systemd/user/puki.service")  # Linux: starts Puki at login
 LLAMA_TAG = "b11669"
 UV_VERSION = "0.12.21"  # makes the Python environment when there's no Python (Puki.exe)
 BLUETTS_COMMIT = "0e38dbf08ed53f85863d1eab092bd9572c53a503"
@@ -161,7 +167,7 @@ def nvidia():
 
 def long_paths_ok(root):
     """Python packages nest deep; past Windows' 260-character limit pip fails halfway."""
-    if len(root) <= 60:
+    if not WINDOWS or len(root) <= 60:
         return True
     try:
         import winreg
@@ -200,11 +206,14 @@ def write_marker(folder, version):
 
 def install_llama(root, gpu, dry):
     dest = os.path.join(root, "llama")
-    flavor = "cpu-x64"
-    if gpu:
-        flavor = "cuda-13.4-x64" if gpu[2] >= 13 else "cuda-12.4-x64"
+    if WINDOWS:
+        flavor = ("win-cuda-13.4-x64" if gpu[2] >= 13 else "win-cuda-12.4-x64") if gpu else "win-cpu-x64"
+        wanted = [f"llama-{LLAMA_TAG}-bin-{flavor}.zip"] + ([f"cudart-llama-bin-{flavor}.zip"] if gpu else [])
+    else:
+        flavor = ("ubuntu-cuda-13.4-x64" if gpu[2] >= 13 else "ubuntu-cuda-12.8-x64") if gpu else "ubuntu-x64"
+        wanted = [f"llama-{LLAMA_TAG}-bin-{flavor}.tar.gz"] + ([f"cudart-llama-{LLAMA_TAG}-bin-{flavor}.tar.gz"] if gpu else [])
     version = f"{LLAMA_TAG} {flavor}"
-    if os.path.exists(os.path.join(dest, "llama-server.exe")):
+    if os.path.exists(os.path.join(dest, LLAMA_SERVER)):
         have = read_marker(dest)
         if have is None or have == version:  # no marker: set up by hand, leave it alone
             say(f"    ✓ llama.cpp (already there{'' if have is None else ', ' + LLAMA_TAG})")
@@ -216,9 +225,6 @@ def install_llama(root, gpu, dry):
             shutil.rmtree(dest)
     assets = {a["name"]: (a["browser_download_url"], a["size"])
               for a in http_json(f"https://api.github.com/repos/ggml-org/llama.cpp/releases/tags/{LLAMA_TAG}")["assets"]}
-    wanted = [f"llama-{LLAMA_TAG}-bin-win-{flavor}.zip"]
-    if gpu:
-        wanted.append(f"cudart-llama-bin-win-{flavor}.zip")
     for name in wanted:
         if name not in assets:
             fail(f"llama.cpp {LLAMA_TAG} has no {name}")
@@ -226,11 +232,33 @@ def install_llama(root, gpu, dry):
         z = os.path.join(root, "downloads", name)
         download(url, z, size, dry)
         if not dry:
-            with zipfile.ZipFile(z) as f:
-                f.extractall(dest)
+            extract(z, dest)
     if not dry:
         write_marker(dest, version)
         say(f"    ✓ llama.cpp {LLAMA_TAG} ({flavor})")
+
+
+def extract(archive, dest):
+    """Unpacks a .zip or .tar.gz into [dest]; a single top folder in the archive is flattened."""
+    tmp = dest + ".unpack"
+    shutil.rmtree(tmp, ignore_errors=True)
+    if archive.endswith(".zip"):
+        with zipfile.ZipFile(archive) as f:
+            f.extractall(tmp)
+    else:
+        with tarfile.open(archive) as f:
+            f.extractall(tmp, **({"filter": "data"} if hasattr(tarfile, "data_filter") else {}))
+    entries = os.listdir(tmp)
+    top = os.path.join(tmp, entries[0]) if len(entries) == 1 and os.path.isdir(os.path.join(tmp, entries[0])) else tmp
+    os.makedirs(dest, exist_ok=True)
+    for name in os.listdir(top):
+        target = os.path.join(dest, name)
+        if os.path.isdir(target) and not os.path.islink(target):
+            shutil.rmtree(target)
+        elif os.path.lexists(target):
+            os.remove(target)
+        shutil.move(os.path.join(top, name), target)
+    shutil.rmtree(tmp, ignore_errors=True)
 
 
 def install_models(root, model, dry):
@@ -302,7 +330,7 @@ def get_uv(root, dry):
 
 def install_venv(root, gpu, dry):
     venv = os.path.join(root, ".venv")
-    py = os.path.join(venv, "Scripts", "python.exe")
+    py = os.path.join(root, VENV_PY)
     if dry:
         say(f"    → would create {venv} and install the Python packages" + ("" if gpu else " (without the NVIDIA ones)"))
         return py
@@ -375,7 +403,45 @@ def port_rule():
         "Select-Object -First 1 -ExpandProperty DisplayName").stdout.strip()
 
 
+def lan_subnet():
+    """The home network, e.g. 192.168.1.0/24, for a firewall rule that only lets it in."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))
+        ip = s.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+    return ".".join(ip.split(".")[:3]) + ".0/24"
+
+
+def ufw_active():
+    return shutil.which("ufw") is not None and subprocess.run(
+        ["systemctl", "is-active", "--quiet", "ufw"], capture_output=True).returncode == 0
+
+
+def setup_firewall_linux(dry):
+    subnet = lan_subnet()
+    if not ufw_active():
+        say("    ✓ no active ufw firewall, so the tablet can reach this PC (if you use another firewall,")
+        say(f"      open TCP {PORT} to your home network only)")
+        return
+    cmd = ["sudo", "ufw", "allow", "from", subnet, "to", "any", "port", str(PORT), "proto", "tcp", "comment", FIREWALL_RULE]
+    if dry:
+        say(f"    → would ask to run: {shlex.join(cmd)}")
+        return
+    say(f"    ufw is on. Puki needs TCP {PORT} open to your home network ({subnet}) only:")
+    say(f"      {shlex.join(cmd)}")
+    if input("    Run it now (asks for your password)? [Y/n] ").strip().lower() in ("", "y", "yes"):
+        r = subprocess.run(cmd)
+        say("    ✓ firewall rule added" if r.returncode == 0 else "    ! that didn't work; run the command above yourself")
+
+
 def setup_firewall(dry):
+    if not WINDOWS:
+        return setup_firewall_linux(dry)
     existing = port_rule()
     if existing:
         say(f"    ✓ firewall rule '{existing}' (already there)")
@@ -399,7 +465,41 @@ def setup_firewall(dry):
         say("      Network profile type → Private.")
 
 
+def setup_autostart_linux(dry):
+    """A systemd user service: the doorbell starts at login and restarts if it stops."""
+    doorbell = os.path.join(HERE, "doorbell.py")
+    if os.path.exists(SERVICE):
+        say("    ✓ starts at login (systemd user service 'puki', already set up)")
+        return
+    if dry:
+        say(f"    → would add the systemd user service 'puki' ({SERVICE})")
+        return
+    os.makedirs(os.path.dirname(SERVICE), exist_ok=True)
+    with open(SERVICE, "w", encoding="utf-8") as f:
+        f.write(f"""[Unit]
+Description=Puki's brain (the doorbell for the tablet)
+After=network-online.target
+
+[Service]
+ExecStart={sys.executable} {doorbell}
+WorkingDirectory={HERE}
+Environment=PYTHONUTF8=1
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+""")
+    r = subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True, text=True)
+    r = subprocess.run(["systemctl", "--user", "enable", "puki"], capture_output=True, text=True)
+    say("    ✓ starts at login (systemd user service 'puki')" if r.returncode == 0
+        else f"    ! couldn't enable the service: {r.stderr.strip()}")
+    say("      To have it run even before anyone logs in:  sudo loginctl enable-linger $USER")
+
+
 def setup_autostart(dry):
+    if not WINDOWS:
+        setup_autostart_linux(dry)
+        return sys.executable, os.path.join(HERE, "doorbell.py")
     startup = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
     link = os.path.join(startup, "Puki brain.lnk")
     pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
@@ -432,13 +532,18 @@ def start_puki(pythonw, doorbell, dry):
         return
     if port_open(PORT):
         say("    ✓ Puki is already running (restart the PC, or the doorbell, to pick up new settings)")
+    elif not WINDOWS and os.path.exists(SERVICE):
+        subprocess.run(["systemctl", "--user", "start", "puki"])
+    elif not WINDOWS:
+        subprocess.Popen([sys.executable, doorbell], cwd=HERE, start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
         subprocess.Popen([pythonw, doorbell], cwd=HERE, creationflags=0x00000008)  # DETACHED_PROCESS
         for _ in range(20):
             if port_open(PORT):
                 break
             time.sleep(0.5)
-        say("    ✓ Puki is running" if port_open(PORT) else "    ! Puki didn't start; run  python brain\\doorbell.py  to see why")
+        say("    ✓ Puki is running" if port_open(PORT) else "    ! Puki didn't start; run  python brain/doorbell.py  to see why")
     code_file = os.path.join(HERE, "pairing_code.txt")
     if os.path.exists(code_file):
         with open(code_file, encoding="utf-8") as f:
@@ -454,6 +559,8 @@ def startup_folder():
 
 def puki_shortcuts():
     """Login shortcuts that start Puki (made by this installer, by Puki.exe, or by hand)."""
+    if not WINDOWS:
+        return [SERVICE] if os.path.exists(SERVICE) else []
     out = powershell(
         f"$sh = New-Object -ComObject WScript.Shell; Get-ChildItem '{startup_folder()}' -Filter *.lnk | "
         "Where-Object { $l = $sh.CreateShortcut($_.FullName); ($l.Arguments + ' ' + $l.TargetPath) -match "
@@ -465,6 +572,16 @@ def stop_puki(root, dry):
     """Stops the doorbell (or tray), the brain and llama-server."""
     if dry:
         say("    → would stop Puki if it's running")
+        return
+    if not WINDOWS:
+        if os.path.exists(SERVICE):
+            subprocess.run(["systemctl", "--user", "stop", "puki"], capture_output=True)
+        me = {str(os.getpid()), str(os.getppid())}
+        for pattern in (os.path.join(HERE, "doorbell.py"), os.path.join(HERE, "brain.py"), os.path.join(root, "llama", "llama-server")):
+            pids = subprocess.run(["pgrep", "-f", pattern], capture_output=True, text=True).stdout.split()
+            for pid in set(pids) - me:
+                subprocess.run(["kill", pid], capture_output=True)
+        say("    ✓ Puki stopped")
         return
     powershell(
         "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'doorbell[.]py|brain[.]py|tray[.]py|Puki[.]exe' "
@@ -531,23 +648,7 @@ def update(args, root):
     sys.exit(subprocess.run(cmd).returncode)
 
 
-def uninstall(args, root):
-    dry = args.dry_run
-    ask = lambda q: dry or args.yes or input(f"  {q} [y/N] ").strip().lower() in ("y", "yes")  # noqa: E731
-    say("Puki: uninstall\n")
-    step(1, "Stop Puki")
-    stop_puki(root, dry)
-    step(2, "Start at login")
-    links = puki_shortcuts()
-    if not links:
-        say("    nothing to remove")
-    for link in links:
-        if dry:
-            say(f"    → would remove {os.path.basename(link)}")
-        else:
-            os.remove(link)
-            say(f"    ✓ removed {os.path.basename(link)}")
-    step(3, "Firewall rule")
+def uninstall_windows_firewall(dry, ask):
     mine = powershell(f"Get-NetFirewallRule -DisplayName '{FIREWALL_RULE}' -ErrorAction SilentlyContinue").stdout.strip()
     other = port_rule()
     if mine:
@@ -563,6 +664,40 @@ def uninstall(args, root):
         say(f"    in an administrator PowerShell:  Remove-NetFirewallRule -DisplayName '{other}'")
     else:
         say("    nothing to remove")
+
+
+def uninstall(args, root):
+    dry = args.dry_run
+    ask = lambda q: dry or args.yes or input(f"  {q} [y/N] ").strip().lower() in ("y", "yes")  # noqa: E731
+    say("Puki: uninstall\n")
+    step(1, "Stop Puki")
+    stop_puki(root, dry)
+    step(2, "Start at login")
+    links = puki_shortcuts()
+    if not links:
+        say("    nothing to remove")
+    for link in links:
+        if dry:
+            say(f"    → would remove {os.path.basename(link)}")
+        else:
+            if link == SERVICE:
+                subprocess.run(["systemctl", "--user", "disable", "puki"], capture_output=True)
+            os.remove(link)
+            if link == SERVICE:
+                subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+            say(f"    ✓ removed {os.path.basename(link)}")
+    step(3, "Firewall rule")
+    if not WINDOWS:
+        if ufw_active():
+            cmd = f"sudo ufw delete allow from {lan_subnet()} to any port {PORT} proto tcp"
+            if dry:
+                say(f"    → would ask to run: {cmd}")
+            elif ask(f"Remove the ufw rule for port {PORT}? (runs: {cmd})"):
+                subprocess.run(cmd.split())
+        else:
+            say("    nothing to remove (no active ufw)")
+    else:
+        uninstall_windows_firewall(dry, ask)
     step(4, f"Models, llama.cpp, BlueTTS and the Python environment ({root})")
     if os.path.isdir(root):
         size = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(root) for f in fs) / 1e9
@@ -617,8 +752,8 @@ def main():
         return update(args, root)
 
     say("Puki's brain: setup\n")
-    if os.name != "nt":
-        fail("this installer is for Windows. On Linux or macOS, follow brain/README.md by hand.")
+    if sys.platform == "darwin":
+        fail("macOS isn't supported by this installer yet; follow brain/README.md by hand.")
     if sys.version_info < (3, 10) and not FROZEN:
         fail(f"Python 3.10 or newer is needed (this is {sys.version.split()[0]}).")
     gpu = None if args.cpu else nvidia()
@@ -657,7 +792,7 @@ def main():
         if input("\n  Start? [Y/n] ").strip().lower() not in ("", "y", "yes"):
             return
 
-    py = os.path.join(root, ".venv", "Scripts", "python.exe")
+    py = os.path.join(root, VENV_PY)
     pythonw, doorbell = os.path.join(os.path.dirname(sys.executable), "pythonw.exe"), os.path.join(HERE, "doorbell.py")
     step(1, "llama.cpp (runs Gemma)")
     install_llama(root, gpu, dry) if run("llama") else say("    skipped")

@@ -231,12 +231,19 @@ class Brain:
         errors = open(ERRORS_FILE, "w", encoding="utf-8") if no_console else None
         # UTF-8 mode: otherwise BlueTTS reads its data files in the Windows code page and crashes
         env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+        if os.name != "nt":
+            # Linux finds shared libraries through LD_LIBRARY_PATH, set before the process starts:
+            # llama.cpp's own (next to llama-server) and the CUDA ones pip put in the brain's venv
+            import glob
+            venv = os.path.dirname(os.path.dirname(CFG["brain_python"]))
+            libs = [CFG["llama_dir"]] + glob.glob(os.path.join(venv, "lib", "python3*", "site-packages", "nvidia", "*", "lib"))
+            env["LD_LIBRARY_PATH"] = os.pathsep.join(libs + [os.environ.get("LD_LIBRARY_PATH", "")]).rstrip(os.pathsep)
         llama = subprocess.Popen(
             [os.path.join(CFG["llama_dir"], "llama-server"), "-m", model,
              "--host", "127.0.0.1", "--port", str(CFG["llama_port"]),
              "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"]
             + (["--mmproj", mmproj] if mmproj and os.path.exists(mmproj) else []),
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags, env=env,
         )
         brain = subprocess.Popen(
             [CFG["brain_python"], os.path.join(HERE, "brain.py")],
