@@ -702,9 +702,14 @@ class TLSServer(ThreadingHTTPServer):
     def handle_error(self, request, client_address):
         err = sys.exc_info()[1]
         if isinstance(err, (ssl.SSLError, ConnectionError, TimeoutError, OSError)):
-            # Most often an older app still speaking plain HTTP, or a device that went away
-            EVENTS.add("denied", ip=client_address[0], text=f"connection dropped ({type(err).__name__}); "
-                                                            "an app older than 0.5 needs updating")
+            ip = client_address[0]
+            if not isinstance(err, ssl.SSLError):
+                why = "the device went away before finishing"
+            elif ip.startswith("127.") or ip == "::1":
+                why = "a program on this PC connected without HTTPS (not the tablet)"
+            else:
+                why = "not HTTPS: a Puki app older than 0.5 needs updating"
+            EVENTS.add("denied", ip=ip, text=f"connection dropped ({type(err).__name__}): {why}")
             return
         super().handle_error(request, client_address)
 

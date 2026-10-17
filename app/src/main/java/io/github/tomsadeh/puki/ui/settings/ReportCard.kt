@@ -73,9 +73,9 @@ fun ReportCard(companion: Companion) {
         val canSend = Contact.REPORT_EMAIL.isNotBlank()
         val steps = listOf(
             BilingualText(
-                "כאן רואים מה פוקי אמר מאז שהמשחק נפתח, מהחדש לישן, ומעל כל משפט מה הילד אמר לפניו.",
-                "Here's what Puki has said since the game opened, newest first, with what your child said just before each line.",
-                heGirl = "כאן רואים מה פוקי אמר מאז שהמשחק נפתח, מהחדש לישן, ומעל כל משפט מה הילדה אמרה לפניו."
+                "כאן רואים מה פוקי אמר מאז שהמשחק נפתח, מהחדש לישן, ומעל כל משפט מה קרה רגע לפניו, או מה הילד אמר לו.",
+                "Here's what Puki has said since the game opened, newest first, and above each line what happened just before, or what your child said to him.",
+                heGirl = "כאן רואים מה פוקי אמר מאז שהמשחק נפתח, מהחדש לישן, ומעל כל משפט מה קרה רגע לפניו, או מה הילדה אמרה לו."
             ),
             BilingualText(
                 "משהו לא התאים? מפחיד, לא נכון, מבטיח משהו או סתם מוזר: לוחצים על 🚩 ליד המשפט.",
@@ -105,9 +105,17 @@ fun ReportCard(companion: Companion) {
         for (line in lines.asReversed().take(10)) {
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    val before = line.heard.ifBlank { line.situation }
+                    // What came just before: her own words, or what was happening in the game
+                    val (label, before) = when {
+                        line.heard.isNotBlank() -> BilingualText("הילד אמר:", "Your child said:", heGirl = "הילדה אמרה:") to line.heard
+                        else -> BilingualText("מה קרה:", "What happened:") to whatHappened(line.situation)
+                    }
                     if (before.isNotBlank()) {
-                        Text("“$before”", fontSize = 13.sp, color = EarthBrown.copy(alpha = 0.65f), maxLines = 2)
+                        Text(
+                            label.resolve(language, gender) + " " + before,
+                            fontSize = 13.sp, lineHeight = 17.sp, color = EarthBrown.copy(alpha = 0.65f), maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
                     Text(line.said, style = MaterialTheme.typography.bodyLarge, color = EarthBrown)
                 }
@@ -136,6 +144,16 @@ fun ReportCard(companion: Companion) {
         }
     }
 }
+
+/**
+ * The game's description of the moment, for the parent: without the sentences that tell Puki
+ * what to do ("Say something short about it."), which are for him, not for them.
+ */
+private fun whatHappened(situation: String): String =
+    situation.split(Regex("(?<=[.!?])\\s+"))
+        .filterNot { it.trimStart().startsWith("תגיד") || it.trimStart().startsWith("Say ") || it.trimStart().startsWith("Tell ") }
+        .joinToString(" ")
+        .trim()
 
 /**
  * What will be sent, before anything is: the text with the child's name replaced, which the parent
