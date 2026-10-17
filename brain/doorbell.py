@@ -41,6 +41,7 @@ import hmac
 import json
 import os
 import queue
+import secrets
 import shutil
 import ssl
 import subprocess
@@ -219,6 +220,9 @@ class Brain:
         self.device = None       # "GPU" or "CPU" while awake
         self.model = None        # "E4B" or "12B" while awake
         self.awake_since = None
+        # Made at each wake and given only to brain.py and llama-server: other programs on this
+        # PC (or a web page open in its browser) can't make Puki talk or use the GPU through them
+        self.token = ""
 
     def touch(self):
         self.last_used = time.time()
@@ -249,7 +253,8 @@ class Brain:
         # UTF-8 mode: otherwise BlueTTS reads its data files in the Windows code page and crashes
         # Offline: the installer brings every model, so anything that tries to fetch one fails
         # instead of quietly downloading
-        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", HF_HUB_OFFLINE="1")
+        self.token = secrets.token_urlsafe(24)
+        env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8", HF_HUB_OFFLINE="1", PUKI_BRAIN_TOKEN=self.token)
         if os.name != "nt":
             # Linux finds shared libraries through LD_LIBRARY_PATH, set before the process starts:
             # llama.cpp's own (next to llama-server) and the CUDA ones pip put in the brain's venv
@@ -260,7 +265,7 @@ class Brain:
         llama = KILL_ON_CLOSE.popen(
             [os.path.join(CFG["llama_dir"], "llama-server"), "-m", model,
              "--host", "127.0.0.1", "--port", str(CFG["llama_port"]),
-             "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"]
+             "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui", "--api-key", self.token]
             + (["--mmproj", mmproj] if mmproj and os.path.exists(mmproj) else []),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags, env=env,
         )
@@ -513,7 +518,7 @@ class Handler(BaseHTTPRequestHandler):
             event["ip"] = self.client_address[0]
             try:
                 ctype = self.headers.get("Content-Type", "application/json")
-                headers = {"Content-Type": ctype}
+                headers = {"Content-Type": ctype, "X-Puki-Brain-Token": BRAIN.token}
                 if gives_up:
                     headers["X-Puki-Deadline"] = f"{gives_up:.3f}"
                 req = urllib.request.Request(f"{BRAIN_URL}{self.path}", data=body, headers=headers)

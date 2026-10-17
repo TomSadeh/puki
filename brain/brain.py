@@ -11,6 +11,7 @@ llama-server with Gemma (the doorbell starts both).
 """
 
 import base64
+import hmac
 import io
 import json
 import math
@@ -52,6 +53,11 @@ persona.configure(CFG)
 # One request at a time: Gemma, Whisper and BlueTTS run one job at a time anyway, and the
 # child's name/gender (persona.set_child) are per request
 REQUEST_LOCK = threading.Lock()
+
+# The doorbell makes a token at each wake and gives it to this process and to llama-server:
+# requests without it (another program, a web page in this PC's browser) are refused
+TOKEN = os.environ.get("PUKI_BRAIN_TOKEN", "")
+LLAMA_HEADERS = {"Content-Type": "application/json", **({"Authorization": f"Bearer {TOKEN}"} if TOKEN else {})}
 
 
 # Small models repeat themselves, so each request suggests a different opening
@@ -95,7 +101,7 @@ def gate(heard):
         "chat_template_kwargs": {"enable_thinking": False},
     }
     req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", data=json.dumps(payload).encode(),
-                                 headers={"Content-Type": "application/json"})
+                                 headers=LLAMA_HEADERS)
     with urllib.request.urlopen(req, timeout=20) as r:
         top = json.load(r)["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
     probs = {}
@@ -133,7 +139,7 @@ def chat(messages, max_tokens=48, temperature=0.9, response_format=None, timeout
     if response_format:
         payload["response_format"] = response_format
     req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", data=json.dumps(payload).encode(),
-                                 headers={"Content-Type": "application/json"})
+                                 headers=LLAMA_HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.load(r)["choices"][0]["message"]["content"]
 
@@ -447,6 +453,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        if TOKEN and not hmac.compare_digest(self.headers.get("X-Puki-Brain-Token", ""), TOKEN):
+            return self._fail(403)
         # The app sends the child's name and gender with every request (?name=...&gender=girl)
         query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         with REQUEST_LOCK:
