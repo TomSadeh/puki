@@ -50,6 +50,9 @@ HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__fil
 # The versions Puki was tested with
 FROZEN = getattr(sys, "frozen", False)  # running inside Puki.exe
 WINDOWS = os.name == "nt"
+# Inside Puki.exe there's no console, so each command the setup runs would open (and flash) a
+# console window of its own: these keep them hidden. From a terminal they share its console
+NO_WINDOW = {"creationflags": 0x08000000} if WINDOWS and (FROZEN or sys.stdout is None) else {}  # CREATE_NO_WINDOW
 VENV_PY = os.path.join(".venv", "Scripts", "python.exe") if WINDOWS else os.path.join(".venv", "bin", "python")
 LLAMA_SERVER = "llama-server.exe" if WINDOWS else "llama-server"
 SERVICE = os.path.expanduser("~/.config/systemd/user/puki.service")  # Linux: starts Puki at login
@@ -399,7 +402,7 @@ class DriverProblem(Exception):
 def _query_nvidia():
     def smi(*args):
         try:
-            r = subprocess.run(["nvidia-smi", *args], capture_output=True, text=True, timeout=15)
+            r = subprocess.run(["nvidia-smi", *args], capture_output=True, text=True, timeout=15, **NO_WINDOW)
         except subprocess.TimeoutExpired:
             raise DriverProblem("nvidia-smi didn't answer within 15 seconds, so the NVIDIA driver seems stuck.")
         if r.returncode != 0:
@@ -597,9 +600,9 @@ def install_venv(root, gpu, dry):
     if not os.path.exists(py):
         say("    creating the Python environment...")
         if uv:  # Puki.exe: no Python on the PC necessarily, so uv brings one
-            subprocess.run([uv, "venv", "--python", "3.12", "--python-preference", "only-managed", venv], check=True, env=uv_env)
+            subprocess.run([uv, "venv", "--python", "3.12", "--python-preference", "only-managed", venv], check=True, env=uv_env, **NO_WINDOW)
         else:
-            subprocess.run([sys.executable, "-m", "venv", venv], check=True)
+            subprocess.run([sys.executable, "-m", "venv", venv], check=True, **NO_WINDOW)
     # Without an NVIDIA GPU, skip the CUDA libraries (about 1 GB)
     with open(os.path.join(HERE, "requirements.txt"), encoding="utf-8") as f:
         reqs = [l for l in f.read().splitlines() if gpu or not l.startswith("nvidia-")]
@@ -609,10 +612,10 @@ def install_venv(root, gpu, dry):
         f.write("\n".join(reqs) + "\n")
     say("    installing packages (a few minutes the first time)...")
     if uv:
-        r = subprocess.run([uv, "pip", "install", "--python", py, "-q", os.path.join(root, "BlueTTS"), "-r", req_file], env=uv_env)
+        r = subprocess.run([uv, "pip", "install", "--python", py, "-q", os.path.join(root, "BlueTTS"), "-r", req_file], env=uv_env, **NO_WINDOW)
     else:
         r = subprocess.run([py, "-m", "pip", "install", "--disable-pip-version-check", "-q",
-                            os.path.join(root, "BlueTTS"), "-r", req_file])
+                            os.path.join(root, "BlueTTS"), "-r", req_file], **NO_WINDOW)
     if r.returncode != 0:
         fail("pip couldn't install the packages (see above). Fix that and run the installer again.")
     say("    ✓ Python environment")
@@ -932,7 +935,7 @@ def certificate_fingerprint(root):
             tls.make(cert, key)
         except ImportError:
             py = os.path.join(root, VENV_PY)
-            if not os.path.exists(py) or subprocess.run([py, os.path.join(HERE, "tls.py"), cert, key],
+            if not os.path.exists(py) or subprocess.run([py, os.path.join(HERE, "tls.py"), cert, key], **NO_WINDOW,
                                                         capture_output=True).returncode != 0:
                 return None
     return tls.fingerprint(cert)
@@ -1010,7 +1013,7 @@ def signature_ok(path, sig, signers=SIGNERS_FILE):
         fail("ssh-keygen (OpenSSH) isn't installed, so the update's signature can't be checked; "
              "install OpenSSH and run the update again.")
     with open(path, "rb") as f:
-        r = subprocess.run([exe, "-Y", "verify", "-f", signers, "-I", "puki", "-n", SIGN_NAMESPACE, "-s", sig],
+        r = subprocess.run([exe, "-Y", "verify", "-f", signers, "-I", "puki", "-n", SIGN_NAMESPACE, "-s", sig], **NO_WINDOW,
                            stdin=f, capture_output=True)
     return r.returncode == 0
 
