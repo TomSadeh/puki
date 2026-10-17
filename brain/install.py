@@ -895,10 +895,11 @@ def check_puki_talks(root, port, startup_timeout_s):
         start = time.time()
         conn = http.client.HTTPSConnection("127.0.0.1", port, timeout=timeout, context=ctx)
         try:
-            conn.request("POST", "/say", body=json.dumps({"situation": HELLO, "lang": lang}).encode(),
-                         headers={"X-Puki-Code": code, "Content-Type": "application/json"})
+            conn.connect()  # the certificate first: the pairing code goes only to this PC's Puki
             if hashlib.sha256(conn.sock.getpeercert(binary_form=True)).hexdigest() != tls.fingerprint(cert):
                 fail(f"something other than Puki answered on port {port} (its certificate isn't this PC's Puki's)")
+            conn.request("POST", "/say", body=json.dumps({"situation": HELLO, "lang": lang}).encode(),
+                         headers={"X-Puki-Code": code, "Content-Type": "application/json"})
             r = conn.getresponse()
             audio = r.read()
         except OSError as e:
