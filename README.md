@@ -70,6 +70,8 @@ can reach a PC at home running the [brain server](brain/README.md):
   child's day, one sentence at a time, each with a matching picture;
 - in Animal Garden it asks "**מה החתול אומר?**" and listens hands-free; any answer makes the
   animal reply with its sound;
+- after a question ("which color?", "how many?", "who's hiding?") it listens for a few seconds,
+  so the child can **say the answer instead of tapping** it;
 - if the PC is off or out of reach, the parrot just doesn't show up and the game uses its
   recorded voices.
 

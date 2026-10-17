@@ -1,6 +1,9 @@
 package io.github.tomsadeh.puki.ui.colors
 
+import io.github.tomsadeh.puki.ui.components.AnswerOutLoud
+import io.github.tomsadeh.puki.ui.components.ReactionState
 import io.github.tomsadeh.puki.ui.components.RoundPrompt
+import io.github.tomsadeh.puki.data.content.ColorDef
 import io.github.tomsadeh.puki.ui.components.hintGlow
 import io.github.tomsadeh.puki.ui.components.noticeTouches
 import io.github.tomsadeh.puki.ui.components.rememberHelp
@@ -19,7 +22,6 @@ import io.github.tomsadeh.puki.ui.components.PromptBubble
 import io.github.tomsadeh.puki.ui.components.Scene
 import io.github.tomsadeh.puki.ui.common.LocalCompanion
 import io.github.tomsadeh.puki.ui.components.reaction
-import io.github.tomsadeh.puki.ui.components.rememberReactionState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,6 +87,35 @@ fun ColorSplashScreen(
         "voice_prompt_tap_the", "voice_color_${state.targetColor.id}"
     )
 
+    val reactions = remember(state.roundIndex) { state.colorChoices.associate { it.id to ReactionState() } }
+
+    // A balloon picked, by a tap or by saying its color
+    fun pick(color: ColorDef) {
+        val blobReaction = reactions[color.id] ?: return
+        val correct = viewModel.onColorTapped(color.id) ?: return
+        if (correct) {
+            sfxPlayer.play(Sfx.SUCCESS)
+            if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}. זה נכון!", "In the color game the child picked ${color.name.en.lowercase()}. That's right!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
+            showRoundSuccess = true
+            scope.launch { blobReaction.celebrate() }
+            scope.launch {
+                delay(if (companion?.isReady == true) 3400 else 2000)
+                showRoundSuccess = false
+                viewModel.nextRound()
+            }
+        } else {
+            sfxPlayer.play(Sfx.WRONG_GENTLE)
+            if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}, אבל חיפשנו ${state.targetColor.name.he}.", "In the color game the child picked ${color.name.en.lowercase()}, but we were looking for ${state.targetColor.name.en.lowercase()}.") { voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language)
+            help.missed()
+            scope.launch { blobReaction.shake() }
+        }
+    }
+
+    // "אדום!" picks the red balloon
+    AnswerOutLoud(state.roundIndex, state.colorChoices.map { listOf(it.name.resolve(language)) }, active = !showRoundSuccess) { i ->
+        state.colorChoices.getOrNull(i)?.let { pick(it) }
+    }
+
     GameBackground(
             scene = Scene.PLAYGROUND,
         colors = listOf(Color(0xFFE1BEE7), Color(0xFFCE93D8), Color(0xFFBA68C8))
@@ -116,31 +147,12 @@ fun ColorSplashScreen(
             // Balloons floating about, high and low
             Scatter(seed = sessionSeed + state.roundIndex, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 state.colorChoices.forEachIndexed { i, color ->
-                    val blobReaction = rememberReactionState(state.roundIndex, color.id)
-                    Box(modifier = Modifier.popIn(i, state.roundIndex).idleBob(i).reaction(blobReaction)
+                    Box(modifier = Modifier.popIn(i, state.roundIndex).idleBob(i).reaction(reactions.getValue(color.id))
                         .hintGlow(help.showHint && color.id == state.targetColor.id)
                         .graphicsLayer { rotationZ = scatterTilt(sessionSeed + state.roundIndex, i) }) {
                     ColorBlob(
                         color = color.color,
-                        onClick = {
-                            val correct = viewModel.onColorTapped(color.id) ?: return@ColorBlob
-                            if (correct) {
-                                sfxPlayer.play(Sfx.SUCCESS)
-                                if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}. זה נכון!", "In the color game the child picked ${color.name.en.lowercase()}. That's right!") { voicePlayer.playPraise(language) } else voicePlayer.playPraise(language)
-                                showRoundSuccess = true
-                                scope.launch { blobReaction.celebrate() }
-                                scope.launch {
-                                    delay(if (companion?.isReady == true) 3400 else 2000)
-                                    showRoundSuccess = false
-                                    viewModel.nextRound()
-                                }
-                            } else {
-                                sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                if (companion != null) companion.react("במשחק הצבעים בחרו ${color.name.he}, אבל חיפשנו ${state.targetColor.name.he}.", "In the color game the child picked ${color.name.en.lowercase()}, but we were looking for ${state.targetColor.name.en.lowercase()}.") { voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language) } else voicePlayer.playSequence(listOf("voice_color_${color.id}", "voice_prompt_try_again"), language)
-                                help.missed()
-                                scope.launch { blobReaction.shake() }
-                            }
-                        }
+                        onClick = { pick(color) }
                     )
                     }
                 }

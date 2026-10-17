@@ -564,6 +564,18 @@ class Handler(BaseHTTPRequestHandler):
                     heard, match = heard2, match2
             log(f"say {shown(target)}: heard {shown(heard)} -> {match}")
             self._json({"heard": heard, "match": match})
+        elif url.path == "/hear":
+            # A game asked a question and the child answered out loud. Body: a WAV; ?hint= are the
+            # answers on screen (Whisper expects them). Only the words go back: the tablet decides
+            # which answer that was. Whisper even for English, as Parakeet misses one word alone
+            hints = [h[:40] for h in query.get("hint", []) if h][:16]
+            try:
+                heard = transcribe(body, lang, hints=" ".join(hints), whisper=True)
+            except Exception as e:
+                log(f"whisper failed: {e}")
+                return self._fail(400)
+            log(f"answer out loud: heard {shown(heard)}")
+            self._json({"heard": heard})
         elif url.path == "/look":
             # Body: PNG of the child's drawing
             try:

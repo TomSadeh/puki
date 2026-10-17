@@ -54,6 +54,9 @@ import io.github.tomsadeh.puki.ui.components.GameTopBar
 import io.github.tomsadeh.puki.ui.components.ReactionState
 import io.github.tomsadeh.puki.ui.components.RoundCompleteSheet
 import io.github.tomsadeh.puki.ui.components.RoundPrompt
+import io.github.tomsadeh.puki.ui.components.AnswerOutLoud
+import io.github.tomsadeh.puki.data.content.numberWords
+import io.github.tomsadeh.puki.data.models.Language
 import io.github.tomsadeh.puki.ui.components.Scatter
 import io.github.tomsadeh.puki.ui.components.Scene
 import io.github.tomsadeh.puki.ui.components.hintGlow
@@ -128,6 +131,27 @@ fun CountingGardenScreen(
             voicePlayer.play("voice_prompt_how_many", language)
         }
     }
+
+    // "How many?": a number card picked, by a tap or by saying the number
+    val cardReactions = remember(state.roundIndex, state.choices) { state.choices.associateWith { ReactionState() } }
+    fun answer(n: Int) {
+        val cardReaction = cardReactions[n] ?: return
+        if (viewModel.onAnswer(n)) {
+            scope.launch { cardReaction.celebrate() }
+            celebrate()
+        } else {
+            sfxPlayer.play(Sfx.WRONG_GENTLE)
+            help.missed()
+            scope.launch { cardReaction.shake() }
+            voicePlayer.playSequence(listOf("voice_number_$n", "voice_prompt_try_again"), language)
+        }
+    }
+    AnswerOutLoud(
+        state.roundIndex to state.phase,
+        state.choices.map { numberWords(it, language == Language.ENGLISH) },
+        active = state.phase == CountingPhase.HOW_MANY && !showRoundSuccess && !state.roundComplete,
+        askedAfterMs = 1900
+    ) { i -> state.choices.getOrNull(i)?.let { answer(it) } }
 
     GameBackground(
         scene = Scene.GARDEN,
@@ -222,23 +246,12 @@ fun CountingGardenScreen(
             ) {
                 if (state.phase == CountingPhase.HOW_MANY) {
                     state.choices.forEachIndexed { i, n ->
-                        val cardReaction = remember(state.roundIndex, n) { ReactionState() }
                         NumberCard(
                             number = n,
                             index = i,
-                            reaction = cardReaction,
+                            reaction = cardReactions.getValue(n),
                             hint = help.showHint && n == target,
-                            onTap = {
-                                if (viewModel.onAnswer(n)) {
-                                    scope.launch { cardReaction.celebrate() }
-                                    celebrate()
-                                } else {
-                                    sfxPlayer.play(Sfx.WRONG_GENTLE)
-                                    help.missed()
-                                    scope.launch { cardReaction.shake() }
-                                    voicePlayer.playSequence(listOf("voice_number_$n", "voice_prompt_try_again"), language)
-                                }
-                            }
+                            onTap = { answer(n) }
                         )
                     }
                 }

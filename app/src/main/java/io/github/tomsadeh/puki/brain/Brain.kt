@@ -13,6 +13,7 @@ package io.github.tomsadeh.puki.brain
  *  - POST /look?lang=       a PNG drawing -> a line about it, spoken (audio)
  *  - POST /listen?lang=&context=   a WAV of the child -> a spoken answer (audio)
  *  - POST /repeat?lang=&target=&alt=   a WAV -> {"heard", "match"} (Say it with Puki)
+ *  - POST /hear?lang=&hint=        a WAV -> {"heard"} (answering a game out loud, see [SpokenAnswer])
  *  - POST /story            {"played", "icons", "lang"} -> {"sentences": [{"text", "icon"}]}
  *
  * Every POST also carries ?name=&gender= (the child, from the app's settings).

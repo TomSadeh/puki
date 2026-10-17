@@ -19,6 +19,8 @@ Endpoints (port from config, default 8790):
                    parrot answers. Same response, plus X-Heard (what Whisper heard).
   POST /repeat?lang=he&target=כלב[&alt=הב] -> body: WAV of the child saying a word (Say it with Puki)
                    -> JSON {"heard", "match": "word" | "close" | "tried"}
+  POST /hear?lang=he&hint=אדום&hint=כחול -> body: WAV of the child answering a game out loud
+                   -> JSON {"heard"} (the tablet decides which answer it was)
 
 Everything goes over HTTPS with the PC's own certificate (tls.py, made on first start); the
 app trusts it by its fingerprint, which the pairing QR code carries.
@@ -519,7 +521,7 @@ class Handler(BaseHTTPRequestHandler):
                                 req.get("lang"), req.get("game"), req.get("note"))
             EVENTS.add("report", text="reported from the tablet", reply=entry["said"], heard=entry["heard"])
             self._json(200, {"ok": True})
-        elif path in ("/say", "/listen", "/speak", "/look", "/story", "/repeat"):
+        elif path in ("/say", "/listen", "/speak", "/look", "/story", "/repeat", "/hear"):
             BRAIN.wake()
             BRAIN.touch()
             # The app says how long it waits (X-Puki-Deadline-Ms); without it (the installer's
@@ -592,6 +594,8 @@ def describe_request(path, full_path, body):
         return {"text": f"looked at a drawing ({len(body) // 1024} KB)", "lang": query.get("lang", ["he"])[0]}
     if path == "/repeat":
         return {"text": "say it: " + query.get("target", [""])[0], "lang": query.get("lang", ["he"])[0]}
+    if path == "/hear":
+        return {"text": "answer out loud: " + " / ".join(query.get("hint", [])[:6]), "lang": query.get("lang", ["he"])[0]}
     if path == "/listen":
         context = query.get("context", [""])[0]
         return {"text": "listened" + (f" ({context})" if context else ""), "lang": query.get("lang", ["he"])[0],
@@ -605,6 +609,11 @@ def describe_reply(path, headers, data):
     if path == "/story":
         try:
             return " ".join(s.get("text", "") for s in json.loads(data).get("sentences", []))
+        except ValueError:
+            pass
+    if path == "/hear":
+        try:
+            return f"heard: {json.loads(data).get('heard') or 'nothing clear'}"
         except ValueError:
             pass
     if path == "/repeat":

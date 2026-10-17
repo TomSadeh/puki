@@ -8,6 +8,11 @@ import io.github.tomsadeh.puki.ui.common.LocalVoicePlayer
 import io.github.tomsadeh.puki.ui.common.LocalMusicPlayer
 import io.github.tomsadeh.puki.ui.common.LocalCompanion
 import io.github.tomsadeh.puki.audio.Connection
+import io.github.tomsadeh.puki.audio.hasMicPermission
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import io.github.tomsadeh.puki.ui.components.BackArrowIcon
@@ -214,6 +219,29 @@ fun SettingsScreen(
                     onToggle = { settingsViewModel.toggleCompanion(settings.companionEnabled) }
                 )
                 if (settings.companionEnabled) {
+                    // Answering the games out loud; switching it on asks for the microphone if needed
+                    val micContext = LocalContext.current
+                    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+                    SettingsToggleRow(
+                        label = BilingualText("עונים בקול", "Answer out loud").resolve(language),
+                        icon = R.drawable.ic_companion_parrot,
+                        checked = settings.answersOutLoud,
+                        labelOn = BilingualText("פועל", "On").resolve(language),
+                        labelOff = BilingualText("כבוי", "Off").resolve(language),
+                        onToggle = {
+                            val on = !settings.answersOutLoud
+                            settingsViewModel.setAnswersOutLoud(on)
+                            if (on && !hasMicPermission(micContext)) askMic.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    )
+                    Text(
+                        BilingualText(
+                            "אחרי שאלה במשחק (\"איזה צבע?\", \"כמה?\", \"מי מתחבא?\") פוקי מקשיב כמה שניות, ואפשר לענות בקול במקום ללחוץ. ההקלטה הולכת רק למחשב בבית, או נשארת במכשיר.",
+                            "After a question in a game (\"which color?\", \"how many?\", \"who's hiding?\") Puki listens for a few seconds, so the answer can be said instead of tapped. The recording only goes to the PC at home, or stays on this device."
+                        ).resolve(language),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EarthBrown
+                    )
                     // Scan the QR code on the brain's dashboard instead of typing address and code
                     var scanFailed by remember { mutableStateOf(false) }
                     val scan = rememberPairingScanner(

@@ -5,6 +5,7 @@ import android.os.Build
 import io.github.tomsadeh.puki.brain.Brain
 import io.github.tomsadeh.puki.brain.HttpBrain
 import io.github.tomsadeh.puki.data.models.Language
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -79,6 +80,8 @@ class Companion(
     /** Saves a fingerprint learned on first use (set by the app, to keep it in the settings). */
     var onPinLearned: (String) -> Unit = {}
     var language = Language.HEBREW
+    /** The parent lets the games listen for answers said out loud (see [listenForAnswer]). */
+    var answersOutLoud = true
 
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
     private var scene = ""
@@ -373,6 +376,33 @@ class Companion(
         }
     }
 
+    /**
+     * A game asked a question: listens a few seconds for the answer said out loud, and returns
+     * what was heard ("" for silence or nothing clear), for [io.github.tomsadeh.puki.brain.SpokenAnswer]
+     * to match against the answers on screen ([hints], which Whisper then expects). Null when it
+     * can't listen: no microphone, the parent's setting off, or no brain awake to hear it.
+     */
+    suspend fun listenForAnswer(hints: List<String>): String? {
+        if (!answersOutLoud || !isReady || !hasMic()) return null
+        _listening.value = true
+        val wav = try {
+            if (!recorder.start()) return null
+            delay(ANSWER_LISTEN_MILLIS)
+            recorder.stop()
+        } catch (e: CancellationException) {
+            recorder.stop()  // the round moved on (she tapped): the microphone goes off at once
+            throw e
+        } finally {
+            _listening.value = false
+        }
+        if (!hasSpeech(wav)) return ""
+        val path = "/hear?lang=${lang()}" + hints.take(16).joinToString("") { "&hint=" + URLEncoder.encode(it, "UTF-8") }
+        val body = withContext(Dispatchers.IO) {
+            request("POST", path, body = wav, contentType = "audio/wav", timeoutMs = 8000)
+        } ?: return ""
+        return runCatching { JSONObject(String(body)).optString("heard") }.getOrDefault("")
+    }
+
     private fun hasMic() = hasMicPermission(context)
 
     /** Rough voice-activity check: a few 50 ms windows clearly louder than room noise. */
@@ -554,6 +584,7 @@ class Companion(
     private companion object {
         const val LISTEN_MILLIS = 3500L
         const val WORD_LISTEN_MILLIS = 4000L  // toddlers take a moment to start
+        const val ANSWER_LISTEN_MILLIS = 4000L
         const val NAME_LINES_VERSION = 1
     }
 }

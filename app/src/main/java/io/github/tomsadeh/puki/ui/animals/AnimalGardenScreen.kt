@@ -11,6 +11,7 @@ import io.github.tomsadeh.puki.ui.components.Scene
 import io.github.tomsadeh.puki.data.models.Language
 import io.github.tomsadeh.puki.ui.common.LocalCompanion
 import io.github.tomsadeh.puki.ui.components.rememberReactionState
+import io.github.tomsadeh.puki.ui.components.AnswerOutLoud
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
@@ -123,6 +124,11 @@ fun AnimalGardenScreen(
             scope.launch { choiceReactions[animal.id]?.shake() }
             voicePlayer.playSequence(listOf("voice_animal_${animal.id}", "voice_prompt_try_again"), language)
         }
+    }
+
+    // "Whose shadow?" "פרה!": naming an animal puts it on the shadow
+    if (shadowRound) AnswerOutLoud(state.roundIndex, state.animalChoices.map { listOf(it.name.resolve(language)) }, active = !state.roundComplete) { i ->
+        state.animalChoices.getOrNull(i)?.let { onAnimalDropped(it, SHADOW_ZONE) }
     }
 
     CompositionLocalProvider(LocalDragDropState provides dragDropState) {

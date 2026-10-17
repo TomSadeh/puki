@@ -75,6 +75,9 @@ cooking, the car wash, offline Puki, Dance and Freeze, tracing)
   them, and the parent approves them on the dashboard; the tablet plays approved lines at once,
   even with the PC off. Next: packs for bedtime stories, new words for "Say it with Puki", and
   lines that follow her age.
+- **Answer out loud (done):** after a question in Colors, Counting ("how many?"), Peekaboo and
+  the shadow round, Puki listens a few seconds and she can say the answer instead of tapping
+  ("כחול!"). Tapping always works; a parent setting turns it off. Next: Shapes and My Day.
 
 ## After v1: ideas for contributors
 

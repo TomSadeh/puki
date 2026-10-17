@@ -90,6 +90,7 @@ fun PukiApp(
         companion.onPinLearned = { pin -> pukiApp.appScope.launch { pukiApp.settingsRepository.learnCompanionPin(pin) } }
         companion.language = language
     }
+    LaunchedEffect(settings.answersOutLoud) { companion.answersOutLoud = settings.answersOutLoud }
 
     // Where Puki thinks: the PC, or this device once its models are downloaded
     val context = LocalContext.current

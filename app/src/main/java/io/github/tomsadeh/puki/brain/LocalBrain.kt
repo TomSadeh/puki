@@ -127,6 +127,13 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         val match = persona.wordMatch(heard, target, alts)
                         JSONObject().put("heard", heard).put("match", match).toString().toByteArray()
                     }
+                    "/hear" -> {
+                        // She answered a game out loud: just the words (the game decides which answer, SpokenAnswer)
+                        val lang = if (query["lang"]?.firstOrNull() == "en") "en" else "he"
+                        val hints = (query["hint"] ?: emptyList()).filter { it.isNotEmpty() }.map { it.take(40) }.take(16)
+                        val heard = ears().transcribe(body ?: ByteArray(0), lang, hints.joinToString(" "))
+                        JSONObject().put("heard", heard).toString().toByteArray()
+                    }
                     "/listen" -> {
                         // She talked to Puki (optionally answering ?context=, what he just asked)
                         val lang = if (query["lang"]?.firstOrNull() == "en") "en" else "he"

@@ -236,7 +236,8 @@ class Persona(
         private const val FINALS = "ךםןףץ"
         private const val PLAIN = "כמנפצ"
 
-        private fun words(text: String): List<String> {
+        /** The words of [text], plain: no nikud or punctuation, lower case, final letters as regular ones. */
+        internal fun words(text: String): List<String> {
             val t = stripNikud(text).lowercase().map { c -> FINALS.indexOf(c).let { if (it >= 0) PLAIN[it] else c } }.joinToString("")
             return Regex("[^\\p{L}\\p{N}_\\s]").replace(Normalizer.normalize(t, Normalizer.Form.NFC), " ")
                 .split(Regex("\\s+")).filter { it.isNotEmpty() }

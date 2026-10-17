@@ -58,6 +58,8 @@ import io.github.tomsadeh.puki.ui.components.GameBackground
 import io.github.tomsadeh.puki.ui.components.GameTopBar
 import io.github.tomsadeh.puki.ui.components.RoundCompleteSheet
 import io.github.tomsadeh.puki.ui.components.RoundPrompt
+import io.github.tomsadeh.puki.ui.components.AnswerOutLoud
+import io.github.tomsadeh.puki.data.content.allAnimals
 import io.github.tomsadeh.puki.ui.components.Scene
 import io.github.tomsadeh.puki.ui.components.hintGlow
 import io.github.tomsadeh.puki.ui.components.noticeTouches
@@ -109,6 +111,56 @@ fun PeekabooScreen(
     var butterflyFrom by remember { mutableStateOf<HidingSpot?>(null) }
     var butterflyKey by remember { mutableIntStateOf(0) }
 
+    // A hiding spot tapped: the animal is found, or a butterfly flies out and the animal peeks
+    fun tap(spot: HidingSpot) {
+        when (viewModel.onSpotTapped(spot)) {
+            true -> {
+                sfxPlayer.play(Sfx.SUCCESS)
+                val cheer = {
+                    voicePlayer.playSequence(listOf("voice_peekaboo", "voice_sound_${animal.id}", "voice_animal_${animal.id}"), language)
+                }
+                val where = when (spot) {
+                    HidingSpot.BARN -> "ברפת"
+                    HidingSpot.BUSH -> "מאחורי השיח"
+                    HidingSpot.HAY -> "מאחורי ערמת החציר"
+                    HidingSpot.STUMP -> "בתוך הגזע"
+                }
+                val whereEn = when (spot) {
+                    HidingSpot.BARN -> "in the barn"
+                    HidingSpot.BUSH -> "behind the bush"
+                    HidingSpot.HAY -> "behind the haystack"
+                    HidingSpot.STUMP -> "in the tree stump"
+                }
+                if (companion != null) companion.react(
+                    "מצאו את ה${animal.name.he}! ${if (she) "היא התחבאה" else "הוא התחבא"} $where.",
+                    "The child found the ${animal.name.en.lowercase()}! It was hiding $whereEn.",
+                    cheer
+                ) else cheer()
+                scope.launch {
+                    delay(if (companion?.isReady == true) 4000 else 3200)
+                    viewModel.nextRound()
+                }
+            }
+            false -> {
+                sfxPlayer.play(Sfx.POP)
+                butterflyFrom = spot
+                butterflyKey++
+                help.missed()
+                peek()
+            }
+            null -> Unit
+        }
+    }
+
+    // "Who's hiding?" "פרה!": naming the animal finds it; another animal's name gets a peek
+    val names = remember(state.roundIndex) { listOf(animal) + allAnimals.filter { it.id != animal.id }.shuffled().take(7) }
+    AnswerOutLoud(state.roundIndex, names.map { listOf(it.name.resolve(language)) }, active = !state.found, askedAfterMs = 1200) { i ->
+        if (i == 0) tap(state.spot) else {
+            help.missed()
+            peek()
+        }
+    }
+
     // Puki flies in the sky here: in his usual corner he'd stand in front of the barn
     GameBackground(scene = Scene.FARM, withCompanion = false, colors = listOf(Color(0xFF81C784), Color(0xFF66BB6A), Color(0xFF4CAF50))) {
       Box(modifier = Modifier.fillMaxSize()) {
@@ -135,43 +187,7 @@ fun PeekabooScreen(
                         // The barn is the big one
                         modifier = Modifier.weight(if (spot == HidingSpot.BARN) 1.35f else 1f).fillMaxHeight(0.9f)
                     ) {
-                        when (viewModel.onSpotTapped(spot)) {
-                            true -> {
-                                sfxPlayer.play(Sfx.SUCCESS)
-                                val cheer = {
-                                    voicePlayer.playSequence(listOf("voice_peekaboo", "voice_sound_${animal.id}", "voice_animal_${animal.id}"), language)
-                                }
-                                val where = when (spot) {
-                                    HidingSpot.BARN -> "ברפת"
-                                    HidingSpot.BUSH -> "מאחורי השיח"
-                                    HidingSpot.HAY -> "מאחורי ערמת החציר"
-                                    HidingSpot.STUMP -> "בתוך הגזע"
-                                }
-                                val whereEn = when (spot) {
-                                    HidingSpot.BARN -> "in the barn"
-                                    HidingSpot.BUSH -> "behind the bush"
-                                    HidingSpot.HAY -> "behind the haystack"
-                                    HidingSpot.STUMP -> "in the tree stump"
-                                }
-                                if (companion != null) companion.react(
-                                    "מצאו את ה${animal.name.he}! ${if (she) "היא התחבאה" else "הוא התחבא"} $where.",
-                                    "The child found the ${animal.name.en.lowercase()}! It was hiding $whereEn.",
-                                    cheer
-                                ) else cheer()
-                                scope.launch {
-                                    delay(if (companion?.isReady == true) 4000 else 3200)
-                                    viewModel.nextRound()
-                                }
-                            }
-                            false -> {
-                                sfxPlayer.play(Sfx.POP)
-                                butterflyFrom = spot
-                                butterflyKey++
-                                help.missed()
-                                peek()
-                            }
-                            null -> Unit
-                        }
+                        tap(spot)
                     }
                 }
             }

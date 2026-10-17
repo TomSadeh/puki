@@ -103,6 +103,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun setAnswersOutLoud(on: Boolean) {
+        viewModelScope.launch { settingsRepository.updateAnswersOutLoud(on) }
+    }
+
     fun setBrainOnDevice(on: Boolean) {
         viewModelScope.launch { settingsRepository.updateBrainOnDevice(on) }
     }
