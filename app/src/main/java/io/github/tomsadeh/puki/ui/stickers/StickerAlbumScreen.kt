@@ -31,7 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
+import androidx.compose.runtime.State
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -134,6 +134,13 @@ fun StickerAlbumScreen(onBack: () -> Unit, viewModel: StickerAlbumViewModel = vi
             Canvas(modifier = Modifier.fillMaxSize()) { drawAlbum() }
             val pageInset = 40.dp
             val cell = min((maxWidth / 2 - pageInset * 2) / COLUMNS, (maxHeight - pageInset * 2) / 3)
+            // One clock for every sticker's wiggle (each starts at its own moment)
+            val wiggle = rememberInfiniteTransition(label = "sticker_wiggle").animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing)),
+                label = "wiggle_phase"
+            )
             Row(modifier = Modifier.fillMaxSize()) {
                 listOf(allStickers.take(PER_PAGE), allStickers.drop(PER_PAGE)).forEachIndexed { page, stickers ->
                     Column(
@@ -149,7 +156,7 @@ fun StickerAlbumScreen(onBack: () -> Unit, viewModel: StickerAlbumViewModel = vi
                             ) {
                                 rowStickers.forEachIndexed { col, sticker ->
                                     val index = page * PER_PAGE + row * COLUMNS + col
-                                    StickerSlot(sticker, unlocked = progress.totalStars >= sticker.starsRequired, index = index, size = cell)
+                                    StickerSlot(sticker, unlocked = progress.totalStars >= sticker.starsRequired, index = index, size = cell, wiggle = wiggle)
                                 }
                             }
                         }
@@ -177,7 +184,7 @@ fun StickerAlbumScreen(onBack: () -> Unit, viewModel: StickerAlbumViewModel = vi
 
 /** One place in the album: a stuck-on sticker that wiggles now and then, or a dashed outline waiting for it. */
 @Composable
-private fun StickerSlot(sticker: StickerDef, unlocked: Boolean, index: Int, size: Dp) {
+private fun StickerSlot(sticker: StickerDef, unlocked: Boolean, index: Int, size: Dp, wiggle: State<Float>) {
     val language = LocalLanguage.current
     val voicePlayer = LocalVoicePlayer.current
     val companion = LocalCompanion.current
@@ -193,9 +200,8 @@ private fun StickerSlot(sticker: StickerDef, unlocked: Boolean, index: Int, size
                 .size(size)
                 .padding(size * 0.06f)
                 .popIn(index)
-                .stickerWiggle(index)
                 .reaction(reaction, jumpHeight = 28.dp)
-                .graphicsLayer { rotationZ = tilt }
+                .stickerWiggle(index, tilt, wiggle)
                 .shadow(8.dp, CircleShape)
                 .clip(CircleShape)
                 .background(Color.White)
@@ -257,25 +263,21 @@ private fun StickerSlot(sticker: StickerDef, unlocked: Boolean, index: Int, size
 }
 
 /** Every few seconds the sticker gives a quick happy wiggle; neighbours take turns. */
-private fun Modifier.stickerWiggle(index: Int): Modifier = composed {
-    val t by rememberInfiniteTransition(label = "sticker_wiggle").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing)),
-        label = "wiggle_phase"
-    )
+/** Stuck on crooked by [tilt], with a little wiggle now and then from the album's shared [wiggle]
+ *  clock (one layer for both). */
+private fun Modifier.stickerWiggle(index: Int, tilt: Float, wiggle: State<Float>): Modifier =
     graphicsLayer {
-        val phase = (t + index * 0.137f) % 1f
+        val phase = (wiggle.value + index * 0.137f) % 1f
+        rotationZ = tilt
         if (phase < 0.16f) {
             val k = phase / 0.16f
             val fade = 1f - k
-            rotationZ = sin(k * 4 * PI.toFloat()) * 9f * fade
+            rotationZ = tilt + sin(k * 4 * PI.toFloat()) * 9f * fade
             val s = 1f + sin(k * PI.toFloat()) * 0.08f
             scaleX = s
             scaleY = s
         }
     }
-}
 
 // ---------- Drawing the table and album ----------
 

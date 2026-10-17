@@ -40,6 +40,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import io.github.tomsadeh.puki.ui.components.TalkingParrotImage
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -298,15 +299,6 @@ fun SayItScreen(
 /** Puki as the game's host: bobs, moves its beak while talking, and glows while listening. */
 @Composable
 private fun HostParrot(talking: Boolean, listening: Boolean) {
-    var beakOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(talking) {
-        beakOpen = false
-        while (talking) {
-            beakOpen = !beakOpen
-            delay(140)
-        }
-        beakOpen = false
-    }
     val transition = rememberInfiniteTransition(label = "host")
     val bob by transition.animateFloat(
         initialValue = 0f,
@@ -335,9 +327,8 @@ private fun HostParrot(talking: Boolean, listening: Boolean) {
                 }
             }
         }
-        Image(
-            painter = painterResource(if (beakOpen) R.drawable.ic_companion_parrot_talk else R.drawable.ic_companion_parrot),
-            contentDescription = null,
+        TalkingParrotImage(
+            talking = talking,
             modifier = Modifier
                 .size(200.dp)
                 .graphicsLayer {

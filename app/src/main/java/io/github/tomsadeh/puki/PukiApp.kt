@@ -98,7 +98,8 @@ fun PukiApp(
         // Only touched when switched on, and never allowed to stop the game from opening:
         // if anything about it fails, Puki simply stays on the PC
         val brain = if (settings.brainOnDevice) runCatching {
-            app.localBrain.takeIf { app.deviceModels.ready() }
+            // About two dozen file checks: off the main thread
+            app.localBrain.takeIf { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.deviceModels.ready() } }
         }.onFailure { android.util.Log.e("PukiBrain", "device brain unavailable", it) }.getOrNull() else null
         val onDevice = brain != null
         if (onDevice) companion.deviceBrain = brain

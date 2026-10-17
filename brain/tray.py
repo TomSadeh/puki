@@ -64,6 +64,20 @@ def build_is_set_up(brain_dir):
     return read(os.path.join(brain_dir, "build.txt")) == read(os.path.join(BUNDLE, "build.txt"))
 
 
+def build_time(stamp):
+    """When a build was made, from its build.txt stamp ("<revision> YYYY-MM-DD HH:MM"), as text
+    that sorts by time; "" if the stamp has no date."""
+    parts = stamp.split()
+    return " ".join(parts[-2:]) if len(parts) >= 3 else ""
+
+
+def is_older_build(brain_dir):
+    """True if this Puki.exe was built before the build already set up in [brain_dir]: running it
+    would put older files (and an older update key and pins) over a newer install."""
+    mine, there = build_time(read(os.path.join(BUNDLE, "build.txt"))), build_time(read(os.path.join(brain_dir, "build.txt")))
+    return bool(mine and there) and mine < there
+
+
 def set_up_done(brain_dir, build):
     """Records that [build]'s files are unpacked and its installer has run; an update that
     stopped halfway runs again the next time Puki.exe opens."""
@@ -183,6 +197,10 @@ def main():
             return
         message("Puki is already running. Opening the dashboard.")
         webbrowser.open(DASHBOARD)
+        return
+    if FROZEN and is_older_build(os.path.join(home(), "brain")):
+        message("This Puki.exe is older than the Puki on this PC, so it won't replace it. "
+                "Open the newer Puki.exe (or download the latest one).", error=True)
         return
     brain_dir, new_build = prepare()
     if new_build or not is_set_up(brain_dir):

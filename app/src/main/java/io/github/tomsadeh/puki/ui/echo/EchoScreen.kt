@@ -12,7 +12,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -31,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import io.github.tomsadeh.puki.ui.components.TalkingParrotImage
 import io.github.tomsadeh.puki.audio.hasMicPermission
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import io.github.tomsadeh.puki.R
 import io.github.tomsadeh.puki.audio.EchoVoice
@@ -123,16 +122,6 @@ fun EchoScreen(onBack: () -> Unit) {
         return true
     }
 
-    // The beak flaps while Puki talks back
-    var beakOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(mode) {
-        beakOpen = false
-        while (mode == EchoMode.ECHOING) {
-            beakOpen = !beakOpen
-            delay(110)
-        }
-        beakOpen = false
-    }
     val lean by animateFloatAsState(if (mode == EchoMode.LISTENING) 1f else 0f, spring(dampingRatio = 0.5f), label = "lean")
     val motion = rememberInfiniteTransition(label = "echo")
     val bob by motion.animateFloat(0f, 1f, infiniteRepeatable(tween(if (mode == EchoMode.ECHOING) 220 else 1400), RepeatMode.Reverse), label = "bob")
@@ -193,9 +182,9 @@ fun EchoScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                Image(
-                    painter = painterResource(if (beakOpen) R.drawable.ic_companion_parrot_talk else R.drawable.ic_companion_parrot),
-                    contentDescription = null,
+                TalkingParrotImage(
+                    talking = mode == EchoMode.ECHOING,
+                    flapMs = 110,
                     modifier = Modifier
                         .size(260.dp)
                         .graphicsLayer {

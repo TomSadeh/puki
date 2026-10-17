@@ -17,7 +17,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -39,7 +38,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.tomsadeh.puki.R
@@ -84,16 +82,6 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
         return
     }
 
-    // Beak opens and closes while talking
-    var beakOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(speaking) {
-        beakOpen = false
-        while (speaking) {
-            beakOpen = !beakOpen
-            delay(140)
-        }
-        beakOpen = false
-    }
 
     val listenScale by animateFloatAsState(if (listening || autoListening) 1.15f else 1f, spring(dampingRatio = 0.4f), label = "listen_scale")
 
@@ -131,9 +119,8 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
                     }
                 }
             }
-            Image(
-                painter = painterResource(if (beakOpen) R.drawable.ic_companion_parrot_talk else R.drawable.ic_companion_parrot),
-                contentDescription = null,
+            TalkingParrotImage(
+                talking = speaking,
                 modifier = Modifier
                     .size(140.dp)
                     .graphicsLayer {
@@ -182,15 +169,6 @@ private fun OfflineParrot(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     var talking by remember { mutableStateOf(false) }
     var last by remember { mutableStateOf(-1) }
-    var beakOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(talking) {
-        beakOpen = false
-        while (talking) {
-            beakOpen = !beakOpen
-            delay(140)
-        }
-        beakOpen = false
-    }
     val bob by rememberInfiniteTransition(label = "offline_parrot").animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -198,9 +176,8 @@ private fun OfflineParrot(modifier: Modifier = Modifier) {
         label = "offline_bob"
     )
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Image(
-            painter = painterResource(if (beakOpen) R.drawable.ic_companion_parrot_talk else R.drawable.ic_companion_parrot),
-            contentDescription = null,
+        TalkingParrotImage(
+            talking = talking,
             modifier = Modifier
                 .size(140.dp)
                 .graphicsLayer {
