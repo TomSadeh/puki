@@ -40,6 +40,7 @@ brain's Python, see tls.py).
 import hmac
 import json
 import os
+import queue
 import secrets
 import shutil
 import socket
@@ -252,6 +253,7 @@ class Brain:
         self.last_used = time.time()
 
     def wake(self):
+        self.check()
         with self.lock:
             if self.state != "cold":
                 return
@@ -284,22 +286,18 @@ class Brain:
             venv = os.path.dirname(os.path.dirname(CFG["brain_python"]))
             libs = [CFG["llama_dir"]] + glob.glob(os.path.join(venv, "lib", "python3*", "site-packages", "nvidia", "*", "lib"))
             env["LD_LIBRARY_PATH"] = os.pathsep.join(libs + [os.environ.get("LD_LIBRARY_PATH", "")]).rstrip(os.pathsep)
-        llama = subprocess.Popen(
+        llama = KILL_ON_CLOSE.popen(
             [os.path.join(CFG["llama_dir"], "llama-server"), "-m", model,
              "--host", "127.0.0.1", "--port", str(CFG["llama_port"]),
              "-ngl", str(gpu_layers), "-c", str(CFG["context"]), "--no-webui"]
             + (["--mmproj", mmproj] if mmproj and os.path.exists(mmproj) else []),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags, env=env,
-            preexec_fn=KILL_ON_CLOSE.preexec if os.name != "nt" else None,
         )
-        brain = subprocess.Popen(
+        brain = KILL_ON_CLOSE.popen(
             [CFG["brain_python"], os.path.join(HERE, "brain.py")],
             cwd=HERE, creationflags=flags, env=env,
             stdout=subprocess.DEVNULL if no_console else None, stderr=errors,
-            preexec_fn=KILL_ON_CLOSE.preexec if os.name != "nt" else None,
         )
-        for p in (llama, brain):
-            KILL_ON_CLOSE.add(p)  # (brain.py's own children join the job too)
         self.procs = [llama, brain]
         deadline = time.time() + CFG["startup_timeout_s"]
         while time.time() < deadline:
@@ -317,10 +315,23 @@ class Brain:
         log("brain failed to start")
         self.stop("failed to start; errors are in brain/brain_errors.log" if no_console else "failed to start")
 
+    def check(self):
+        """Notices a brain that died while awake, so it isn't reported ready (and every request
+        answered 502) until it's put to sleep; the next request wakes it again."""
+        if self.state != "ready":
+            return
+        dead = [f"{name} exited with {p.returncode}"
+                for name, p in zip(("llama-server", "brain.py"), self.procs) if p.poll() is not None]
+        if dead:
+            log("brain stopped while awake: " + ", ".join(dead))
+            self.stop("stopped while awake: " + ", ".join(dead))
+
     def stop(self, reason=None):
         for p in self.procs:
             if p.poll() is None:
                 p.kill()
+        for p in self.procs:
+            p.wait()  # gone, GPU memory and all, before a new wake measures what's free
         self.procs = []
         with self.lock:
             self.state = "cold"
@@ -333,6 +344,7 @@ class Brain:
     def idle_watch(self):
         while True:
             time.sleep(20)
+            self.check()
             if self.state == "ready" and time.time() - self.last_used > CFG["idle_minutes"] * 60:
                 log("idle, putting brain to sleep")
                 self.stop(f"idle for {CFG['idle_minutes']} minutes")
@@ -347,10 +359,16 @@ BRAIN = Brain()
 
 class _KillOnClose:
     """Windows: a job object that kills everything in it when the doorbell exits, however it
-    exits. Linux: each child asks the kernel for SIGKILL when its parent dies."""
+    exits. Linux: each child asks the kernel for SIGKILL when its parent dies (PR_SET_PDEATHSIG).
+    That signal comes when the *thread* that started the child ends, not the process, and the
+    brain wakes on a short-lived thread: so on Linux every child is started by one thread that
+    lives as long as the doorbell."""
 
     def __init__(self):
         self.job = None
+        self.spawns = queue.Queue()
+        if sys.platform.startswith("linux"):
+            threading.Thread(target=self._spawner, daemon=True, name="spawner").start()
         if os.name == "nt":
             try:
                 import ctypes
@@ -382,18 +400,36 @@ class _KillOnClose:
             except Exception as e:
                 log(f"couldn't tie the brain to the doorbell ({e}); it may outlive a crash")
 
-    def add(self, proc):
-        if self.job:
-            import ctypes
-            self.k32.AssignProcessToJobObject(self.job, ctypes.c_void_p(int(proc._handle)))
+    def popen(self, args, **kwargs):
+        """subprocess.Popen, for a child that dies with the doorbell."""
+        if not sys.platform.startswith("linux"):
+            proc = subprocess.Popen(args, **kwargs)
+            if self.job:  # (brain.py's own children join the job too)
+                import ctypes
+                self.k32.AssignProcessToJobObject(self.job, ctypes.c_void_p(int(proc._handle)))
+            return proc
+        result, done = [], threading.Event()
+        self.spawns.put((args, kwargs, result, done))
+        done.wait()
+        if isinstance(result[0], Exception):
+            raise result[0]
+        return result[0]
+
+    def _spawner(self):
+        while True:
+            args, kwargs, result, done = self.spawns.get()
+            try:
+                result.append(subprocess.Popen(args, preexec_fn=self._die_with_parent, **kwargs))
+            except Exception as e:  # raised again in the caller's thread (this one must keep running)
+                result.append(e)
+            done.set()
 
     @staticmethod
-    def preexec():
-        """For Popen on Linux: SIGKILL this child when the doorbell dies."""
-        if sys.platform.startswith("linux"):
-            import ctypes
-            import signal
-            ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, signal.SIGKILL)  # PR_SET_PDEATHSIG
+    def _die_with_parent():
+        """Runs in the child before exec: SIGKILL it when the spawner thread (the doorbell) ends."""
+        import ctypes
+        import signal
+        ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, signal.SIGKILL)  # PR_SET_PDEATHSIG
 
 
 KILL_ON_CLOSE = _KillOnClose()
