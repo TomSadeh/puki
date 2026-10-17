@@ -1,17 +1,17 @@
-"""Puki.exe carries the brain's files listed in tray.BRAIN_FILES: every local module they import
-has to be on that list, or the brain fails to start on Windows (safety.py once wasn't)."""
+"""Puki.exe and the installer carry the brain's files listed in bundle.FILES: every local module
+they import has to be on that list, or the brain fails to start where it's installed (safety.py
+once wasn't)."""
 import ast
 import os
+import sys
 
 BRAIN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BRAIN)
+import bundle  # noqa: E402
 
 
 def brain_files():
-    tree = ast.parse(open(os.path.join(BRAIN, "tray.py"), encoding="utf-8").read())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "BRAIN_FILES" for t in node.targets):
-            return set(ast.literal_eval(node.value))
-    raise AssertionError("no BRAIN_FILES in tray.py")
+    return set(bundle.FILES)
 
 
 def local_imports(path):
@@ -30,4 +30,4 @@ def test_every_local_import_is_bundled():
     for f in sorted(bundled):
         if f.endswith(".py"):
             missing = {m + ".py" for m in local_imports(os.path.join(BRAIN, f))} - bundled
-            assert not missing, f"{f} imports {missing}, which Puki.exe doesn't carry (tray.BRAIN_FILES)"
+            assert not missing, f"{f} imports {missing}, which bundle.FILES doesn't carry"

@@ -47,12 +47,15 @@ It shows what it will do, then:
    and BlueTTS with its voice models and Hebrew pronunciation (about 10 GB in all, into
    `~/puki-brain`). That's every model Puki uses: the brain never downloads while it runs;
 3. creates the Python environment (without the NVIDIA libraries on PCs without a GPU);
-4. writes `brain/config.json` with all the paths;
-5. adds the home-network-only firewall rule (Windows asks for permission once), and tells
+4. copies the brain's files into `~/puki-brain/brain`, where Puki runs from (in its own Python
+   environment). Pulling or editing the folder you installed from doesn't change the running
+   Puki until you run the installer again;
+5. writes `~/puki-brain/brain/config.json` with all the paths;
+6. adds the home-network-only firewall rule (Windows asks for permission once), and tells
    you if your Wi-Fi is set to *Public*;
-6. makes Puki start at login, starts it, and opens the [dashboard](#dashboard) with the
+7. makes Puki start at login, starts it, and opens the [dashboard](#dashboard) with the
    pairing code and QR code;
-7. wakes the brain and asks it for a line in Hebrew and in English, the way the tablet does
+8. wakes the brain and asks it for a line in Hebrew and in English, the way the tablet does
    (HTTPS, the pairing code), and prints what Puki said. If Puki doesn't talk, the setup
    stops there and says where the error is.
 
@@ -77,14 +80,14 @@ the firewall rule it added, and everything it downloaded, asking before each par
 
 ## Tray app and Puki.exe
 
-`brain\tray.py` runs the doorbell with an icon in the Windows tray: grey while Puki sleeps,
+`tray.py` runs the doorbell with an icon in the Windows tray: grey while Puki sleeps,
 yellow while it wakes, green when it's awake. Its menu opens the dashboard, shows the
 pairing code, puts the brain to sleep, turns "start at login" on or off, uninstalls Puki
 (the same `--uninstall`, in a window that asks before each part), and quits. Windows
 first puts new tray icons behind the **^** arrow; drag it onto the taskbar to keep it in view.
 
 ```
-.venv\Scripts\pythonw.exe brain\tray.py     (the brain's environment has pystray and pillow)
+%USERPROFILE%\puki-brain\.venv\Scripts\pythonw.exe %USERPROFILE%\puki-brain\brain\tray.py     (the brain's environment has pystray and pillow)
 ```
 
 `python brain\build_exe.py` builds **Puki.exe** (about 17 MB): the same tray app with the
@@ -175,7 +178,8 @@ The doorbell answers only requests that carry its **pairing code**, so another d
 the network (a guest's phone, a smart TV) can't make Puki talk or send it recordings.
 
 - The code is made the first time the doorbell starts, printed in its console
-  (`pairing code: K7M2-QX9P`), and kept in `brain/pairing_code.txt` (git-ignored). With
+  (`pairing code: K7M2-QX9P`), and kept in `pairing_code.txt` next to it (installed:
+  `~/puki-brain/brain/pairing_code.txt`; by hand: `brain/pairing_code.txt`, git-ignored). With
   `pythonw` there's no console, so open that file, or the [dashboard](#dashboard).
 - Scan the dashboard's QR code in the app (welcome screen or parent settings), or type it once
   under the PC address; case and the dash don't matter. Below the field, the app shows whether

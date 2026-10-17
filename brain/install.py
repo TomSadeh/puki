@@ -25,6 +25,7 @@ always does). Standard library only, so any Python 3.10+ can run it.
 """
 
 import argparse
+import filecmp
 import hashlib
 import json
 import os
@@ -38,6 +39,8 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
+
+import bundle
 
 # Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
 HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
@@ -163,7 +166,7 @@ def say(msg=""):
     UI.say(msg)
 
 
-STEPS = 8
+STEPS = 9
 
 
 def step(n, title):
@@ -621,8 +624,34 @@ def install_venv(root, gpu, dry):
     return py
 
 
+def brain_dir(root):
+    """Where Puki runs from: the brain's files, with its settings, pairing code and certificate
+    beside them. Puki.exe unpacks its files there itself."""
+    return os.path.join(root, "brain")
+
+
+def install_brain_files(root, dry):
+    """Copies the brain's files from here into the install folder, where Puki runs them: pulling
+    or editing this folder doesn't change the running Puki until the installer runs again."""
+    dest = brain_dir(root)
+    if os.path.isdir(dest) and os.path.samefile(HERE, dest):
+        say(f"    ✓ {dest} (this installer runs from there)")
+        return
+    changed = [f for f in bundle.FILES
+               if not (os.path.exists(os.path.join(dest, f)) and filecmp.cmp(os.path.join(HERE, f), os.path.join(dest, f), shallow=False))]
+    if not changed:
+        say(f"    ✓ {dest} (up to date)")
+    elif dry:
+        say(f"    → would copy {len(changed)} of the brain's {len(bundle.FILES)} files to {dest}")
+    else:
+        os.makedirs(dest, exist_ok=True)
+        for f in changed:
+            shutil.copy2(os.path.join(HERE, f), os.path.join(dest, f))
+        say(f"    ✓ {dest} ({len(changed)} of {len(bundle.FILES)} files new or changed)")
+
+
 def write_config(root, py, model, dry):
-    path = os.path.join(HERE, "config.json")
+    path = os.path.join(brain_dir(root), "config.json")
     cfg = {}
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
@@ -648,6 +677,7 @@ def write_config(root, py, model, dry):
     if dry:
         say(f"    → would write {path}")
         return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     write_private(path, json.dumps(cfg, ensure_ascii=False, indent=2) + "\n")  # may hold the child's name
     say(f"    ✓ {path}")
 
@@ -743,30 +773,34 @@ def setup_firewall(dry):
         say("      Network profile type → Private.")
 
 
-def setup_autostart_linux(dry):
-    """A systemd user service: the doorbell starts at login and restarts if it stops."""
-    doorbell = os.path.join(HERE, "doorbell.py")
-    if os.path.exists(SERVICE):
-        say("    ✓ starts at login (systemd user service 'puki', already set up)")
-        return
-    if dry:
-        say(f"    → would add the systemd user service 'puki' ({SERVICE})")
-        return
-    os.makedirs(os.path.dirname(SERVICE), exist_ok=True)
-    with open(SERVICE, "w", encoding="utf-8") as f:
-        f.write(f"""[Unit]
+def setup_autostart_linux(root, py, dry):
+    """A systemd user service: the doorbell starts at login and restarts if it stops. It runs in
+    the brain's own Python (not whichever one ran this installer), from the brain's folder."""
+    brain = brain_dir(root)
+    unit = f"""[Unit]
 Description=Puki's brain (the doorbell for the tablet)
 After=network-online.target
 
 [Service]
-ExecStart={sys.executable} {doorbell}
-WorkingDirectory={HERE}
+ExecStart={py} {os.path.join(brain, "doorbell.py")}
+WorkingDirectory={brain}
 Environment=PYTHONUTF8=1
 Restart=on-failure
 
 [Install]
 WantedBy=default.target
-""")
+"""
+    if os.path.exists(SERVICE):
+        with open(SERVICE, encoding="utf-8") as f:
+            if f.read() == unit:
+                say("    ✓ starts at login (systemd user service 'puki', already set up)")
+                return
+    if dry:
+        say(f"    → would {'update' if os.path.exists(SERVICE) else 'add'} the systemd user service 'puki' ({SERVICE})")
+        return
+    os.makedirs(os.path.dirname(SERVICE), exist_ok=True)
+    with open(SERVICE, "w", encoding="utf-8") as f:
+        f.write(unit)
     r = subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True, text=True)
     r = subprocess.run(["systemctl", "--user", "enable", "puki"], capture_output=True, text=True)
     say("    ✓ starts at login (systemd user service 'puki')" if r.returncode == 0
@@ -774,41 +808,45 @@ WantedBy=default.target
     say("      To have it run even before anyone logs in:  sudo loginctl enable-linger $USER")
 
 
-def setup_autostart(dry):
+def setup_autostart(root, py, dry):
     if not WINDOWS:
-        setup_autostart_linux(dry)
-        return sys.executable, os.path.join(HERE, "doorbell.py")
-    startup = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup")
-    link = os.path.join(startup, "Puki brain.lnk")
-    pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
-    doorbell = os.path.join(HERE, "doorbell.py")
-    # Any login shortcut that already runs the doorbell (e.g. one made by hand) counts
-    existing = powershell(
-        f"$sh = New-Object -ComObject WScript.Shell; Get-ChildItem '{startup}' -Filter *.lnk | "
-        "Where-Object { $sh.CreateShortcut($_.FullName).Arguments -match 'doorbell[.]py' } | "
-        "Select-Object -ExpandProperty Name").stdout.strip()
-    if existing:
-        say(f"    ✓ starts at login (already set up: {existing.splitlines()[0]})")
-        return pythonw, doorbell
-    if dry:
-        say("    → would make Puki start at login")
-        return pythonw, doorbell
+        return setup_autostart_linux(root, py, dry)
     if FROZEN:
         say("    ✓ Puki.exe will start at login (it sets that up when it opens)")
-        return pythonw, doorbell
+        return
+    startup = startup_folder()
+    link = os.path.join(startup, "Puki brain.lnk")
+    # Another login shortcut that runs a doorbell (made by hand, or by an older installer from
+    # the checkout) would start a second one, from somewhere without Puki's settings
+    others = powershell(
+        f"$sh = New-Object -ComObject WScript.Shell; Get-ChildItem '{startup}' -Filter *.lnk | "
+        "Where-Object { $_.Name -ne 'Puki brain.lnk' -and $sh.CreateShortcut($_.FullName).Arguments -match 'doorbell[.]py' } | "
+        "Select-Object -ExpandProperty Name").stdout.split("\n")
+    for name in filter(None, map(str.strip, others)):
+        say(f"    ! the login shortcut '{name}' also starts a doorbell; delete it from {startup}")
+    if dry:
+        say(f"    → would make Puki start at login ({link})")
+        return
+    brain = brain_dir(root)
     r = powershell(
         f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut('{link}'); "
-        f"$s.TargetPath = '{pythonw}'; $s.Arguments = '\"{doorbell}\"'; "
-        f"$s.WorkingDirectory = '{HERE}'; $s.Save()")
+        f"$s.TargetPath = '{venv_pythonw(py)}'; $s.Arguments = '\"{os.path.join(brain, 'doorbell.py')}\"'; "
+        f"$s.WorkingDirectory = '{brain}'; $s.Save()")
     say("    ✓ starts at login" if os.path.exists(link) else f"    ! couldn't create the login shortcut: {r.stderr.strip()}")
-    return pythonw, doorbell
 
 
-def start_puki(pythonw, doorbell, dry):
+def venv_pythonw(py):
+    """The brain's Python without a console window (Windows)."""
+    return os.path.join(os.path.dirname(py), "pythonw.exe")
+
+
+def start_puki(root, py, dry):
     if dry:
         say("    → would start Puki, open the dashboard, and ask Puki for a line in Hebrew and in English")
         return
-    cfg = doorbell_config()
+    brain = brain_dir(root)
+    doorbell = os.path.join(brain, "doorbell.py")
+    cfg = doorbell_config(root)
     port = cfg["port"]
     if port_open(port):
         say("    ✓ Puki is already running (restart the PC, or the doorbell, to pick up new settings)")
@@ -818,27 +856,27 @@ def start_puki(pythonw, doorbell, dry):
             if r.returncode != 0:
                 fail("systemd couldn't start Puki:\n" + (r.stderr or r.stdout).strip())
         elif not WINDOWS:
-            subprocess.Popen([sys.executable, doorbell], cwd=HERE, start_new_session=True,
+            subprocess.Popen([py, doorbell], cwd=brain, start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
-            subprocess.Popen([pythonw, doorbell], cwd=HERE, creationflags=0x00000008)  # DETACHED_PROCESS
+            subprocess.Popen([venv_pythonw(py), doorbell], cwd=brain, creationflags=0x00000008)  # DETACHED_PROCESS
         deadline = time.time() + cfg["startup_timeout_s"]
         while not port_open(port) and time.time() < deadline:
             time.sleep(0.5)
         if not port_open(port):
-            fail(f"Puki didn't start (nothing answers on port {port}). {where_errors_are()}")
+            fail(f"Puki didn't start (nothing answers on port {port}). {where_errors_are(root)}")
         say("    ✓ Puki is running")
     import webbrowser
     webbrowser.open(DASHBOARD)
     say(f"  The dashboard ({DASHBOARD}) shows the pairing code too.")
-    check_puki_talks(port, cfg["startup_timeout_s"])
+    check_puki_talks(root, port, cfg["startup_timeout_s"])
 
 
 # What the installer asks Puki for at the end, to hear that everything works
 HELLO = "Puki was just set up on this computer and says hello to the family"
 
 
-def check_puki_talks(port, startup_timeout_s):
+def check_puki_talks(root, port, startup_timeout_s):
     """Wakes the brain and asks for a line in Hebrew and in English, the way the tablet does
     (HTTPS, pinned to this PC's certificate, with the pairing code): a finished install is a
     Puki who talks, not a service that started."""
@@ -848,7 +886,8 @@ def check_puki_talks(port, startup_timeout_s):
     import tls
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE  # self-signed: pinned below instead
-    code = pairing()[0]
+    code = pairing(root)[0]
+    cert = os.path.join(brain_dir(root), os.path.basename(tls.CERT_FILE))
     # The doorbell waits up to startup_timeout_s for the brain to wake, then 120 s for its answer
     timeout = startup_timeout_s + 120
     say("    asking Puki for a line in each language (waking the brain takes up to a minute)...")
@@ -858,33 +897,33 @@ def check_puki_talks(port, startup_timeout_s):
         try:
             conn.request("POST", "/say", body=json.dumps({"situation": HELLO, "lang": lang}).encode(),
                          headers={"X-Puki-Code": code, "Content-Type": "application/json"})
-            if hashlib.sha256(conn.sock.getpeercert(binary_form=True)).hexdigest() != tls.fingerprint():
+            if hashlib.sha256(conn.sock.getpeercert(binary_form=True)).hexdigest() != tls.fingerprint(cert):
                 fail(f"something other than Puki answered on port {port} (its certificate isn't this PC's Puki's)")
             r = conn.getresponse()
             audio = r.read()
         except OSError as e:
-            fail(f"Puki didn't answer in {language} ({type(e).__name__}: {e}). {where_errors_are()}")
+            fail(f"Puki didn't answer in {language} ({type(e).__name__}: {e}). {where_errors_are(root)}")
         finally:
             conn.close()
         if r.status != 200 or not audio:
-            fail(f"Puki didn't talk in {language} (HTTP {r.status} {r.reason}). {where_errors_are()}")
+            fail(f"Puki didn't talk in {language} (HTTP {r.status} {r.reason}). {where_errors_are(root)}")
         say(f"    ✓ {language}, {time.time() - start:.0f} s: {urllib.parse.unquote(r.getheader('X-Text', ''))}")
 
 
-def where_errors_are():
+def where_errors_are(root):
     if WINDOWS:
-        return (f"The brain's errors are in {os.path.join(HERE, 'brain_errors.log')}; running"
+        return (f"The brain's errors are in {os.path.join(brain_dir(root), 'brain_errors.log')}; running"
                 "  python brain\\doorbell.py  in a console shows the doorbell's.")
     if os.path.exists(SERVICE):
         return "Its log:  journalctl --user -u puki -e"
-    return "Run  python3 brain/doorbell.py  to see why."
+    return f"Run  {os.path.join(root, VENV_PY)} {os.path.join(brain_dir(root), 'doorbell.py')}  to see why."
 
 
-def doorbell_config():
+def doorbell_config(root):
     """The doorbell's settings as doorbell.py reads them: config.example.json, then config.json."""
-    with open(os.path.join(HERE, "config.example.json"), encoding="utf-8") as f:
+    with open(os.path.join(brain_dir(root), "config.example.json"), encoding="utf-8") as f:
         cfg = json.load(f)
-    local = os.path.join(HERE, "config.json")
+    local = os.path.join(brain_dir(root), "config.json")
     if os.path.exists(local):
         with open(local, encoding="utf-8") as f:
             cfg.update(json.load(f))
@@ -903,9 +942,9 @@ def lan_address():
         s.close()
 
 
-def pairing():
+def pairing(root):
     """The pairing code (made now if the doorbell hasn't run yet) and the link the app scans."""
-    code_file = os.path.join(HERE, "pairing_code.txt")
+    code_file = os.path.join(brain_dir(root), "pairing_code.txt")
     if not os.path.exists(code_file):
         # Same format as the doorbell's: 8 characters without 0/O or 1/I
         import secrets
@@ -943,7 +982,8 @@ def stop_puki(root, dry):
         if os.path.exists(SERVICE):
             subprocess.run(["systemctl", "--user", "stop", "puki"], capture_output=True)
         me = {str(os.getpid()), str(os.getppid())}
-        for pattern in (os.path.join(HERE, "doorbell.py"), os.path.join(HERE, "brain.py"), os.path.join(root, "llama", "llama-server")):
+        places = sorted({HERE, brain_dir(root)})
+        for pattern in [os.path.join(d, f) for d in places for f in ("doorbell.py", "brain.py")] + [os.path.join(root, "llama", "llama-server")]:
             pids = subprocess.run(["pgrep", "-f", pattern], capture_output=True, text=True).stdout.split()
             for pid in set(pids) - me:
                 subprocess.run(["kill", pid], capture_output=True)
@@ -951,7 +991,7 @@ def stop_puki(root, dry):
         return
     powershell(
         "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'doorbell[.]py|brain[.]py|tray[.]py|Puki[.]exe' "
-        f"-and ($_.CommandLine -like '*{HERE}*' -or $_.Name -eq 'Puki.exe') "
+        f"-and ($_.CommandLine -like '*{HERE}*' -or $_.CommandLine -like '*{brain_dir(root)}*' -or $_.Name -eq 'Puki.exe') "
         f"-and $_.ProcessId -notin @({os.getpid()}, {os.getppid()}) }} | "
         "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; "
         f"Get-Process llama-server -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -like '{root}*' }} | "
@@ -973,6 +1013,8 @@ def installed_model(root):
 def update(args, root):
     """Fetches the latest Puki, then re-runs the (new) installer, which only does what changed."""
     repo_dir = os.path.dirname(HERE)
+    if not FROZEN and os.path.isdir(brain_dir(root)) and os.path.samefile(HERE, brain_dir(root)):
+        fail("run --update from the Puki folder you downloaded or cloned, not from the installed copy in " + HERE)
     say("Puki: update\n")
     step(1, "Stop Puki")
     stop_puki(root, args.dry_run)
@@ -1065,27 +1107,32 @@ def uninstall(args, root):
             say("    nothing to remove (no active ufw)")
     else:
         uninstall_windows_firewall(dry, ask)
+    brain = brain_dir(root)
     step(4, f"Models, llama.cpp, BlueTTS and the Python environment ({root})")
-    if os.path.isdir(root):
-        size = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(root) for f in fs) / 1e9
+    parts = [os.path.join(root, n) for n in (os.listdir(root) if os.path.isdir(root) else [])
+             if os.path.join(root, n) != brain]
+    if parts:
+        size = sum(os.path.getsize(os.path.join(d, f)) for part in parts for d, _, fs in os.walk(part) for f in fs) / 1e9
         if dry:
-            say(f"    → would delete it ({size:,.1f} GB)")
-        elif ask(f"Delete {root} ({size:,.1f} GB)?"):
-            shutil.rmtree(root, ignore_errors=True)
-            say("    ✓ deleted" if not os.path.exists(root) else "    ! some files couldn't be deleted (in use?)")
+            say(f"    → would delete them ({size:,.1f} GB)")
+        elif ask(f"Delete them ({size:,.1f} GB)?"):
+            for part in parts:
+                shutil.rmtree(part, ignore_errors=True) if os.path.isdir(part) else os.remove(part)
+            left = [p for p in parts if os.path.exists(p)]
+            say("    ✓ deleted" if not left else f"    ! couldn't delete {', '.join(left)} (in use?)")
     else:
         say("    nothing there")
-    step(5, "Settings and pairing code (brain/config.json, brain/pairing_code.txt)")
-    files = [f for f in (os.path.join(HERE, "config.json"), os.path.join(HERE, "pairing_code.txt")) if os.path.exists(f)]
-    if not files:
+    step(5, f"Puki's settings, pairing code and certificate ({brain})")
+    if not os.path.isdir(brain):
         say("    nothing there")
     elif dry:
         say("    → would ask, then delete them")
-    elif ask("Delete your settings and the pairing code too?"):
-        for f in files:
-            os.remove(f)
-        say("    ✓ deleted")
-    say("\nDone. The Puki folder itself (the code) is still here; delete it if you like.")
+    elif ask("Delete your settings, the pairing code and the certificate too?"):
+        shutil.rmtree(brain, ignore_errors=True)
+        say("    ✓ deleted" if not os.path.exists(brain) else "    ! some files couldn't be deleted (in use?)")
+        if os.path.isdir(root) and not os.listdir(root):
+            os.rmdir(root)
+    say("\nDone. The Puki folder you installed from (the code) is still here; delete it if you like.")
 
 
 def main():
@@ -1108,7 +1155,7 @@ def main():
     ap.add_argument("--uninstall", action="store_true", help="stop Puki and remove everything it installed")
     ap.add_argument("--gui", action="store_true", help="show the setup in a window (Puki.exe always does)")
     ap.add_argument("--only", help="run just these steps, e.g. --only firewall,autostart "
-                    "(llama, models, bluetts, venv, config, firewall, autostart, start)")
+                    "(llama, models, bluetts, venv, files, config, firewall, autostart, start)")
     args = ap.parse_args()
     if args.gui and UI.__class__ is ConsoleUI:
         import setup_gui  # runs this same main() in a window
@@ -1174,7 +1221,8 @@ def main():
             return
 
     py = os.path.join(root, VENV_PY)
-    pythonw, doorbell = os.path.join(os.path.dirname(sys.executable), "pythonw.exe"), os.path.join(HERE, "doorbell.py")
+    if FROZEN and not os.path.samefile(HERE, brain_dir(root)):
+        fail(f"Puki.exe's files are in {HERE}, but the install folder is {root}")
     step(1, "llama.cpp (runs Gemma)")
     install_llama(root, gpu, dry) if run("llama") else say("    skipped")
     step(2, "Models: Gemma, its vision part, Hebrew Whisper, Parakeet (English)")
@@ -1186,23 +1234,22 @@ def main():
         py = install_venv(root, gpu, dry)
     else:
         say("    skipped")
-    step(5, "Settings")
+    step(5, "Puki's files (what runs; changing this folder doesn't change them)")
+    install_brain_files(root, dry) if run("files") else say("    skipped")
+    step(6, "Settings")
     write_config(root, py, model, dry) if run("config") else say("    skipped")
-    step(6, "Firewall (home network only)")
+    step(7, "Firewall (home network only)")
     setup_firewall(dry) if run("firewall") and not args.no_firewall else say("    skipped")
-    step(7, "Start at login")
-    if run("autostart") and not args.no_autostart:
-        pythonw, doorbell = setup_autostart(dry)
-    else:
-        say("    skipped")
-    step(8, "Start Puki and hear it talk")
-    start_puki(pythonw, doorbell, dry) if run("start") and not args.no_start else say("    skipped")
+    step(8, "Start at login")
+    setup_autostart(root, py, dry) if run("autostart") and not args.no_autostart else say("    skipped")
+    step(9, "Start Puki and hear it talk")
+    start_puki(root, py, dry) if run("start") and not args.no_start else say("    skipped")
     if dry:
         return
     say("\nDone. In the app, open parent settings (long-press the gear) and scan the QR code, or type")
     say(f"this PC's address ({lan_address()}:{PORT}) and the pairing code. The first reply takes about")
     say("30 seconds while Puki wakes up.")
-    UI.finish(*pairing())
+    UI.finish(*pairing(root))
 
 
 def estimate():
