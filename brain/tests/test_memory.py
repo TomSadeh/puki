@@ -87,7 +87,7 @@ def test_a_game_line_reaches_back_only_to_the_same_thing(tmp_path):
     m.note("say", "he", situation="במשחק החיות: הילדה האכילה את הקוף.", said="מממ!", t=at(1, 11))
     m.add_entry("She fed the elephant and the monkey.", at(1, 11))
     when, then = m.related("במשחק החיות: הילדה האכילה את הפיל.", now=at(0))
-    assert when == ("yesterday", "אתמול") and "הפיל" in then  # the elephant, not the monkey just because both were fed
+    assert when == ("yesterday", "אתמול") and "הפיל" in then["situation"]  # not the monkey just because both were fed
     assert m.related("במשחק הצבעים: מחפשים את הצבע צהוב.", now=at(0)) is None
     assert m.related("במשחק החיות: הפרה מחכה לאוכל.", now=at(0)) is None
 
@@ -96,3 +96,40 @@ def test_this_session_isnt_reached_back_to(tmp_path):
     m = memory.Memory(str(tmp_path))
     m.note("say", "he", situation="במשחק החיות: הילדה האכילה את הפיל.", said="יאמי!", t=at(0, 9))
     assert m.related("במשחק החיות: הילדה האכילה את הפיל שוב.", now=at(0, 10)) is None  # no diary yet: it's "just now"
+
+
+def test_word_forms_meet():
+    assert memory._forms("הפילים") & memory._forms("פיל")
+    assert memory._forms("בננות") & memory._forms("בננה")
+    assert memory._forms("כחולה") & memory._forms("כחול")
+    assert memory._forms("וְהַפִּיל") & memory._forms("פיל")  # nikud and two prefixes
+    assert memory._forms("dogs") & memory._forms("dog")
+    assert not memory._forms("פרה") & memory._forms("פרח")
+
+
+def test_her_own_words_and_say_it_tries_are_found(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.note("listen", "he", heard="פילים! פילים גדולים!", said="וואו!", t=at(2, 10))
+    m.note("repeat", "he", situation="כלב", heard="כב", t=at(1, 10))
+    m.add_entry("She talked about elephants and tried to say dog.", at(1, 10))
+    when, moment = m.related("במשחק החיות: הילדה האכילה את הפיל.", now=at(0))
+    assert when[0] == "2 days ago" and moment["kind"] == "listen"
+    assert m.moment_text(moment, "he") == 'אמרה לך "פילים! פילים גדולים!"'
+    assert m.moment_text(moment, "en", girl=False) == 'he said to you "פילים! פילים גדולים!"'
+    when, moment = m.related("במשחק המחבואים: הכלב מתחבא ומחפשים אותו.", now=at(0))
+    assert moment["kind"] == "repeat" and "להגיד \"כלב\"" in m.moment_text(moment, "he")
+
+
+def test_a_diary_quote_is_found_when_the_log_has_nothing(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.add_entry('She drew a sun and said "שמש!" twice. She liked the yellow paint.', at(1, 10))
+    when, moment = m.related("בציור: הילדה ציירה שמש צהובה.", now=at(0))
+    assert when[0] == "yesterday" and moment == {"kind": "diary", "text": 'She drew a sun and said "שמש!" twice.'}
+
+
+def test_names_dont_make_moments_alike(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.note("listen", "he", heard="פוקי! פוקי!", said="שלום!", t=at(1, 10))
+    m.add_entry("She called Puki.", at(1, 10))
+    assert m.related("במשחק הצבעים: פוקי מחפש כחול.", now=at(0), names=("פוקי", "Puki")) is None
+    assert m.related("במשחק הצבעים: פוקי מחפש כחול.", now=at(0)) is not None  # (without the names, it would)

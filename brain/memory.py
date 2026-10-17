@@ -16,6 +16,7 @@ brain.py writes them, one request at a time.
 
 import json
 import os
+import re
 import threading
 import time
 
@@ -38,20 +39,51 @@ def pronouns(girl):
 _STOP = {"במשחק", "הילדה", "הילד", "בחרו", "נכון", "מחפשים", "מחכה", "שוב", "אבל", "חיפשנו", "הצבע", "צבע",
          "האכילה", "האכיל", "אכילה", "אכיל", "ציירה", "צייר", "מצאו", "מצאה", "מצא", "לאוכל", "אוכל",
          "the", "child", "game", "picked", "that", "right", "looking", "for", "again", "waiting", "and", "with",
-         "fed", "drew", "found", "food"}
-_PREFIX = "הבולש"
+         "fed", "drew", "found", "food",
+         # and everyday words, when what she said is searched too
+         "אתה", "הנה", "איזה", "הזה", "הזאת", "שלה", "שלו", "איפה", "כמה", "אני", "רוצה", "רוצים", "עוד", "היום",
+         "you", "your", "this", "what", "said", "she", "her", "his", "want", "more", "look", "here", "there"}
+_PREFIXES = "הובלשמכ"
+_FINALS = str.maketrans("ךםןףץ", "כמנפצ")
+_NIKUD = dict.fromkeys(range(0x591, 0x5C8))
 
 
-def _content_words(situation):
-    """The words that say what a game moment was about ("פיל", "בננה"), without Hebrew prefixes."""
+def _forms(word):
+    """The forms a word may come in, so they can meet: "הפילים" and "פיל", "בננות" and "בננה",
+    "dogs" and "dog". Up to two Hebrew prefixes (ה, ו, ב, ל, ש, מ, כ), a plural or feminine
+    ending, final letters as regular ones."""
+    w = word.lower().translate(_NIKUD).translate(_FINALS)
+    bases = {w}
+    for n in (1, 2):
+        if len(w) - n >= 2 and all(c in _PREFIXES for c in w[:n]):
+            bases.add(w[n:])
     out = set()
-    for w in "".join(c if c.isalnum() else " " for c in situation.split(":", 1)[-1].lower()).split():
-        if w in _STOP or len(w) < 3:
+    for b in bases:
+        out.add(b)
+        for end in ("ימ", "ות", "ה", "es", "s"):
+            if b.endswith(end) and len(b) - len(end) >= 2:
+                out.add(b[:-len(end)])
+    return out
+
+
+_STOP_FORMS = set().union(*(_forms(w) for w in _STOP))
+
+
+def _content_words(text, ignore=frozenset()):
+    """The forms of the words that say what something was about ("פיל", "בננה"), leaving out
+    the words every game moment has (and the game's name, before the colon)."""
+    out = set()
+    for w in "".join(c if c.isalnum() else " " for c in text.split(":", 1)[-1]).split():
+        if len(w) < 3:
             continue
-        while len(w) > 3 and w[0] in _PREFIX:
-            w = w[1:]
-        out.add(w)
-    return out - _STOP
+        forms = _forms(w)
+        if forms & (_STOP_FORMS | ignore):
+            continue
+        out |= forms
+    return out
+
+
+_QUOTE = re.compile(r'"([^"]{2,60})"')
 
 
 def day_of(t):
@@ -195,25 +227,68 @@ class Memory:
             f"Profile page:\n{old}\n\nNewest diary entry:\n{entry}"
         )
 
-    def related(self, situation, now=None):
-        """An earlier session's game moment about the same thing as [situation] (the elephant
-        again), for a game line to reach back to: (when, that moment), or None. Chosen here, not
-        by Gemma: told to link to any memory, it links to unrelated ones and mixes them up."""
+    def related(self, situation, now=None, names=()):
+        """Something from an earlier session about the same thing as [situation] (the elephant
+        again), for a game line to reach back to: (when, moment), or None. A moment is a game
+        moment, something the child said (to Puki, in Say it, answering a game) or, failing
+        those, a diary sentence quoting such a word. Chosen here, not by Gemma: told to link to
+        any memory, it links to unrelated ones and mixes them up. See [moment_text]."""
         now = now or time.time()
-        words = _content_words(situation)
+        # The child's and Puki's names are in half of everything: they don't make two moments alike
+        ignore = frozenset().union(*(_forms(w) for n in names for w in str(n).split() if len(w) >= 2))
+        words = _content_words(situation, ignore)
         if not words:
             return None
         since = now - DIARY_DAYS * 86400
+        until = self.written_until()  # later than that is this session: "just now" already
         for e in reversed(self.entries(since)):
-            if e["t"] > self.written_until() or e.get("kind") != "say":
-                continue  # this session is "just now" already
-            if words & _content_words(e.get("situation", "")):
-                age = (time.mktime(time.strptime(day_of(now), "%Y-%m-%d")) -
-                       time.mktime(time.strptime(day_of(e["t"]), "%Y-%m-%d"))) / 86400
-                when = ("earlier today", "קודם היום") if age < 1 else ("yesterday", "אתמול") if age < 2 else \
-                    (f"{int(round(age))} days ago", f"לפני {int(round(age))} ימים")
-                return when, e["situation"]
+            if e["t"] > until:
+                continue
+            kind = e.get("kind")
+            text = {"say": e.get("situation", ""), "listen": e.get("heard", ""), "hear": e.get("heard", ""),
+                    "repeat": e.get("situation", "") + " " + e.get("heard", "")}.get(kind)
+            if text and words & _content_words(text, ignore):
+                return self._when(e["t"], now), e
+        for d in reversed(self.diary()):
+            if d["until"] < since:
+                break
+            for sentence in re.split(r"(?<=[.!?])\s+", d["text"]):
+                if any(words & _content_words(q, ignore) for q in _QUOTE.findall(sentence)):
+                    return self._when(d["until"], now), {"kind": "diary", "text": sentence}
         return None
+
+    @staticmethod
+    def _when(t, now):
+        age = (time.mktime(time.strptime(day_of(now), "%Y-%m-%d")) -
+               time.mktime(time.strptime(day_of(t), "%Y-%m-%d"))) / 86400
+        if age < 1:
+            return "earlier today", "קודם היום"
+        if age < 2:
+            return "yesterday", "אתמול"
+        return f"{int(round(age))} days ago", f"לפני {int(round(age))} ימים"
+
+    @staticmethod
+    def moment_text(moment, lang, girl=True):
+        """A moment from [related], as Puki's hint says it in [lang]."""
+        kind = moment.get("kind")
+        heard = moment.get("heard", "")
+        if kind == "say":
+            return moment.get("situation", "")
+        if kind == "diary":
+            return moment["text"]
+        if lang == "he":
+            said = "אמרה" if girl else "אמר"
+            if kind == "listen":
+                return f'{said} לך "{heard}"'
+            if kind == "repeat":
+                return f'{"ניסתה" if girl else "ניסה"} להגיד "{moment.get("situation", "")}" {"ואמרה" if girl else "ואמר"} "{heard}"'
+            return f'{"ענתה" if girl else "ענה"} "{heard}"'
+        p = pronouns(girl)
+        if kind == "listen":
+            return f'{p["she"]} said to you "{heard}"'
+        if kind == "repeat":
+            return f'{p["she"]} tried to say "{moment.get("situation", "")}" and said "{heard}"'
+        return f'{p["she"]} answered "{heard}"'
 
     def prompt_block(self, now=None, girl=True):
         """What Puki remembers, for the system prompt: profile, the last week's diary, and today

@@ -248,8 +248,10 @@ words, what's being learned). The dashboard shows both.
 No retrieval yet: Puki's prompt gets the profile, the last week's diary and the session so far
 (`context` is 8192 for that). When the child talks to Puki and in the bedtime story, the memory
 is just there; about one game line in three (`memory_say_chance`) reaches back, but only when an
-earlier session had the same thing (the elephant again), picked in code from the log, so Gemma
-can't link unrelated memories or make one up. Careful moments (hurt, scared, big questions) are
+earlier session had the same thing (the elephant again), picked in code, so Gemma can't link
+unrelated memories or make one up. The lookup searches the last week across all games: game
+moments, what the child said (to Puki, in Say it, answering out loud), and the words the diary
+quotes. Hebrew word forms meet ("הפילים" and "פיל", "כחולה" and "כחול"); the names don't count. Careful moments (hurt, scared, big questions) are
 never logged. It all stays on the PC; `"memory": false` turns it off.
 
 ## Trying it

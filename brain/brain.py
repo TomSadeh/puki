@@ -115,7 +115,8 @@ def ask_gemma(situation, lang, listening=False, avoid=None, remember=False, reac
     kind = "food" if any(w in situation for w in FOOD_WORDS) else "other"
     # A suggested opening sound keeps game lines varied; not for answering the child, where a
     # forced "Hooray!" can land on "I fell down"
-    before = MEMORY.related(situation) if reach_back and MEMORY else None
+    before = MEMORY.related(situation, names=(persona.NAME, persona.COMPANION, persona.COMPANION_EN)) \
+        if reach_back and MEMORY else None
     opener = None if listening or before else random.choice(OPENERS[lang][kind])
     hint = situation
     if lang == "he":
@@ -133,11 +134,12 @@ def ask_gemma(situation, lang, listening=False, avoid=None, remember=False, reac
         # A game line that reaches back (memory_say_chance of them), when an earlier session had the
         # same thing. Picked here: the small model ignores a mere invitation, and left to choose it
         # links to unrelated memories and mixes them up
-        (when_en, when_he), then = before
-        hint += (f"\n(גם {when_he} היה רגע כזה: \"{then}\". תזכיר את זה במילים ספורות, בלי להוסיף פרטים.)"
+        (when_en, when_he), moment = before
+        then = MEMORY.moment_text(moment, lang, persona.GIRL)
+        hint += (f"\n(גם {when_he} היה רגע כזה. {when_he.capitalize()}: {then}. תזכיר את זה במילים ספורות, בלי להוסיף פרטים.)"
                  if lang == "he" else
-                 f"\n(Something like this happened {when_en} too: \"{then}\". Mention it in a few words, "
-                 "adding no details.)")
+                 f"\n(Something like this happened {when_en} too. {when_en.capitalize()}: {then}. Mention it in a "
+                 "few words, adding no details.)")
     system = system_prompt(lang) + safety.system_extra(lang, persona.GIRL) + memories
     messages = [{"role": "system", "content": system}]
     for user, reply in examples(lang):
