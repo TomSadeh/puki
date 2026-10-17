@@ -85,8 +85,8 @@ fun ReportCard(companion: Companion) {
                 "הדיווח נשמר בטאבלט (ובמחשב שבבית, אם יש), ואז מופיע ✉️: שולחים לנו אותו מהמייל שלכם, ורואים בדיוק מה יישלח, עם השם מוחלף. ככה נתקן את פוקי לכל המשפחות. שום דבר לא נשלח בלי שתבחרו.",
                 "The report is kept on this tablet (and your home PC, if there is one), and ✉️ appears: send it to Puki's makers from your own email, seeing exactly what goes, with your child's name replaced. That's how Puki gets fixed for every family. Nothing is sent unless you choose to."
             ) else BilingualText(
-                "הדיווח נשמר בטאבלט (ובמחשב שבבית, אם יש), כדי שאפשר יהיה לתקן את פוקי שלא יחזור על זה. שום דבר לא יוצא מהבית.",
-                "The report is kept on this tablet (and your home PC, if there is one), so Puki can be fixed not to say it again. Nothing leaves your home."
+                "הדיווח נשמר בטאבלט (ובמחשב שבבית, אם יש), כדי שאפשר יהיה לתקן את פוקי שלא יחזור על זה. שום דבר לא יוצא מהבית אלא אם אתם רוצים.",
+                "The report is kept on this tablet (and your home PC, if there is one), so Puki can be fixed not to say it again. Nothing leaves your home unless you want it to."
             )
         )
         steps.forEachIndexed { i, step ->
