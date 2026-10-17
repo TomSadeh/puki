@@ -148,8 +148,11 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
 - On first launch, a short welcome screen asks for the language, the child's name, girl/boy,
   and (optionally) the companion: scan the QR code on the PC's dashboard, or type its address
   and pairing code.
-- Parent settings: long-press the gear on the hub. There you can change all of the above,
-  plus separate volumes for music, voices (and Puki) and sound effects, and a time limit.
+- Parent settings: long-press the gear on the hub, then tap the number written out in words
+  (a toddler can hold a button, but can't read "seventeen"). There you can change all of the
+  above, plus separate volumes for music, voices (and Puki) and sound effects, which games
+  show on the map, and a time limit. The limit holds even if the app is closed; a new allowance
+  starts after an hour away, or when you end the goodbye.
 - Music: "Puki main theme" plays in the hub and games, and "Puki nights" plays during the
   bedtime routine, dipping under the bedtime story. Dance and Freeze plays `music_dance.mp3`
   when it's there (otherwise the main theme). To use your own, replace

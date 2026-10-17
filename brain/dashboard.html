@@ -74,7 +74,9 @@
   #lines li { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   #lines li:first-child { border-top: 0; }
   #diary { list-style: none; margin: 8px 0 0; padding: 0; }
-  #diary li { padding: 8px 0; border-top: 1px solid var(--line); }
+  #diary li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); }
+  #diary li > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  #memProfileEdit { width: 100%; min-height: 9em; font: inherit; padding: 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
   #lines .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   #lines .line { font-weight: 600; font-size: 16px; }
   #lines .actions { display: flex; gap: 6px; flex-shrink: 0; }
@@ -144,11 +146,17 @@
   </section>
 
   <section class="card" style="margin-bottom:16px">
-    <h2 style="margin:0">What Puki remembers</h2>
+    <div class="pack-head">
+      <h2 style="margin:0">What Puki remembers</h2>
+      <div class="seg"><button id="memPause">Pause memory</button><button id="memErase">Erase all</button></div>
+    </div>
     <p class="muted small" id="memInfo">…</p>
-    <div id="memProfile" class="line" style="white-space:pre-line"></div>
+    <h3 style="margin:10px 0 4px;font-size:15px">About your child <span class="muted small">(Puki reads this; fix anything that's wrong)</span></h3>
+    <textarea id="memProfileEdit" placeholder="Nothing yet: Puki writes this after playing."></textarea>
+    <div><button id="memProfileSave" disabled>Save</button></div>
+    <h3 style="margin:14px 0 4px;font-size:15px">Diary</h3>
     <ul id="diary"></ul>
-    <p class="muted small">When Puki goes to sleep after playing, he writes a few lines in his diary and updates what he knows about your child. He uses them now and then ("yesterday you fed the elephant!") and in the bedtime story. It all stays on this PC, in the brain's memory folder; <code>"memory": false</code> in config.json turns it off. Careful moments (hurt, scared) are never kept.</p>
+    <p class="muted small">When Puki goes to sleep after playing, he writes a few lines in his diary and updates the page above. He uses them now and then ("yesterday you fed the elephant!") and in the bedtime story. It all stays on this PC, in the brain's memory folder, for <span id="memKeep">90</span> days (<code>memory_keep_days</code>); <code>"memory": false</code> in config.json turns it off. "Forget" removes a diary entry and the play it came from. Careful moments (hurt, scared) are never kept.</p>
   </section>
 
   <section class="card">
@@ -267,19 +275,45 @@ function whatHappened(situation) {
   return situation.split(/(?<=[.!?])\s+/).filter(p => !/^(תגיד|Say |Tell )/.test(p.trim())).join(" ");
 }
 let memShown = "";
+let memProfileShown = null;
 function showMemory(m) {
   $("memInfo").textContent = !m.on ? "Memory is off (config.json)." :
+    (m.paused ? "Paused: Puki keeps nothing new. " : "") +
     (m.diary.length ? `${m.diary.length} diary entries` : "Nothing in the diary yet") +
     (m.unwritten ? ` · ${m.unwritten} things from this session, written when Puki next goes to sleep` : "");
-  const key = JSON.stringify([m.profile, m.diary.map(e => e.until)]);
+  $("memPause").textContent = m.paused ? "Resume memory" : "Pause memory";
+  $("memPause").classList.toggle("on", m.paused);
+  $("memKeep").textContent = m.keep_days || "all";
+  // The profile box: refreshed only while the parent isn't editing it
+  const box = $("memProfileEdit");
+  if (m.profile !== memProfileShown && (document.activeElement !== box || box.value === memProfileShown)) {
+    box.value = m.profile;
+    memProfileShown = m.profile;
+    $("memProfileSave").disabled = true;
+  }
+  const key = JSON.stringify(m.diary.map(e => e.until));
   if (key === memShown) return;
   memShown = key;
-  $("memProfile").textContent = m.profile;
   const list = $("diary");
   list.replaceChildren();
   for (const e of m.diary) {
     const li = el("li");
-    li.append(el("div", "meta", e.day), el("div", "", e.text));
+    const what = el("div");
+    what.append(el("div", "meta", e.day), el("div", "", e.text));
+    if (e.ask && e.ask.length) {
+      const ask = el("div", "muted small");
+      ask.style.marginTop = "4px";
+      ask.dir = "auto";
+      ask.textContent = "Talk about it: " + e.ask.join(" · ");
+      what.append(ask);
+    }
+    const forget = el("button", "", "Forget");
+    forget.title = "Remove this entry and the play it came from";
+    forget.onclick = async () => {
+      if (!confirm("Forget this diary entry and the play it was written from?")) return;
+      showMemory(await post("/api/memory/forget", { until: e.until }));
+    };
+    li.append(what, forget);
     list.append(li);
   }
 }
@@ -336,6 +370,19 @@ async function tick() {
 
 $("sleep").onclick = async () => showStatus(await post("/api/sleep"));
 $("makeLines").onclick = async () => showPack(await post("/api/pack/make"));
+$("memProfileEdit").oninput = () => { $("memProfileSave").disabled = $("memProfileEdit").value === memProfileShown; };
+$("memProfileSave").onclick = async () => {
+  const m = await post("/api/memory/profile", { text: $("memProfileEdit").value });
+  memProfileShown = null;
+  $("memProfileEdit").blur();
+  showMemory(m);
+};
+$("memPause").onclick = async () =>
+  showMemory(await post("/api/memory/pause", { paused: $("memPause").textContent.startsWith("Pause") }));
+$("memErase").onclick = async () => {
+  if (!confirm("Erase everything Puki remembers (the diary, the page about your child and the log)? This can't be undone.")) return;
+  showMemory(await post("/api/memory/erase"));
+};
 $("approveAll").onclick = async () => {
   const ids = JSON.parse(packShown || "[]");
   if (!confirm(`Approve all ${ids.length} waiting lines? The tablet may then say any of them.`)) return;

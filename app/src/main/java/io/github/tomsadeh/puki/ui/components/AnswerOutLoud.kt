@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import io.github.tomsadeh.puki.brain.SpokenAnswer
 import io.github.tomsadeh.puki.ui.common.LocalCompanion
+import io.github.tomsadeh.puki.ui.common.LocalGamePaused
 import io.github.tomsadeh.puki.ui.common.LocalVoicePlayer
 import kotlinx.coroutines.delay
 
@@ -29,8 +30,9 @@ fun AnswerOutLoud(
     val voicePlayer = LocalVoicePlayer.current
     val answer by rememberUpdatedState(onAnswer)
     val choices by rememberUpdatedState(options)
-    LaunchedEffect(key, active) {
-        if (!active) return@LaunchedEffect
+    val paused = LocalGamePaused.current
+    LaunchedEffect(key, active, paused) {
+        if (!active || paused) return@LaunchedEffect
         repeat(2) { tries ->
             // Wait for the question (or the "try again") to be said, and a breath after it
             delay(if (tries == 0) askedAfterMs else 800)

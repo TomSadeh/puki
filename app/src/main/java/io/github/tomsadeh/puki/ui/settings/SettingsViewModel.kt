@@ -103,6 +103,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun setIslandShown(id: String, shown: Boolean, hidden: Set<String>) {
+        viewModelScope.launch { settingsRepository.updateHiddenIslands(if (shown) hidden - id else hidden + id) }
+    }
+
     fun setAnswersOutLoud(on: Boolean) {
         viewModelScope.launch { settingsRepository.updateAnswersOutLoud(on) }
     }

@@ -252,7 +252,13 @@ earlier session had the same thing (the elephant again), picked in code, so Gemm
 unrelated memories or make one up. The lookup searches the last week across all games: game
 moments, what the child said (to Puki, and in Say it), and the words the diary
 quotes. Hebrew word forms meet ("הפילים" and "פיל", "כחולה" and "כחול"); the names don't count. Careful moments (hurt, scared, big questions) are
-never logged. It all stays on the PC; `"memory": false` turns it off.
+never logged, and from Say it only the word is kept (with whether she said it), never what
+Whisper heard. It all stays on the PC; `"memory": false` turns it off.
+
+On the dashboard a parent can edit the profile page Puki reads, forget a diary entry (and the
+play it came from, so Puki can't reach back to it either), pause memory, or erase it all. Each
+entry also has 2–3 questions to ask the child about that session later at home, in the language
+she played in. The log and diary keep `memory_keep_days` (90 by default; 0 keeps everything).
 
 ## Trying it
 

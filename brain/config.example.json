@@ -26,6 +26,7 @@
   "log_text": false,
   "memory": true,
   "memory_say_chance": 0.3,
+  "memory_keep_days": 90,
   "pack_hour": 3,
   "pack_lines_per_moment": 3,
   "pack_moments_per_night": 20,

@@ -12,7 +12,7 @@ See `olam-katan-claude-code-prompt.md` for the full game design document.
 
 - **Language:** Kotlin
 - **UI:** Jetpack Compose (no XML layouts, no Views)
-- **Min SDK:** 26 | **Target SDK:** 34
+- **Min SDK:** 26 | **Target SDK:** 36
 - **Architecture:** Single-activity, MVVM. One `ViewModel` per mini-game screen.
 - **Navigation:** Compose Navigation (`NavHost` / `NavController`)
 - **Persistence:** Jetpack DataStore (Preferences) for progress, stars, stickers, difficulty levels, settings. No Room unless complexity demands it later.

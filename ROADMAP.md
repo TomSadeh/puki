@@ -58,7 +58,7 @@ cooking, the car wash, offline Puki, Dance and Freeze, tracing)
 - **Counting, part two:** "give the bunny 3 carrots".
 
 **Polish**
-- A parent setting to hide islands (fewer choices at two).
+- A parent setting to hide islands (fewer choices at two). (Done in 0.8.)
 - A hand that shows the gesture the first time each game opens.
 - A short vibration on success.
 - A "new sticker!" moment at the end of a session.
@@ -78,8 +78,9 @@ cooking, the car wash, offline Puki, Dance and Freeze, tracing)
 - **Puki remembers (started):** a log of every exchange on the PC, a diary entry and a profile
   page written by Gemma when the brain goes to sleep, all fed into the prompt (no retrieval yet;
   see the design notes below). Game lines reach back only to an earlier moment about the same
-  thing. Next: the device brain, a parent page to read and correct the profile, and retrieval
-  once the diary outgrows the context.
+  thing. On the dashboard a parent reads and corrects the profile, forgets diary entries, pauses or
+  erases it all, and gets 2–3 things to ask her about each session. The log keeps 90 days. Next:
+  the device brain, and retrieval once the diary outgrows the context.
 - **Answer out loud (done):** after a question in Colors, Counting ("how many?"), Peekaboo and
   the shadow round, Puki listens a few seconds and she can say the answer instead of tapping
   ("כחול!"). Tapping always works; a parent setting turns it off. Next: Shapes and My Day.
@@ -90,7 +91,7 @@ cooking, the car wash, offline Puki, Dance and Freeze, tracing)
    - More stickers, spaced further apart.
    - A parent progress page on the PC's dashboard: stars and level per game, words she said,
      games played, reset and level override.
-   - **Talk about it later:** after a session, the parent page suggests 2–3 things to ask her.
+   - **Talk about it later** (done in 0.8): after a session, the dashboard suggests 2–3 things to ask her.
    - A fridge for her drawings, with Puki's comments.
 2. **Phone brain polish** (M each)
    - **English on the phone through Android's own speech engine.** Google's on-device

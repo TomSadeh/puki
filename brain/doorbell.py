@@ -597,7 +597,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 event["status"] = e.code
             except Exception as e:
-                log(f"say failed: {e}")
+                log(f"say failed ({type(e).__name__})")
                 self.send_response(502)
                 self.end_headers()
                 event["status"] = 502
@@ -841,8 +841,27 @@ class DashboardApp:
     def memory(self):
         """What Puki remembers: the profile page and the last two weeks of diary."""
         m = memory.Memory(HERE)
-        return {"on": bool(CFG.get("memory", True)), "profile": m.profile(), "diary": m.diary()[-14:][::-1],
-                "unwritten": len(m.unwritten())}
+        return {"on": bool(CFG.get("memory", True)), "paused": m.paused(), "profile": m.profile(),
+                "diary": m.diary()[-30:][::-1], "unwritten": len(m.unwritten()),
+                "keep_days": CFG.get("memory_keep_days", 90)}
+
+    def memory_profile(self, text):
+        memory.Memory(HERE).set_profile(text)
+        EVENTS.add("memory", text="the profile page was edited on the dashboard")
+
+    def memory_forget(self, until):
+        ok = memory.Memory(HERE).forget(until)
+        if ok:
+            EVENTS.add("memory", text="a diary entry was forgotten")
+        return ok
+
+    def memory_erase(self):
+        memory.Memory(HERE).erase()
+        EVENTS.add("memory", text="Puki's memory was erased")
+
+    def memory_pause(self, on):
+        memory.Memory(HERE).set_paused(on)
+        EVENTS.add("memory", text="memory paused" if on else "memory on again")
 
     def pack_decide(self, line_id, approve):
         return PACK.decide(line_id, approve)

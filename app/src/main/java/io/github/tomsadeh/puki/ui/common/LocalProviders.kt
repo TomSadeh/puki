@@ -18,6 +18,8 @@ val LocalSfxPlayer = compositionLocalOf<SfxPlayer> { error("No SfxPlayer provide
 val LocalMusicPlayer = compositionLocalOf<MusicPlayer> { error("No MusicPlayer provided") }
 val LocalCompanion = compositionLocalOf<Companion?> { null }
 val LocalVoicePlayer = compositionLocalOf<VoicePlayer> { error("No VoicePlayer provided") }
+/** True while the game is paused under the time limit's goodbye: no nudges, no listening. */
+val LocalGamePaused = compositionLocalOf { false }
 
 /** Resolves to the current language, and to the child's gender for Hebrew lines that have one. */
 @Composable

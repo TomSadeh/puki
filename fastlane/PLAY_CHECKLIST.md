@@ -75,7 +75,8 @@ From `metadata/android/<language>/`:
 **App access:** All functionality is available without special access. Note for reviewers:
 "Every game works on its own. Puki's talking companion is optional: it needs a free program
 on the family's own PC (https://github.com/TomSadeh/puki), and without it the parrot uses
-recorded lines. Parent settings open by holding the gear button for 2 seconds."
+recorded lines. Parent settings open by holding the gear button for 2 seconds, then tapping the
+number shown in words (e.g. 'seventeen' among six numbers)."
 
 **Target audience and content:** ages **5 and under** (add 6–8 if wanted). This puts the app in
 the **Families program**: the Families policy applies (no ads, no data-collecting SDKs, a parent

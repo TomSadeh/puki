@@ -5,7 +5,6 @@ import android.os.Build
 import io.github.tomsadeh.puki.brain.Brain
 import io.github.tomsadeh.puki.brain.HttpBrain
 import io.github.tomsadeh.puki.data.models.Language
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,10 +56,19 @@ class Companion(
     private var packSynced = 0L
 
     /** Brings the approved lines up to date, at most once an hour (the PC answers even asleep). */
+    @Volatile private var packSyncing = false
+
     private fun syncPack() {
-        if (onDevice || System.currentTimeMillis() - packSynced < 60 * 60 * 1000L) return
-        packSynced = System.currentTimeMillis()
-        scope.launch(Dispatchers.IO) { runCatching { pack.sync() } }
+        if (onDevice || packSyncing || System.currentTimeMillis() - packSynced < 60 * 60 * 1000L) return
+        packSyncing = true
+        scope.launch(Dispatchers.IO) {
+            try {
+                // Only a sync that worked waits the hour; a failed one is tried again at the next game
+                if (runCatching { pack.sync() }.getOrDefault(false)) packSynced = System.currentTimeMillis()
+            } finally {
+                packSyncing = false
+            }
+        }
     }
 
     /** True while the parrot listens on its own (after asking a question). */
@@ -82,6 +90,8 @@ class Companion(
     var language = Language.HEBREW
     /** The parent lets the games listen for answers said out loud (see [listenForAnswer]). */
     var answersOutLoud = true
+    /** The time limit's goodbye is up: the game underneath may not listen (or start talking). */
+    var paused = false
 
     /** What's on screen right now, so the parrot has something to talk about when tapped. */
     private var scene = ""
@@ -193,6 +203,7 @@ class Companion(
 
     /** Checks for the server and wakes the brain if needed. Cheap to call on every game screen. */
     fun wake() {
+        if (isReady && enabled) syncPack()  // lines a parent approved while the brain stayed awake
         if (!enabled || wakeJob?.isActive == true || isReady) return
         if (address.isBlank() && !isEmulator() && !onDevice) return  // not set up yet
         wakeJob = scope.launch(Dispatchers.IO) {
@@ -330,14 +341,7 @@ class Companion(
     suspend fun askAndListen(question: String, context: String, onHeard: () -> Unit): Boolean {
         if (!isReady || !hasMic()) return false
         if (!speakAndWait(question)) return false
-        _listening.value = true
-        val wav = try {
-            if (!recorder.start()) return false
-            delay(LISTEN_MILLIS)
-            recorder.stop()
-        } finally {
-            _listening.value = false
-        }
+        val wav = record(LISTEN_MILLIS) ?: return false
         if (!hasSpeech(wav)) return false
         onHeard()
         val reply = postListen(wav, context)
@@ -354,14 +358,7 @@ class Companion(
      */
     suspend fun listenForWord(word: String, alsoCounts: List<String>): WordTry? {
         if (!hasMic()) return null
-        _listening.value = true
-        val wav = try {
-            if (!recorder.start()) return null
-            delay(WORD_LISTEN_MILLIS)
-            recorder.stop()
-        } finally {
-            _listening.value = false
-        }
+        val wav = record(WORD_LISTEN_MILLIS) ?: return null
         if (!hasSpeech(wav)) return WordTry.SILENT
         if (!isReady) return WordTry.SPOKE
         val path = "/repeat?lang=${lang()}&target=" + URLEncoder.encode(word, "UTF-8") +
@@ -384,23 +381,31 @@ class Companion(
      */
     suspend fun listenForAnswer(hints: List<String>): String? {
         if (!answersOutLoud || !isReady || !hasMic()) return null
-        _listening.value = true
-        val wav = try {
-            if (!recorder.start()) return null
-            delay(ANSWER_LISTEN_MILLIS)
-            recorder.stop()
-        } catch (e: CancellationException) {
-            recorder.stop()  // the round moved on (she tapped): the microphone goes off at once
-            throw e
-        } finally {
-            _listening.value = false
-        }
+        val wav = record(ANSWER_LISTEN_MILLIS) ?: return null
         if (!hasSpeech(wav)) return ""
         val path = "/hear?lang=${lang()}" + hints.take(16).joinToString("") { "&hint=" + URLEncoder.encode(it, "UTF-8") }
         val body = withContext(Dispatchers.IO) {
             request("POST", path, body = wav, contentType = "audio/wav", timeoutMs = 8000)
         } ?: return ""
         return runCatching { JSONObject(String(body)).optString("heard") }.getOrDefault("")
+    }
+
+    /**
+     * Records [millis] of the microphone (the parrot glows meanwhile), or null if it couldn't
+     * start. However this ends, the microphone goes off: also when the screen closes or the
+     * round moves on mid-listen, which cancels the waiting.
+     */
+    private suspend fun record(millis: Long): ByteArray? {
+        if (paused) return null
+        _listening.value = true
+        try {
+            if (!recorder.start()) return null
+            delay(millis)
+            return recorder.stop()
+        } finally {
+            if (recorder.isRecording) recorder.stop()
+            _listening.value = false
+        }
     }
 
     private fun hasMic() = hasMicPermission(context)

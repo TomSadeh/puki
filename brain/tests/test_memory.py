@@ -65,10 +65,11 @@ def test_a_broken_line_doesnt_lose_the_log(tmp_path):
 
 def test_the_prompts_quote_her_words_and_follow_gender(tmp_path):
     m = memory.Memory(str(tmp_path))
-    m.note("repeat", "he", situation="כלב", heard="כב", t=at(0))
+    m.note("repeat", "he", situation="כלב", heard="", t=at(0))
+    m.note("repeat", "he", situation="חתול", heard="חתול", t=at(0) + 1)
     entries = m.entries()
     diary = m.diary_prompt(entries, "the little boy", girl=False)
-    assert 'he tried the word "כלב" and said "כב"' in diary and "his words" in diary
+    assert 'he tried to say the word "כלב"' in diary and 'he said the word "חתול"' in diary and "his words" in diary
     assert "Only facts from the log" in diary
     assert "(empty: this is the first session)" in m.profile_prompt("He played.", "the little boy", girl=False)
 
@@ -110,14 +111,15 @@ def test_word_forms_meet():
 def test_her_own_words_and_say_it_tries_are_found(tmp_path):
     m = memory.Memory(str(tmp_path))
     m.note("listen", "he", heard="פילים! פילים גדולים!", said="וואו!", t=at(2, 10))
-    m.note("repeat", "he", situation="כלב", heard="כב", t=at(1, 10))
+    m.note("repeat", "he", situation="כלב", heard="", t=at(1, 10))  # tried, not quite (brain.py keeps no transcript)
     m.add_entry("She talked about elephants and tried to say dog.", at(1, 10))
     when, moment = m.related("במשחק החיות: הילדה האכילה את הפיל.", now=at(0))
     assert when[0] == "2 days ago" and moment["kind"] == "listen"
     assert m.moment_text(moment, "he") == 'אמרה לך "פילים! פילים גדולים!"'
     assert m.moment_text(moment, "en", girl=False) == 'he said to you "פילים! פילים גדולים!"'
     when, moment = m.related("במשחק המחבואים: הכלב מתחבא ומחפשים אותו.", now=at(0))
-    assert moment["kind"] == "repeat" and "להגיד \"כלב\"" in m.moment_text(moment, "he")
+    assert moment["kind"] == "repeat" and m.moment_text(moment, "he") == 'ניסתה להגיד "כלב"'
+    assert m.moment_text({"kind": "repeat", "situation": "כלב", "heard": "כלב"}, "en") == 'she said the word "כלב"'
 
 
 def test_a_diary_quote_is_found_when_the_log_has_nothing(tmp_path):
@@ -133,3 +135,63 @@ def test_names_dont_make_moments_alike(tmp_path):
     m.add_entry("She called Puki.", at(1, 10))
     assert m.related("במשחק הצבעים: פוקי מחפש כחול.", now=at(0), names=("פוקי", "Puki")) is None
     assert m.related("במשחק הצבעים: פוקי מחפש כחול.", now=at(0)) is not None  # (without the names, it would)
+
+
+def test_forgetting_an_entry_forgets_its_play_too(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.note("say", "he", situation="במשחק החיות: הילדה האכילה את הפיל.", said="יאמי!", t=at(2, 10))
+    m.add_entry("She fed the elephant.", at(2, 10))
+    m.note("say", "he", situation="במשחק החיות: הילדה האכילה את הקוף.", said="מממ!", t=at(1, 10))
+    m.add_entry("She fed the monkey.", at(1, 10))
+    assert m.forget(at(2, 10)) and not m.forget(12345.0)
+    assert [e["text"] for e in m.diary()] == ["She fed the monkey."]
+    assert [e["situation"] for e in m.entries()] == ["במשחק החיות: הילדה האכילה את הקוף."]
+    assert m.related("במשחק החיות: הילדה האכילה את הפיל.", now=at(0)) is None  # gone, not just hidden
+    assert m.unwritten() == []
+
+
+def test_forgetting_the_last_entry_doesnt_bring_its_play_back(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    for i in range(3):
+        m.note("say", "he", situation=f"רגע {i}", said="יש!", t=at(1, 10) + i)
+    m.add_entry("Three moments.", at(1, 10) + 2)
+    m.forget(at(1, 10) + 2)
+    assert m.diary() == [] and m.unwritten() == []  # not written again from the same play
+
+
+def test_erase_and_pause(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.note("say", "he", situation="א", said="ב")
+    m.add_entry("Played.", time.time())
+    m.set_profile("- Loves cows")
+    m.erase()
+    assert m.entries() == [] and m.diary() == [] and m.profile() == "" and m.prompt_block() == ""
+    m.set_paused(True)
+    m.note("say", "he", situation="ג", said="ד")
+    assert m.paused() and m.entries() == []
+    m.set_paused(False)
+    m.note("say", "he", situation="ה", said="ו")
+    assert not m.paused() and len(m.entries()) == 1
+
+
+def test_old_memory_is_pruned(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.note("say", "he", situation="ישן", said="א", t=at(100))
+    m.add_entry("Long ago.", at(100))
+    m.note("say", "he", situation="חדש", said="ב", t=at(1))
+    m.add_entry("Yesterday.", at(1))
+    m.prune(90)
+    assert [e["situation"] for e in m.entries()] == ["חדש"] and [e["text"] for e in m.diary()] == ["Yesterday."]
+    m.prune(0)  # keeps everything
+    assert len(m.entries()) == 1
+
+
+def test_questions_for_later_are_kept_with_the_entry(tmp_path):
+    m = memory.Memory(str(tmp_path))
+    m.add_entry("She fed the elephant.", at(1), ["איזו חיה האכלת היום?", "", "x" * 500, "ומה הפיל אכל?", "ועוד?"])
+    e = m.diary()[0]
+    assert e["ask"][0] == "איזו חיה האכלת היום?" and len(e["ask"]) == 3 and len(e["ask"][1]) == memory.ASK_CHARS
+    m.add_entry("Played again.", at(0))
+    assert "ask" not in m.diary()[1]
+    prompt = m.ask_prompt("He fed the elephant.", "the little boy", "he", girl=False)
+    assert "Hebrew" in prompt and "masculine" in prompt and "ask him" in prompt

@@ -1,5 +1,11 @@
 package io.github.tomsadeh.puki.ui.settings
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
 import kotlin.math.roundToInt
 import androidx.compose.material3.Slider
 import io.github.tomsadeh.puki.audio.Sfx
@@ -65,6 +71,8 @@ import io.github.tomsadeh.puki.data.models.BilingualText
 import io.github.tomsadeh.puki.data.models.Gender
 import io.github.tomsadeh.puki.data.models.Language
 import io.github.tomsadeh.puki.theme.CloudWhite
+import io.github.tomsadeh.puki.ui.hub.allIslands
+import androidx.compose.ui.graphics.Color
 import io.github.tomsadeh.puki.theme.EarthBrown
 import io.github.tomsadeh.puki.theme.GrassGreen
 import io.github.tomsadeh.puki.theme.SkyBlue
@@ -339,6 +347,41 @@ fun SettingsScreen(
                     )
                 }
 
+                // Which games are on the map: fewer islands, fewer choices at two
+                Text(
+                    BilingualText("משחקים במפה", "Games on the map").resolve(language),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = EarthBrown
+                )
+                Text(
+                    BilingualText("לחיצה מסתירה משחק או מחזירה אותו. פחות איים, פחות בחירות לקטנטנים.",
+                        "Tap to hide a game or bring it back. Fewer islands, fewer choices for little ones.").resolve(language),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = EarthBrown
+                )
+                allIslands.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        row.forEach { island ->
+                            val shown = island.id !in settings.hiddenIslands
+                            val lastOne = shown && allIslands.count { it.id !in settings.hiddenIslands } == 1
+                            Text(
+                                (if (shown) "✓ " else "") + island.name.resolve(language),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (shown) CloudWhite else EarthBrown,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (shown) GrassGreen else Color(0xFFEFEBE9))
+                                    .clickable(enabled = !lastOne) {
+                                        settingsViewModel.setIslandShown(island.id, !shown, settings.hiddenIslands)
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                            )
+                        }
+                        repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+                    }
+                }
+
                 // Time limit row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -400,6 +443,9 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = EarthBrown
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            AboutCard()
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -491,5 +537,54 @@ private fun VolumeRow(label: String, icon: Int, value: Float, onChange: (Float) 
             Text("${(value * 100).roundToInt()}%", style = MaterialTheme.typography.titleMedium, color = EarthBrown)
         }
         Slider(value = value, onValueChange = onChange, onValueChangeFinished = onDone)
+    }
+}
+
+/** Who made Puki and what it's built with; the full license texts open in a dialog. */
+@Composable
+private fun AboutCard() {
+    val language = LocalLanguage.current
+    val context = LocalContext.current
+    var licenses by remember { mutableStateOf<String?>(null) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            BilingualText(
+                "פוקי חינמי ובקוד פתוח (רישיון MIT), נוצר על ידי תום שדה. תודה ל-Gemma של Google, ל-BlueTTS, ל-ivrit.ai, ל-whisper.cpp, ל-ONNX Runtime, ל-LiteRT-LM ול-ZXing.",
+                "Puki is free and open source (MIT license), made by Tom Sadeh. With thanks to Google's Gemma, BlueTTS, ivrit.ai, whisper.cpp, ONNX Runtime, LiteRT-LM and ZXing."
+            ).resolve(language),
+            style = MaterialTheme.typography.bodyMedium,
+            color = EarthBrown,
+            textAlign = TextAlign.Center
+        )
+        OutlinedButton(onClick = {
+            licenses = runCatching { context.assets.open("licenses.txt").bufferedReader().readText() }.getOrDefault("")
+        }) {
+            Text(BilingualText("רישיונות", "Licenses").resolve(language), color = EarthBrown)
+        }
+    }
+    licenses?.let { text ->
+        Dialog(onDismissRequest = { licenses = null }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White)
+                    .padding(16.dp)
+            ) {
+                // The texts are English, left to right whatever the app's language
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Text(
+                        text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EarthBrown,
+                        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
+                    )
+                }
+                TextButton(onClick = { licenses = null }, modifier = Modifier.align(Alignment.End)) {
+                    Text(BilingualText("סגירה", "Close").resolve(language), color = EarthBrown)
+                }
+            }
+        }
     }
 }

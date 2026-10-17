@@ -33,11 +33,11 @@ class LinePack(filesDir: File, private val fetch: (String) -> ByteArray?) {
         version = json.optString("version")
     }
 
-    /** Brings the approved lines up to date with the PC (call off the main thread). */
+    /** Brings the approved lines up to date with the PC (call off the main thread); false if the PC didn't answer. */
     @Synchronized
-    fun sync() {
-        val manifest = fetch("/pack")?.let { runCatching { JSONObject(String(it, Charsets.UTF_8)) }.getOrNull() } ?: return
-        if (manifest.optString("version") == version && version.isNotEmpty()) return
+    fun sync(): Boolean {
+        val manifest = fetch("/pack")?.let { runCatching { JSONObject(String(it, Charsets.UTF_8)) }.getOrNull() } ?: return false
+        if (manifest.optString("version") == version && version.isNotEmpty()) return true
         val fresh = LinePack(dir.parentFile ?: dir, fetch).also { it.read(manifest) }.lines
         dir.mkdirs()
         for (line in fresh) {
@@ -54,6 +54,7 @@ class LinePack(filesDir: File, private val fetch: (String) -> ByteArray?) {
         indexFile.writeText(out.toString())
         read(out)
         if (keep.size != fresh.size) version = ""  // some audio is missing: try again next time
+        return true
     }
 
     /** An approved line for this moment (not the one played just before), with its audio file, or null. */

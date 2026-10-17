@@ -31,6 +31,7 @@ import io.github.tomsadeh.puki.audio.SfxPlayer
 import io.github.tomsadeh.puki.audio.VoicePlayer
 import io.github.tomsadeh.puki.data.ProgressRepository
 import io.github.tomsadeh.puki.data.SettingsRepository
+import io.github.tomsadeh.puki.ui.common.LocalGamePaused
 import io.github.tomsadeh.puki.data.models.Language
 import io.github.tomsadeh.puki.navigation.PukiNavGraph
 import io.github.tomsadeh.puki.theme.PukiTheme
@@ -126,10 +127,25 @@ fun PukiApp(
         musicPlayer.setEnabled(settings.musicEnabled)
     }
 
-    // Time limit: counts only the time the game is on screen, not while it sits in the background
+    // Time limit: counts only the time the game is on screen, not while it sits in the background.
+    // The clock is saved, so swiping the app away (or Android closing it) doesn't start a new
+    // allowance: that takes an hour away from the game, or a parent ending the goodbye
     var showTimeLimit by remember { mutableStateOf(false) }
     var playedMs by remember { mutableLongStateOf(0L) }
+    var clockLoaded by remember { mutableStateOf(false) }
     var onScreen by remember { mutableStateOf(true) }
+    val clockApp = LocalContext.current.applicationContext as PukiApplication
+    fun saveClock() {
+        val clock = SettingsRepository.PlayClock(playedMs, System.currentTimeMillis(), showTimeLimit)
+        clockApp.appScope.launch { clockApp.settingsRepository.savePlayClock(clock) }
+    }
+    LaunchedEffect(Unit) {
+        val clock = clockApp.settingsRepository.playClock()
+        val rested = System.currentTimeMillis() - clock.lastSeen > REST_FOR_NEW_ALLOWANCE_MS
+        playedMs = if (rested) 0L else clock.playedMs
+        showTimeLimit = !rested && clock.timeUp
+        clockLoaded = true
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -139,18 +155,37 @@ fun PukiApp(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(settings.timeLimitMinutes) { playedMs = 0L }
-    LaunchedEffect(settings.timeLimitMinutes, onScreen, showTimeLimit) {
-        if (settings.timeLimitMinutes <= 0 || !onScreen || showTimeLimit) return@LaunchedEffect
+    // A parent changing the limit starts a new allowance (not the settings being read at start)
+    var limitSeen by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(settings.timeLimitMinutes, settings.loaded, clockLoaded) {
+        if (!settings.loaded || !clockLoaded) return@LaunchedEffect
+        if (settings.timeLimitMinutes <= 0 && showTimeLimit) {
+            showTimeLimit = false  // the limit was turned off since time was up
+            saveClock()
+        }
+        if (limitSeen != null && limitSeen != settings.timeLimitMinutes) {
+            playedMs = 0L
+            showTimeLimit = false
+            saveClock()
+        }
+        limitSeen = settings.timeLimitMinutes
+    }
+    LaunchedEffect(settings.timeLimitMinutes, onScreen, clockLoaded) {
+        if (!clockLoaded || settings.timeLimitMinutes <= 0) return@LaunchedEffect
+        if (!onScreen) {
+            saveClock()  // when it went away: the hour's rest counts from here
+            return@LaunchedEffect
+        }
         while (true) {
             delay(5_000)
-            playedMs += 5_000
-            if (playedMs >= settings.timeLimitMinutes * 60_000L) {
-                showTimeLimit = true
-                break
+            if (!showTimeLimit) {
+                playedMs += 5_000
+                if (playedMs >= settings.timeLimitMinutes * 60_000L) showTimeLimit = true
             }
+            saveClock()  // (also while the goodbye is up: it's still on screen, not resting)
         }
     }
+    LaunchedEffect(showTimeLimit) { companion.paused = showTimeLimit }
 
     PukiTheme {
         CompositionLocalProvider(
@@ -161,6 +196,7 @@ fun PukiApp(
             LocalMusicPlayer provides musicPlayer,
             LocalVoicePlayer provides voicePlayer,
             LocalCompanion provides companion,
+            LocalGamePaused provides showTimeLimit,
             LocalLayoutDirection provides layoutDirection
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -176,6 +212,7 @@ fun PukiApp(
                         onDismiss = {
                             showTimeLimit = false
                             playedMs = 0L  // a new allowance starts counting
+                            saveClock()
                         }
                     )
                 }
@@ -183,3 +220,6 @@ fun PukiApp(
         }
     }
 }
+
+/** An hour away from the game starts a new time-limit allowance. */
+private const val REST_FOR_NEW_ALLOWANCE_MS = 60 * 60 * 1000L

@@ -5,6 +5,7 @@ import io.github.tomsadeh.puki.ui.components.LongPressGate
 import androidx.compose.runtime.collectAsState
 import io.github.tomsadeh.puki.BuildConfig
 import io.github.tomsadeh.puki.update.Updater
+import io.github.tomsadeh.puki.ui.common.LocalAppSettings
 import io.github.tomsadeh.puki.ui.common.LocalLanguage
 import io.github.tomsadeh.puki.ui.common.LocalVoicePlayer
 import kotlinx.coroutines.delay
@@ -83,10 +84,14 @@ fun HubScreen(
             val width = maxWidth
             val height = maxHeight
             fun fx(island: IslandDef) = if (isRtl) 1f - island.fractionalX else island.fractionalX
+            // The islands a parent left on the map (all of them unless some were hidden in settings)
+            val hidden = LocalAppSettings.current.hiddenIslands
+            val islands = allIslands.filter { it.id !in hidden }.ifEmpty { allIslands }
 
             // Dotted sea route linking the islands in order, like a treasure map
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val points = allIslands.map { Offset(size.width * fx(it), size.height * it.fractionalY + 40.dp.toPx()) }
+                val points = islands.map { Offset(size.width * fx(it), size.height * it.fractionalY + 40.dp.toPx()) }
+                if (points.size < 2) return@Canvas
                 val route = Path().apply {
                     moveTo(points.first().x, points.first().y)
                     for (i in 1 until points.size) {
@@ -113,7 +118,8 @@ fun HubScreen(
             // On a phone's short screen the islands would pile up: smaller there (tablets keep full size)
             val screenScale = (height / 560.dp).coerceIn(0.6f, 1f)
             // Islands nearer the horizon are drawn a little smaller, for depth
-            allIslands.forEachIndexed { index, island ->
+            islands.forEach { island ->
+                val index = allIslands.indexOf(island)  // (each keeps its own palm side)
                 val depthScale = (0.82f + 0.35f * ((island.fractionalY - 0.42f) / 0.38f).coerceIn(0f, 1f)) * screenScale
                 IslandButton(
                     island = island,

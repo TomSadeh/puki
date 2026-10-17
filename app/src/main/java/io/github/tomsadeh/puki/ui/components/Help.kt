@@ -1,6 +1,7 @@
 package io.github.tomsadeh.puki.ui.components
 
 import android.os.SystemClock
+import io.github.tomsadeh.puki.ui.common.LocalGamePaused
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -60,8 +61,9 @@ class Help internal constructor() {
 fun rememberHelp(key: Any?, active: Boolean = true, onNudge: () -> Unit): Help {
     val help = remember(key) { Help() }
     val nudge by rememberUpdatedState(onNudge)
-    LaunchedEffect(key, active) {
-        if (!active) return@LaunchedEffect
+    val paused = LocalGamePaused.current  // (the time limit's goodbye is up: no "where's the red one?" over it)
+    LaunchedEffect(key, active, paused) {
+        if (!active || paused) return@LaunchedEffect
         help.touched()  // the clock starts when the round does
         var nudges = 0
         while (nudges < 3) {

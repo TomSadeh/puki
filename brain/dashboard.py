@@ -135,6 +135,24 @@ def serve(app, port):
                 app.pack_make()
                 self._json(200, app.pack())
                 return
+            elif self.path in ("/api/memory/profile", "/api/memory/forget", "/api/memory/erase", "/api/memory/pause"):
+                if self.path == "/api/memory/profile":
+                    app.memory_profile(str(body.get("text", ""))[:2000])
+                elif self.path == "/api/memory/forget":
+                    try:
+                        until = float(body.get("until"))
+                    except (TypeError, ValueError):
+                        self._json(400, {"error": "until must be a number"})
+                        return
+                    if not app.memory_forget(until):
+                        self._json(404, {"error": "no such diary entry"})
+                        return
+                elif self.path == "/api/memory/erase":
+                    app.memory_erase()
+                else:
+                    app.memory_pause(bool(body.get("paused")))
+                self._json(200, app.memory())
+                return
             elif self.path == "/api/idle":
                 minutes = int(body.get("minutes", 0))
                 if not 1 <= minutes <= 240:

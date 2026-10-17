@@ -27,6 +27,7 @@ TODAY_EVENTS = 15       # today's session in the prompt: the last few exchanges
 PROFILE_CHARS = 1200
 ENTRY_CHARS = 500
 FIELD_CHARS = 200
+ASK_CHARS = 140
 
 
 def pronouns(girl):
@@ -96,12 +97,16 @@ class Memory:
         self.log_path = os.path.join(self.dir, "log.jsonl")
         self.diary_path = os.path.join(self.dir, "diary.json")
         self.profile_path = os.path.join(self.dir, "profile.json")
+        self.paused_path = os.path.join(self.dir, "paused")
         self.lock = threading.Lock()
 
     # ---------- The log ----------
 
     def note(self, kind, lang, game="", situation="", heard="", said="", t=None):
-        """Appends one exchange: [kind] is say, listen, look, story, repeat or hear."""
+        """Appends one exchange: [kind] is say, listen, look, story, repeat or hear. Nothing while
+        a parent has paused memory."""
+        if self.paused():
+            return
         entry = {"t": round(t or time.time(), 1), "kind": kind, "lang": lang}
         for k, v in (("game", game), ("situation", situation), ("heard", heard), ("said", said)):
             if v:
@@ -164,19 +169,82 @@ class Memory:
         """The exchanges no diary entry covers yet."""
         return self.entries(self.written_until())
 
-    def add_entry(self, text, until):
+    def add_entry(self, text, until, ask=()):
+        """A diary entry covering the play up to [until]; [ask]: questions for the parent to ask
+        the child about it later (see [ask_prompt])."""
         text = " ".join(str(text).split())[:ENTRY_CHARS]
+        entry = {"day": day_of(until), "until": until, "text": text}
+        ask = [" ".join(str(q).split())[:ASK_CHARS] for q in ask if str(q).strip()][:3]
+        if ask:
+            entry["ask"] = ask
         with self.lock:
             entries = self.diary()
-            entries.append({"day": day_of(until), "until": until, "text": text})
-            os.makedirs(self.dir, exist_ok=True)
-            write_private(self.diary_path, json.dumps({"entries": entries}, ensure_ascii=False, indent=1))
+            entries.append(entry)
+            self._write_diary(entries)
 
     def set_profile(self, text):
         text = str(text).strip()[:PROFILE_CHARS]
         with self.lock:
             os.makedirs(self.dir, exist_ok=True)
             write_private(self.profile_path, json.dumps({"text": text, "updated": time.time()}, ensure_ascii=False))
+
+    # ---------- The parent's controls (the dashboard) ----------
+
+    def paused(self):
+        return os.path.exists(self.paused_path)
+
+    def set_paused(self, on):
+        with self.lock:
+            if on:
+                os.makedirs(self.dir, exist_ok=True)
+                write_private(self.paused_path, "Puki keeps nothing new while this file is here.\n")
+            elif os.path.exists(self.paused_path):
+                os.remove(self.paused_path)
+
+    def _rewrite_log(self, keep):
+        """Keeps only the log entries [keep] says yes to (written to a new file, then swapped in)."""
+        kept = [e for e in self.entries() if keep(e)]
+        tmp = self.log_path + ".new"
+        write_private(tmp, "".join(json.dumps(e, ensure_ascii=False) + "\n" for e in kept))
+        os.replace(tmp, self.log_path)
+
+    def _write_diary(self, entries):
+        os.makedirs(self.dir, exist_ok=True)
+        write_private(self.diary_path, json.dumps({"entries": entries}, ensure_ascii=False, indent=1))
+
+    def forget(self, until):
+        """Forgets one diary entry (by its [until]) and the play it was written from, so Puki can't
+        reach back to it either. True if there was such an entry."""
+        with self.lock:
+            entries = self.diary()
+            i = next((i for i, e in enumerate(entries) if e["until"] == until), None)
+            if i is None:
+                return False
+            start = entries[i - 1]["until"] if i else 0.0
+            if os.path.exists(self.log_path):
+                self._rewrite_log(lambda e: not start < e.get("t", 0) <= until)
+            del entries[i]
+            self._write_diary(entries)
+            return True
+
+    def erase(self):
+        """Forgets everything: the log, the diary and the profile (pausing stays as it was)."""
+        with self.lock:
+            for path in (self.log_path, self.diary_path, self.profile_path):
+                if os.path.exists(path):
+                    os.remove(path)
+
+    def prune(self, keep_days, now=None):
+        """Drops the log and diary older than [keep_days] (0 keeps everything)."""
+        if not keep_days:
+            return
+        cutoff = (now or time.time()) - keep_days * 86400
+        with self.lock:
+            if os.path.exists(self.log_path) and any(e.get("t", 0) < cutoff for e in self.entries()):
+                self._rewrite_log(lambda e: e.get("t", 0) >= cutoff)
+            entries = self.diary()
+            if any(e["until"] < cutoff for e in entries):
+                self._write_diary([e for e in entries if e["until"] >= cutoff])
 
     # ---------- What Gemma is asked ----------
 
@@ -195,7 +263,8 @@ class Memory:
         elif kind == "story":
             text = f"Bedtime story about: {e.get('situation', '')}"
         elif kind == "repeat":
-            text = f"Say it: {p['she']} tried the word \"{e.get('situation', '')}\" and said \"{e.get('heard', '')}\""
+            text = (f"Say it: {p['she']} said the word \"{e['situation']}\"" if e.get("heard") else
+                    f"Say it: {p['she']} tried to say the word \"{e.get('situation', '')}\"")
         elif kind == "hear":
             text = f"Answering out loud ({e.get('situation', '')}), {p['she']} said \"{e.get('heard', '')}\""
         else:
@@ -214,6 +283,23 @@ class Memory:
             f"Log:\n{log}"
         )
 
+    @staticmethod
+    def ask_prompt(entry, child, lang, girl=True):
+        """Questions for the parent to ask the child about this play, later at home: they turn
+        screen time into a conversation with the family (the parent reads them on the dashboard)."""
+        p = pronouns(girl)
+        language = "Hebrew" if lang == "he" else "English"
+        gender = (f"{p['she']} is a {'girl' if girl else 'boy'}, so in Hebrew speak to {p['obj']} in the "
+                  f"{'feminine' if girl else 'masculine'} form" if lang == "he" else "")
+        return (
+            f"Here is today's diary entry about {child}, a toddler who played a tablet game with Puki "
+            f"the parrot:\n{entry}\n\nWrite 2 or 3 very short, warm questions a parent can ask {p['obj']} "
+            f"later at home about what {p['she']} did, in simple {language} a 2-year-old understands "
+            f"(for example about an animal {p['she']} fed or a color {p['she']} found). {gender}. "
+            "Each question on its own line starting with '- '. Only about things in the entry; no "
+            "quizzing, no praise, nothing about the tablet itself."
+        )
+
     def profile_prompt(self, entry, child, girl=True):
         p = pronouns(girl)
         old = self.profile() or "(empty: this is the first session)"
@@ -221,9 +307,11 @@ class Memory:
             f"This is a short profile page about {child}, a toddler, kept so Puki the parrot can "
             f"remember {p['obj']}. Update it with the newest diary entry. At most 8 short lines, each "
             "starting with '- ': favorite games, animals, colors and things; "
-            f"words {p['she']} says (exactly, in {p['her']} language; leave out anything that isn't a real word, "
-            f"speech recognition mishears toddlers); what {p['she']}'s learning. Keep what still holds, add what's new, drop "
-            "nothing important. Only facts from the page and the entry. Answer with the page only.\n\n"
+            f"words {p['she']} says: at most 8 single words or short phrases, only ones the diary quotes "
+            f"{p['obj']} saying, exactly, in {p['her']} language (never Puki's lines, and leave out anything that "
+            f"isn't a real word: speech recognition mishears toddlers); what {p['she']}'s learning. Keep "
+            "what still holds and add what's new, but keep it short: merge, and drop what doesn't fit "
+            "these rules. Only facts from the page and the entry. Answer with the page only.\n\n"
             f"Profile page:\n{old}\n\nNewest diary entry:\n{entry}"
         )
 
@@ -281,13 +369,17 @@ class Memory:
             if kind == "listen":
                 return f'{said} לך "{heard}"'
             if kind == "repeat":
-                return f'{"ניסתה" if girl else "ניסה"} להגיד "{moment.get("situation", "")}" {"ואמרה" if girl else "ואמר"} "{heard}"'
+                if heard:
+                    return f'{"אמרה" if girl else "אמר"} את המילה "{moment.get("situation", "")}"'
+                return f'{"ניסתה" if girl else "ניסה"} להגיד "{moment.get("situation", "")}"'
             return f'{"ענתה" if girl else "ענה"} "{heard}"'
         p = pronouns(girl)
         if kind == "listen":
             return f'{p["she"]} said to you "{heard}"'
         if kind == "repeat":
-            return f'{p["she"]} tried to say "{moment.get("situation", "")}" and said "{heard}"'
+            if heard:
+                return f'{p["she"]} said the word "{moment.get("situation", "")}"'
+            return f'{p["she"]} tried to say "{moment.get("situation", "")}"'
         return f'{p["she"]} answered "{heard}"'
 
     def prompt_block(self, now=None, girl=True):

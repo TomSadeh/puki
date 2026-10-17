@@ -89,6 +89,7 @@ def write_diary():
     page. Called by the doorbell before the brain goes to sleep. Returns what it wrote."""
     if not MEMORY:
         return None
+    MEMORY.prune(CFG.get("memory_keep_days", 90))
     entries = MEMORY.unwritten()
     if len(entries) < 3:  # a moment of play: wait for more
         return None
@@ -97,7 +98,17 @@ def write_diary():
                  max_tokens=220, temperature=0.3, timeout=120).strip()
     if len(entry) < 20:
         return None
-    MEMORY.add_entry(entry, entries[-1]["t"])
+    # Questions for the parent to ask later, in the language she played in
+    lang = "en" if sum(e.get("lang") == "en" for e in entries) * 2 > len(entries) else "he"
+    try:
+        raw = chat([{"role": "user", "content": MEMORY.ask_prompt(entry, child(lang), lang, persona.GIRL)}],
+                   max_tokens=160, temperature=0.5, timeout=120)
+        ask = [l.strip()[2:].strip() for l in raw.splitlines() if l.strip().startswith("- ")]
+        ask = [q for q in ask if safety.reply_ok(q) and q.endswith("?")][:3]
+    except Exception as e:  # the diary matters more than the questions
+        log(f"no questions for later ({type(e).__name__})")
+        ask = []
+    MEMORY.add_entry(entry, entries[-1]["t"], ask)
     page = chat([{"role": "user", "content": MEMORY.profile_prompt(entry, who, persona.GIRL)}],
                 max_tokens=300, temperature=0.2, timeout=120)
     lines = [l.strip() for l in page.splitlines() if l.strip().startswith("- ")][:8]
@@ -528,7 +539,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             return line_for(situation, lang, listening, remember, reach_back)
         except Exception as e:
-            log(f"gemma failed: {e}")
+            log(f"gemma failed ({type(e).__name__})")
             return None
 
     def _json(self, obj):
@@ -590,7 +601,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 heard = transcribe(body, lang)
             except Exception as e:
-                log(f"whisper failed: {e}")
+                log(f"whisper failed ({type(e).__name__})")
                 return self._fail(400)
             # Hurt, danger, big questions and the like get a fixed, kind reply (safety.py)
             caught = guarded_reply(heard, lang, query.get("game", [""])[0][:40])
@@ -614,7 +625,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 heard = transcribe(body, lang, hints=" ".join([target] + alts))
             except Exception as e:
-                log(f"whisper failed: {e}")
+                log(f"whisper failed ({type(e).__name__})")
                 return self._fail(400)
             match = word_match(heard, target, alts)
             if lang == "en" and match != "word" and has_parakeet():
@@ -622,14 +633,16 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     heard2 = transcribe(body, lang, hints=" ".join([target] + alts), whisper=True)
                 except Exception as e:
-                    log(f"whisper failed: {e}")
+                    log(f"whisper failed ({type(e).__name__})")
                     heard2 = ""
                 match2 = word_match(heard2, target, alts)
                 if heard2 and ["tried", "close", "word"].index(match2) > ["tried", "close", "word"].index(match):
                     heard, match = heard2, match2
             log(f"say {shown(target)}: heard {shown(heard)} -> {match}")
             if heard:
-                note("repeat", lang, situation=target, heard=heard)
+                # Only the word and whether she said it: what Whisper heard otherwise may be noise,
+                # misheard into anything ("...the blood"), and mustn't reach the diary
+                note("repeat", lang, situation=target, heard=target if match == "word" else "")
             self._json({"heard": heard, "match": match})
         elif url.path == "/hear":
             # A game asked a question and the child answered out loud. Body: a WAV; ?hint= are the
@@ -639,7 +652,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 heard = transcribe(body, lang, hints=" ".join(hints), whisper=True)
             except Exception as e:
-                log(f"whisper failed: {e}")
+                log(f"whisper failed ({type(e).__name__})")
                 return self._fail(400)
             log(f"answer out loud: heard {shown(heard)}")
             # Not kept in memory: the brain can't tell an answer from noise, and noise misheard
@@ -650,7 +663,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 text = look_line(body, lang)
             except Exception as e:
-                log(f"look failed: {e}")
+                log(f"look failed ({type(e).__name__})")
                 text = None
             log(f"looked at a drawing -> {shown(text)}")
             if text:
@@ -663,7 +676,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 sentences = story(played, icons, lang) if icons else None
             except Exception as e:
-                log(f"story failed: {e}")
+                log(f"story failed ({type(e).__name__})")
                 sentences = None
             log(f"story about {shown(played)} -> {len(sentences or [])} sentences")
             if sentences:

@@ -26,7 +26,8 @@ class MicRecorder {
     /** Caller must hold the RECORD_AUDIO permission. */
     @SuppressLint("MissingPermission")
     fun start(): Boolean {
-        if (running) return true
+        if (running && worker?.isAlive == true) return true
+        if (running) stop()  // an old recording that ran out its time and was never collected: start fresh
         val minBuf = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val rec = runCatching {
             AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO,
@@ -50,6 +51,9 @@ class MicRecorder {
                     level = rms(buf, n)
                 }
             }
+            // Out of time (or stopped): the microphone goes off now, even if nobody collects the recording
+            runCatching { rec.stop() }
+            level = 0f
         }
         return true
     }

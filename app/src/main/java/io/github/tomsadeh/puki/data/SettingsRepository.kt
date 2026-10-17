@@ -8,12 +8,15 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.tomsadeh.puki.data.models.AppSettings
 import io.github.tomsadeh.puki.data.models.Gender
 import io.github.tomsadeh.puki.data.models.Language
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -37,6 +40,10 @@ class SettingsRepository(private val context: Context) {
         val COMPANION_PIN = stringPreferencesKey("companion_pin")
         val BRAIN_ON_DEVICE = booleanPreferencesKey("brain_on_device")
         val ANSWERS_OUT_LOUD = booleanPreferencesKey("answers_out_loud")
+        val PLAYED_MS = longPreferencesKey("played_ms")
+        val LAST_SEEN = longPreferencesKey("play_last_seen")
+        val TIME_UP = booleanPreferencesKey("time_up")
+        val HIDDEN_ISLANDS = stringSetPreferencesKey("hidden_islands")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
@@ -57,7 +64,8 @@ class SettingsRepository(private val context: Context) {
             companionCode = prefs[Keys.COMPANION_CODE] ?: "",
             companionPin = prefs[Keys.COMPANION_PIN] ?: "",
             brainOnDevice = prefs[Keys.BRAIN_ON_DEVICE] ?: false,
-            answersOutLoud = prefs[Keys.ANSWERS_OUT_LOUD] ?: true
+            answersOutLoud = prefs[Keys.ANSWERS_OUT_LOUD] ?: true,
+            hiddenIslands = prefs[Keys.HIDDEN_ISLANDS] ?: emptySet()
         )
     }
 
@@ -125,6 +133,25 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun updateGender(gender: Gender) {
         context.settingsDataStore.edit { it[Keys.GENDER] = gender.name }
+    }
+
+    /** The time limit's clock: time played, when the game was last on screen, and whether time was up. */
+    data class PlayClock(val playedMs: Long, val lastSeen: Long, val timeUp: Boolean)
+
+    suspend fun playClock(): PlayClock = context.settingsDataStore.data.first().let {
+        PlayClock(it[Keys.PLAYED_MS] ?: 0L, it[Keys.LAST_SEEN] ?: 0L, it[Keys.TIME_UP] ?: false)
+    }
+
+    suspend fun savePlayClock(clock: PlayClock) {
+        context.settingsDataStore.edit {
+            it[Keys.PLAYED_MS] = clock.playedMs
+            it[Keys.LAST_SEEN] = clock.lastSeen
+            it[Keys.TIME_UP] = clock.timeUp
+        }
+    }
+
+    suspend fun updateHiddenIslands(ids: Set<String>) {
+        context.settingsDataStore.edit { it[Keys.HIDDEN_ISLANDS] = ids }
     }
 
     suspend fun updateAnswersOutLoud(on: Boolean) {
