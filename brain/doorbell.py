@@ -497,7 +497,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path in ("/say", "/listen", "/speak", "/look", "/story", "/repeat"):
             BRAIN.wake()
             BRAIN.touch()
-            deadline = time.time() + CFG["startup_timeout_s"]
+            # The app says how long it waits (X-Puki-Deadline-Ms); without it (the installer's
+            # check), wait for the brain to wake. A request nobody waits for any more isn't run:
+            # it would hold the brain just when the child's next one comes
+            gives_up = request_deadline(self.headers)
+            deadline = min(time.time() + CFG["startup_timeout_s"], gives_up or float("inf"))
             while BRAIN.state == "warming" and time.time() < deadline:
                 time.sleep(0.2)
             if BRAIN.state != "ready":
@@ -509,7 +513,10 @@ class Handler(BaseHTTPRequestHandler):
             event["ip"] = self.client_address[0]
             try:
                 ctype = self.headers.get("Content-Type", "application/json")
-                req = urllib.request.Request(f"{BRAIN_URL}{self.path}", data=body, headers={"Content-Type": ctype})
+                headers = {"Content-Type": ctype}
+                if gives_up:
+                    headers["X-Puki-Deadline"] = f"{gives_up:.3f}"
+                req = urllib.request.Request(f"{BRAIN_URL}{self.path}", data=body, headers=headers)
                 with urllib.request.urlopen(req, timeout=120) as r:
                     data = r.read()
                     self.send_response(r.status)
@@ -581,6 +588,16 @@ def describe_reply(path, headers, data):
         except ValueError:
             pass
     return ""
+
+
+def request_deadline(headers):
+    """When the app stops waiting for this request (seconds since the epoch), from its
+    X-Puki-Deadline-Ms header (with half a second spare), or None when it didn't say."""
+    try:
+        ms = int(headers.get("X-Puki-Deadline-Ms", ""))
+    except ValueError:
+        return None
+    return time.time() + max(0, min(ms, 600_000) - 500) / 1000 if ms > 0 else None
 
 
 def save_local_config(key, value):

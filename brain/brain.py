@@ -19,6 +19,7 @@ import random
 import re
 import sys
 import threading
+import time
 import urllib.parse
 import urllib.request
 from collections import deque
@@ -292,10 +293,26 @@ def _add_cuda_dlls():
             os.environ["PATH"] = bin_dir + os.pathsep + os.environ["PATH"]
 
 
+def _wait_for_gemma(timeout_s=180):
+    """Until llama-server says Gemma is loaded (it starts at the same moment as this), so the
+    free GPU memory measured next is what's really left for Whisper."""
+    end = time.time() + timeout_s
+    while time.time() < end:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{CFG['llama_port']}/health", timeout=2) as r:
+                if r.status == 200:
+                    return
+        except Exception:
+            pass
+        time.sleep(0.5)
+
+
 def _load_whisper():
     from faster_whisper import WhisperModel
-    # GPU when there's room next to Gemma (and the training runs), CPU otherwise
+    # GPU when there's room next to Gemma (and the training runs), CPU otherwise: measured once
+    # Gemma has taken its share, or Whisper would land on the CPU (or overfill the GPU) by chance
     from doorbell import free_vram_mb
+    _wait_for_gemma()
     if free_vram_mb() >= CFG["whisper_min_free_vram_mb"]:
         try:
             _add_cuda_dlls()
@@ -310,6 +327,11 @@ def _load_whisper():
 
 log("loading Whisper")
 WHISPER = _load_whisper()
+# A first, silent pass: the first time she talks shouldn't also pay for CUDA's start-up
+try:
+    list(WHISPER.transcribe(np.zeros(16000, np.float32), language="he", vad_filter=False)[0])
+except Exception as e:
+    log(f"whisper warm-up failed ({type(e).__name__})")
 
 # English: NVIDIA's Parakeet (int8 ONNX) on the CPU, so it needs no VRAM next to Gemma.
 # Loaded in the background on the first English request.
@@ -381,11 +403,20 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200 if self.path == "/health" else 404)
         self.end_headers()
 
+    def _late(self):
+        """True once the app has stopped waiting for this request (the doorbell passes on when)."""
+        try:
+            return time.time() > float(self.headers.get("X-Puki-Deadline", ""))
+        except ValueError:
+            return False
+
     def _reply(self, text, lang, heard=None, speed=0.92):
         if not text:
             self.send_response(204)
             self.end_headers()
             return
+        if self._late():  # nobody's listening any more: don't spend the voice on it
+            return self._fail(503)
         audio = speak(text, lang, speed)
         self.send_response(200)
         self.send_header("Content-Type", "audio/ogg")
@@ -419,6 +450,8 @@ class Handler(BaseHTTPRequestHandler):
         # The app sends the child's name and gender with every request (?name=...&gender=girl)
         query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         with REQUEST_LOCK:
+            if self._late():  # waited behind another request until the app gave up on it
+                return self._fail(503)
             set_child(query.get("name", [""])[0], query.get("gender", [""])[0])
             self._post()
 
@@ -519,5 +552,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     speak("שלום", "he")  # loads the Hebrew pronunciation model before the first real request
+    if has_parakeet():
+        preload_parakeet()  # English speech recognition, in the background
     log(f"brain listening on 127.0.0.1:{CFG['brain_port']}")
     ThreadingHTTPServer(("127.0.0.1", CFG["brain_port"]), Handler).serve_forever()

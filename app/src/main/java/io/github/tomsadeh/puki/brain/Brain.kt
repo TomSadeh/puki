@@ -53,6 +53,8 @@ class HttpBrain(
             conn.connectTimeout = 1500
             conn.setRequestProperty("X-Puki-Code", code().trim())
             conn.readTimeout = timeoutMs
+            // How long the game will wait: the PC skips the work once nobody's waiting for it
+            conn.setRequestProperty("X-Puki-Deadline-Ms", timeoutMs.toString())
             if (body != null) {
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", contentType)
