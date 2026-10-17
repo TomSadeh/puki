@@ -12,7 +12,6 @@ import io.github.tomsadeh.puki.ui.components.rememberHelp
 import io.github.tomsadeh.puki.ui.common.LocalCompanion
 import io.github.tomsadeh.puki.ui.components.rememberReactionState
 import io.github.tomsadeh.puki.ui.components.reaction
-import io.github.tomsadeh.puki.ui.components.popIn
 import io.github.tomsadeh.puki.ui.components.idleBob
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path

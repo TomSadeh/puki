@@ -34,8 +34,10 @@ goodbye. It's open source (MIT), so nobody can ever lock it behind a payment.
   (the xylophone walks up and down a scale), then repeat a little tune.
 - **My Day:** a cutaway house with a scene for each routine: soap the muddy spots off a child
   in the bath, set the plate, cup, fork and spoon on a table, dress the child from an open
-  wardrobe, put the toys away around a room, brush teeth, and bedtime.
-- **Drawing** on paper taped to an easel, with big paint pots, and Puki looking at the picture.
+  wardrobe, put the toys away around a room, brush teeth, bake a cake in the kitchen, wash a
+  muddy car in the garage, and bedtime.
+- **Drawing** on paper taped to an easel, with big paint pots, an eraser, stamps, color-in
+  pages and tracing, a camera that saves the picture, and Puki looking at it.
   A **sticker album** fills up as stars are earned.
 - **Peekaboo barn:** an animal hides on the farm (in the barn, behind the bush or the haystack,
   in a tree stump) and its sound gives it away. Tapping the right spot brings it out; any other
@@ -194,7 +196,8 @@ CLAUDE.md                  conventions for working on the code (also read by Cla
   nikud, so all text is fed to it plain. Words plain spelling can't disambiguate (letter
   names, animal sounds) are given as phonemes in `generate_voices.py`.
 - **The brain on the phone** (`app/src/main/java/io/github/tomsadeh/puki/brain/`): `LocalBrain` answers the
-  same requests as the PC brain, with `Persona` (a port of brain.py's prompts and line filter),
+  same requests as the PC brain, with `Persona` (a port of persona.py's and brain.py's prompts and line filter) and `Safety`
+  (safety.py's nets),
   `voice/` (a Kotlin port of BlueTTS's pipeline, checked to match Python sample for sample),
   `Mind` (Gemma through LiteRT-LM) and `Ears` (whisper.cpp). The whisper.cpp library is prebuilt
   in `app/src/main/jniLibs`; rebuild it with `python native/whisper/build.py` (needs the NDK).

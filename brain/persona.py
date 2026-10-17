@@ -19,12 +19,17 @@ CHILD = "הילדה"
 _CONFIG_CHILD = (NAME, GIRL)
 
 
+def _plain(s):
+    """Without nikud (the vowel points)."""
+    return re.sub(r"[֑-ׇ]", "", s)
+
+
 def configure(cfg):
     """Reads the child's name and gender and the parrot's names from the brain's config."""
     global NAME, GIRL, COMPANION, COMPANION_EN, CHILD, _CONFIG_CHILD
-    NAME = re.sub(r"[֑-ׇ]", "", cfg.get("child_name") or "")
+    NAME = _plain(cfg.get("child_name") or "")
     GIRL = cfg.get("child_gender", "girl") == "girl"
-    COMPANION = re.sub(r"[֑-ׇ]", "", cfg.get("companion_name", "פוקי"))
+    COMPANION = _plain(cfg.get("companion_name", "פוקי"))
     COMPANION_EN = cfg.get("companion_name_en", "Puki")
     CHILD = NAME or ("הילדה" if GIRL else "הילד")
     _CONFIG_CHILD = (NAME, GIRL)
@@ -33,7 +38,7 @@ def configure(cfg):
 def set_child(name, gender):
     """Use the name/gender the app sent (set in the app's settings), else the config's."""
     global NAME, GIRL, CHILD
-    NAME = re.sub(r"[\u0591-\u05C7]", "", (name or "").strip())[:30] or _CONFIG_CHILD[0]
+    NAME = _plain((name or "").strip())[:30] or _CONFIG_CHILD[0]
     GIRL = gender == "girl" if gender in ("girl", "boy") else _CONFIG_CHILD[1]
     CHILD = NAME or ("הילדה" if GIRL else "הילד")
 
@@ -178,7 +183,6 @@ def fix_misreads(text):
 
 
 # Words Whisper should expect: the parrot's and child's names and things from the games
-_plain = lambda s: re.sub(r"[֑-ׇ]", "", s)  # noqa: E731 (strip nikud)
 def hotwords():
     return " ".join(filter(None, [
         _plain(COMPANION), _plain(NAME), "היי", "שלום", "פרה", "כלב", "חתול", "סוס", "פיל", "אריה",

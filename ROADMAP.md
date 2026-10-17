@@ -5,13 +5,18 @@ play-testing with a toddler decides what comes first. Nothing here needs the clo
 
 Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
 
-## Where Puki is today (0.6)
+## Where Puki is today (0.7)
 
 **The game**
-- Ten islands with scene-based games: animals, colors, shapes, counting, letters, music,
-  **Peekaboo barn** (find the hiding animal), **Echo Puki** (Puki repeats her in a silly parrot
-  voice, no PC needed), "Say it with Puki", and "My Day" (bath, table, dressing, tidying, teeth,
-  bedtime). Plus drawing and a sticker album.
+- Ten islands with scene-based games: animals (with **shadow match**), colors, shapes,
+  counting (**one tap, one number**), letters, music (with **Dance and Freeze**), **Peekaboo
+  barn** (find the hiding animal), **Echo Puki** (Puki repeats her in a silly parrot voice, no PC
+  needed), "Say it with Puki", and "My Day": bath, table, dressing, tidying, teeth, bedtime, a
+  **cake in the kitchen** and a **car wash** in the garage. Plus a sticker album.
+- **Drawing:** brushes, an eraser, stamps, color-in pages, tracing letters and numbers, and a
+  camera that saves the picture to the gallery.
+- **Offline Puki:** without a brain, the parrot still answers taps with recorded giggles and
+  squawks.
 - Every game grows with the child: levels move up after easy sessions and back down after
   hard ones. A quiet moment repeats the question, and after two misses the answer glows.
   Taps work where dragging is hard, and double taps can't break anything.
@@ -19,6 +24,8 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
   countdown.
 - Hebrew and English, girl/boy forms, no reading needed, all voices generated with BlueTTS.
 - The game updates itself from GitHub releases (parent settings); a Play build is ready.
+- **מלשין לרנינג:** parents flag anything Puki said that wasn't right; reports stay at home, or go
+  to Puki's makers by the parent's own email once there's an address.
 
 **Puki, the companion**
 - Comments on what the child does, looks at her drawings, tells a bedtime story about her
@@ -31,9 +38,14 @@ Sizes: **S** an hour or so, **M** a few hours, **L** a day or more.
 
 **Safe by design**
 - The tablet and the PC talk over HTTPS, pinned to the PC's own certificate (its fingerprint
-  is in the pairing QR code). Releases are signed with Puki's own key. Every file the PC
-  installer downloads is pinned to a SHA-256. The brain can't be left holding the GPU if
+  is in every pairing QR code). Releases are signed with Puki's own key, and so are the PC
+  brain's updates (checked against its public half before anything is installed). Every file
+  the PC installer downloads is pinned to a SHA-256. The brain can't be left holding the GPU if
   the doorbell is closed abruptly.
+- **Safety nets for what the child says:** word lists and a one-token check on the model's own
+  probabilities give hurt, danger and big questions a fixed, gentle answer that points to
+  mommy or daddy; every line Puki says is filtered for promises and bonding. Stress-tested on
+  288 child phrasings (0 unsafe replies, from 73 without the nets).
 
 ## v1.0: the Google Play launch
 
@@ -41,17 +53,9 @@ v1.0 is meant to be finished: what's below, then bug fixes for a few months, and
 only from contributors. Features freeze about a week in; the rest of Play's 14-day closed test
 is for polish and testers' reports.
 
-**New and better games**
-- **Counting, one tap, one number:** each thing counts once, hops and shows its number, and
-  Puki repeats the last one ("three! three apples"), which teaches what the count means.
-  Then "give the bunny 3 carrots".
-- **Shadow match** (in Animal Garden): drag the animal onto its silhouette, 2 choices, then 3.
-- **Drawing modes:** free drawing, stamps and color-in pages.
-- **Cooking:** one recipe, from a picture recipe card: add, stir with a finger, bake, taste.
-- **Car wash:** soap and rinse a muddy car (the bath's rub-to-clean, on wheels).
-- **Offline Puki:** without a brain, the parrot still stays and answers taps with recorded
-  giggles and squawks, so every family meets him.
-- **Dance and Freeze** (from the music stage) and **tracing letters and numbers** (pages in the easel).
+**New and better games** (done in 0.7: counting one by one, shadow match, drawing modes,
+cooking, the car wash, offline Puki, Dance and Freeze, tracing)
+- **Counting, part two:** "give the bunny 3 carrots".
 
 **Polish**
 - A parent setting to hide islands (fewer choices at two).

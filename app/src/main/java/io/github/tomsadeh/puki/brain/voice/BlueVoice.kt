@@ -4,7 +4,6 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -114,8 +113,6 @@ class BlueVoice(
         return out
     }
 
-    fun phonemesFor(text: String): String = VoiceText.stripLangTags(renikud.phonemize(VoiceText.prepareTextForSynthesis(text)))
-
     fun idsFor(phonemeChunk: String): IntArray = VoiceText.encode(phonemeChunk, charToId, padId)
 
     /** TextToSpeech._infer for one chunk, with classifier-free guidance (scale 4). */
@@ -185,15 +182,7 @@ class BlueVoice(
     private fun wav(samples: FloatArray): ByteArray {
         val data = ByteBuffer.allocate(samples.size * 2).order(ByteOrder.LITTLE_ENDIAN)
         for (s in samples) data.putShort((s.coerceIn(-1f, 1f) * 32767).toInt().toShort())
-        val out = ByteArrayOutputStream()
-        val h = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN)
-        h.put("RIFF".toByteArray()).putInt(36 + samples.size * 2).put("WAVE".toByteArray())
-        h.put("fmt ".toByteArray()).putInt(16).putShort(1).putShort(1).putInt(sampleRate).putInt(sampleRate * 2)
-            .putShort(2).putShort(16)
-        h.put("data".toByteArray()).putInt(samples.size * 2)
-        out.write(h.array())
-        out.write(data.array())
-        return out.toByteArray()
+        return io.github.tomsadeh.puki.audio.wavBytes(data.array(), sampleRate)
     }
 
     companion object {

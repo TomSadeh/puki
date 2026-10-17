@@ -55,7 +55,7 @@ fun PukiApp(
     progressRepository: ProgressRepository
 ) {
     val appViewModel: AppViewModel = viewModel(
-        factory = AppViewModel.Factory(settingsRepository, progressRepository)
+        factory = AppViewModel.Factory(settingsRepository)
     )
     val settings by appViewModel.settings.collectAsStateWithLifecycle()
     val language = settings.language

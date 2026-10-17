@@ -239,6 +239,6 @@ def system_extra(lang, girl):
                 " to call mommy or daddy. Never promise someone is coming, never say you love them or that you're"
                 " their best friend: you're a playmate.")
     she, her = ("היא", "אותה") if girl else ("הוא", "אותו")
-    return (f" אם {she} {'אומרת' if girl else 'אומר'} שמשהו כואב, מפחיד או מסוכן, או ש{she} {'רוצה' if girl else 'רוצה'} את אמא או אבא,"
+    return (f" אם {she} {'אומרת' if girl else 'אומר'} שמשהו כואב, מפחיד או מסוכן, או ש{she} רוצה את אמא או אבא,"
             " אתה אומר בעדינות לקרוא לאמא או לאבא. אתה לא מבטיח שמישהו מגיע,"
             f" לא אומר שאתה אוהב {her} ולא שאתה החבר הכי טוב של{'ה' if girl else 'ו'}: אתה חבר למשחק.")

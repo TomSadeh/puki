@@ -1,10 +1,7 @@
 package io.github.tomsadeh.puki.audio
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
-import androidx.core.content.ContextCompat
 import io.github.tomsadeh.puki.brain.Brain
 import io.github.tomsadeh.puki.brain.HttpBrain
 import io.github.tomsadeh.puki.data.models.Language
@@ -115,7 +112,7 @@ class Companion(
      * before their own mail app sends it.
      */
     fun shareText(line: SaidLine): String {
-        val noNikud = { s: String -> s.replace(Regex("[\u0591-\u05C7]"), "") }
+        val noNikud = { s: String -> io.github.tomsadeh.puki.brain.Persona.stripNikud(s) }
         val placeholder = pick("[שם]", "[name]")
         val hide = { s: String ->
             var t = noNikud(s)
@@ -340,8 +337,7 @@ class Companion(
         }
     }
 
-    private fun hasMic() =
-        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    private fun hasMic() = hasMicPermission(context)
 
     /** Rough voice-activity check: a few 50 ms windows clearly louder than room noise. */
     private fun hasSpeech(wav: ByteArray): Boolean {

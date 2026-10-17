@@ -18,7 +18,7 @@ import java.net.URL
 import java.security.MessageDigest
 
 /** A newer game on GitHub: its version and where its APK is. */
-data class Release(val version: String, val apkUrl: String, val size: Long, val sha256: String?)
+data class Release(val version: String, val apkUrl: String, val size: Long, val sha256: String)
 
 /**
  * Updates from the public repo's GitHub releases: finds the newest release with an APK, downloads
@@ -27,6 +27,8 @@ data class Release(val version: String, val apkUrl: String, val size: Long, val 
  */
 object Updater {
     private const val RELEASES = "https://api.github.com/repos/TomSadeh/puki/releases?per_page=10"
+    /** Where an APK may come from: this repo's own release downloads (GitHub then redirects to its file host). */
+    private const val DOWNLOADS = "https://github.com/TomSadeh/puki/releases/download/"
     private const val DAY_MS = 24 * 60 * 60 * 1000L
 
     /** The update waiting to be installed, if any (shown as a dot on the settings button). */
@@ -64,7 +66,9 @@ object Updater {
             for (j in 0 until assets.length()) {
                 val a = assets.getJSONObject(j)
                 if (!a.getString("name").endsWith(".apk")) continue
-                val sha = a.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")
+                // Only from Puki's own releases, and only with GitHub's SHA-256 to check the download against
+                val sha = a.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:") ?: continue
+                if (!a.getString("browser_download_url").startsWith(DOWNLOADS)) continue
                 if (best == null || isNewer(version, best.version)) {
                     best = Release(version, a.getString("browser_download_url"), a.getLong("size"), sha)
                 }
@@ -105,7 +109,7 @@ object Updater {
             }
         }
         val sha = md.digest().joinToString("") { "%02x".format(it) }
-        if (file.length() != r.size || (r.sha256 != null && sha != r.sha256)) {
+        if (file.length() != r.size || sha != r.sha256) {
             file.delete()
             error("the download came out damaged")
         }

@@ -1,7 +1,6 @@
 package io.github.tomsadeh.puki.ui.echo
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import io.github.tomsadeh.puki.audio.hasMicPermission
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -42,7 +42,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import io.github.tomsadeh.puki.R
 import io.github.tomsadeh.puki.audio.EchoVoice
 import io.github.tomsadeh.puki.audio.MicRecorder
@@ -74,8 +73,7 @@ fun EchoScreen(onBack: () -> Unit) {
 
     // The microphone is asked for once, the first time she talks to Puki
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    fun hasMic() = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-        PackageManager.PERMISSION_GRANTED
+    fun hasMic() = hasMicPermission(context)
 
     // "Say something to Puki!", and again (twice at most) if she goes quiet for a while
     LaunchedEffect(Unit) {

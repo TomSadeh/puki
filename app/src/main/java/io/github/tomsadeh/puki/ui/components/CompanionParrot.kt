@@ -3,7 +3,6 @@ package io.github.tomsadeh.puki.ui.components
 import io.github.tomsadeh.puki.ui.common.LocalLanguage
 
 import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -32,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import io.github.tomsadeh.puki.audio.hasMicPermission
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -41,7 +41,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.tomsadeh.puki.R
 import io.github.tomsadeh.puki.audio.CompanionStatus
@@ -76,8 +75,7 @@ fun CompanionParrot(modifier: Modifier = Modifier) {
 
     // Asked once; a parent approves the microphone the first time someone holds the parrot
     val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    fun hasMic() = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-        PackageManager.PERMISSION_GRANTED
+    fun hasMic() = hasMicPermission(context)
 
     LaunchedEffect(Unit) { companion.wake() }
     // Until his brain is ready (or if it never is), the recorded Puki keeps the corner warm

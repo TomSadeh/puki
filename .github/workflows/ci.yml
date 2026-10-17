@@ -37,7 +37,9 @@ jobs:
         run: python scripts/check_voices.py
       - name: The PC brain's code compiles
         run: python -m compileall -q brain scripts
-      - name: The PC brain's persona (line filter, word check)
+      - name: The phone's safety word lists match the PC's
+        run: python scripts/sync_safety_kt.py --check
+      - name: The PC brain's tests (persona, safety, pairing, install)
         run: |
           pip install pytest cryptography
           python -m pytest -q brain/tests

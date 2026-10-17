@@ -5,8 +5,6 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlin.concurrent.thread
 
 /**
@@ -81,15 +79,7 @@ class MicRecorder {
         return kotlin.math.sqrt(sum / maxOf(1, n / 2)).toFloat() * 4f  // speech sits around 0.1-0.6
     }
 
-    private fun wav(pcmData: ByteArray): ByteArray {
-        val header = ByteBuffer.allocate(44).order(ByteOrder.LITTLE_ENDIAN).apply {
-            put("RIFF".toByteArray()); putInt(36 + pcmData.size); put("WAVE".toByteArray())
-            put("fmt ".toByteArray()); putInt(16); putShort(1); putShort(1)
-            putInt(RATE); putInt(RATE * 2); putShort(2); putShort(16)
-            put("data".toByteArray()); putInt(pcmData.size)
-        }
-        return header.array() + pcmData
-    }
+    private fun wav(pcmData: ByteArray): ByteArray = wavBytes(pcmData, RATE)
 
     companion object {
         const val RATE = 16000

@@ -3,7 +3,7 @@ package io.github.tomsadeh.puki.brain
 import java.text.Normalizer
 
 /**
- * Who Puki is and how he talks, ported from the PC brain (brain/brain.py) so the device brain
+ * Who Puki is and how he talks, ported from the PC brain (brain/persona.py, and brain.py's prompts) so the device brain
  * sounds the same: the instructions and examples Gemma gets, the filter every line passes
  * (short, warm, no "wrong", no compliments about the child), Hebrew words the voice misreads,
  * and the generous word check for Say it with Puki. Keep the two in step.

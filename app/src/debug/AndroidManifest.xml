@@ -5,6 +5,8 @@
      connection to that PC (tls.fingerprint() on the PC gives the fingerprint) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
-        <receiver android:name=".SelfTestReceiver" android:exported="true" />
+        <!-- Only adb's shell holds DUMP, so other apps on the tablet can't send it anything -->
+        <receiver android:name=".SelfTestReceiver" android:exported="true"
+            android:permission="android.permission.DUMP" />
     </application>
 </manifest>

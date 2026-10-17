@@ -1,8 +1,11 @@
 """Copies brain/safety.py's word lists into the phone brain's Safety.kt, so the two never drift.
 
-    python scripts/sync_safety_kt.py
+    python scripts/sync_safety_kt.py           # copies them
+    python scripts/sync_safety_kt.py --check   # fails if Safety.kt is behind (CI runs this)
 
-Run it after changing RULES in safety.py (the Kotlin tests then check the phone agrees)."""
+Run it after changing RULES in safety.py (the Kotlin tests then check the phone agrees). The other
+tables (banned phrases, game allowances, the English replies) are copied by hand;
+brain/tests/test_safety_mirror.py checks they match."""
 import json
 import os
 import sys
@@ -12,7 +15,7 @@ sys.path.insert(0, repo + "/brain")
 import safety  # noqa: E402
 
 p = repo + "/app/src/main/java/io/github/tomsadeh/puki/brain/Safety.kt"
-s = open(p, encoding="utf-8").read()
+old = s = open(p, encoding="utf-8").read()
 
 
 def kt_list(items, indent):
@@ -33,5 +36,10 @@ rules = [COMMENTS.get(cat, "") + f'        Rule("{cat}",\n            {kt_list(h
 start = s.index("    val RULES = listOf(\n")
 end = s.index("    /** What a game says itself")
 s = s[:start] + "    val RULES = listOf(\n" + "\n".join(rules) + "\n    )\n\n" + s[end:]
-open(p, "w", encoding="utf-8", newline="\n").write(s)
-print("Safety.kt: word lists copied from safety.py")
+if "--check" in sys.argv:
+    if s != old:
+        sys.exit("Safety.kt's word lists are behind safety.py: run python scripts/sync_safety_kt.py")
+    print("Safety.kt: word lists match safety.py")
+else:
+    open(p, "w", encoding="utf-8", newline="\n").write(s)
+    print("Safety.kt: word lists copied from safety.py")

@@ -183,7 +183,6 @@ voice_lines = [
     ("voice_prompt_try_again", "Oops, let's try again!", "אופס! ננסה שוב!"),
     ("voice_prompt_great_job", "Great job!", "כל הכבוד!"),
     ("voice_prompt_well_done", "Well done!", "יפה מאוד!"),
-    ("voice_prompt_new_island", "New island unlocked!", "אי חדש נפתח!"),
     ("voice_prompt_count_along", "Let's count together!", ("בואי נספור ביחד!", "בוא נספור ביחד!")),
     ("voice_prompt_how_many", "How many are there?", "כמה יש?"),
     ("voice_prompt_whose_shadow", "Whose shadow is this?", "של מי הצל הזה?"),
@@ -226,7 +225,6 @@ voice_lines = [
     ("voice_prompt_get_dressed", "Let's get dressed! What goes on first?",
      ("בואי נתלבש! מה שמים קודם?", "בוא נתלבש! מה שמים קודם?")),
     ("voice_prompt_set_table", "Let's set the table!", ("בואי נערוך את השולחן!", "בוא נערוך את השולחן!")),
-    ("voice_prompt_good_night", "Good night!", "לילה טוב!"),
     ("voice_prompt_time_break", "Time for a break!", "הגיע הזמן להפסקה!"),
     ("voice_prompt_see_you_soon", "See you soon!", "נתראה בקרוב!"),
 

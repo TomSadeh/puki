@@ -23,8 +23,11 @@ def cert(tmp_path, monkeypatch):
 
 
 def test_made_once(cert):
-    before = open(tls.CERT_FILE).read()
-    assert tls.ensure() == cert and open(tls.CERT_FILE).read() == before
+    with open(tls.CERT_FILE) as f:
+        before = f.read()
+    assert tls.ensure() == cert
+    with open(tls.CERT_FILE) as f:
+        assert f.read() == before
 
 
 def test_link_form_is_the_same_hash(cert):
@@ -40,10 +43,14 @@ def test_a_client_sees_that_certificate(cert):
 
     def serve():
         conn, _ = listener.accept()
-        with ctx.wrap_socket(conn, server_side=True) as s:
-            s.recv(1)
+        try:
+            with ctx.wrap_socket(conn, server_side=True) as s:
+                s.recv(1)
+        except OSError:
+            pass  # the client may hang up first; this test is about what the client saw
 
-    threading.Thread(target=serve, daemon=True).start()
+    server = threading.Thread(target=serve, daemon=True)
+    server.start()
     client = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     client.check_hostname = False
     client.verify_mode = ssl.CERT_NONE  # the app pins the fingerprint instead
@@ -51,8 +58,9 @@ def test_a_client_sees_that_certificate(cert):
         der = s.getpeercert(binary_form=True)
         assert s.version() in ("TLSv1.2", "TLSv1.3")
         s.send(b"x")
-    assert hashlib.sha256(der).hexdigest() == cert
+    server.join(5)
     listener.close()
+    assert hashlib.sha256(der).hexdigest() == cert
 
 
 def test_old_tls_is_refused(cert):

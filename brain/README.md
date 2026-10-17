@@ -22,7 +22,7 @@ tablet ──Wi-Fi──▶ doorbell.py :8790 ──starts on demand──▶ ll
   Warming up takes about 30 seconds.
 - After `idle_minutes` without requests, both heavy processes exit and the GPU memory is freed.
 
-**Requirements:** a Windows PC (Linux works with small path changes) with Python 3.12 and,
+**Requirements:** a Windows or Linux PC with Python 3.10 or newer (Puki.exe brings its own) and,
 ideally, an NVIDIA GPU with about 6 GB of free VRAM. Gemma and Whisper together use about
 5.6 GB. Without a GPU everything runs on the CPU, just slower.
 
@@ -256,3 +256,11 @@ the app's PC address to `127.0.0.1:8790`.
   recorded lines.
 - Small models repeat themselves, so each request suggests a different opening sound and
   lists the last few lines to avoid.
+- **What the child says is checked first** (`safety.py`): word lists for hurt, danger, wanting a
+  parent, big questions and secrets, then a one-token check on Gemma's own probabilities
+  (`safety_threshold`, default 0.8). Either gives a fixed, gentle reply that points to mommy or
+  daddy; the model never writes those. If the check fails, Puki answers with a neutral line.
+  Every line Puki says then passes `reply_ok`: no promises ("mommy is on her way") and no
+  bonding ("best friend", "I love you"). `scripts/safety_eval.py` is the stress test.
+- The log shows how long things were, not what the child said or what Puki answered;
+  `"log_text": true` in `config.json` shows the text, for debugging.

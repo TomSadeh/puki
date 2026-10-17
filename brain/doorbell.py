@@ -95,7 +95,8 @@ def lan_address():
 
 
 class Guard:
-    """Slows down and locks out addresses that keep sending wrong codes."""
+    """Slows down and locks out addresses that keep sending wrong codes. Every try counts until
+    one has the right code, so many tries at once don't get more guesses."""
 
     MAX_FAILS = 10        # wrong codes allowed...
     WINDOW_S = 10 * 60    # ...within this many seconds,
@@ -106,24 +107,24 @@ class Guard:
         self.fails = {}    # ip -> times of recent wrong codes
         self.blocked = {}  # ip -> locked out until
 
-    def is_blocked(self, ip):
-        with self.lock:
-            until = self.blocked.get(ip, 0)
-            if until and time.time() >= until:
-                del self.blocked[ip]
-                return False
-            return bool(until)
-
-    def failed(self, ip):
+    def attempt(self, ip):
+        """Counts a try with a code, before it's checked (so parallel tries share the budget);
+        False when the address is locked out, or this try is one too many."""
         now = time.time()
         with self.lock:
+            until = self.blocked.get(ip, 0)
+            if until and now < until:
+                return False
+            self.blocked.pop(ip, None)
             recent = [t for t in self.fails.get(ip, []) if now - t < self.WINDOW_S] + [now]
             self.fails[ip] = recent
-            if len(recent) >= self.MAX_FAILS:
-                self.blocked[ip] = now + self.LOCKOUT_S
-                self.fails.pop(ip, None)
-                log(f"{ip} sent too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
-                EVENTS.add("lockout", ip=ip, text=f"too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
+            if len(recent) <= self.MAX_FAILS:
+                return True
+            self.blocked[ip] = now + self.LOCKOUT_S
+            self.fails.pop(ip, None)
+        log(f"{ip} sent too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
+        EVENTS.add("lockout", ip=ip, text=f"too many wrong pairing codes, locked out for {self.LOCKOUT_S // 60} minutes")
+        return False
 
     def succeeded(self, ip):
         with self.lock:
@@ -449,7 +450,7 @@ class Handler(BaseHTTPRequestHandler):
     def _authorized(self):
         """Checks the pairing code; answers the request itself (401/429) when it's wrong."""
         ip = self.client_address[0]
-        if GUARD.is_blocked(ip):
+        if not GUARD.attempt(ip):
             self._json(429, {"error": "too many wrong pairing codes, try again later"})
             return False
         sent = normalize_code(self.headers.get("X-Puki-Code", ""))
@@ -458,7 +459,6 @@ class Handler(BaseHTTPRequestHandler):
             return True
         time.sleep(1)  # makes guessing slow
         EVENTS.add("denied", ip=ip, text="wrong or missing pairing code")
-        GUARD.failed(ip)
         self._json(401, {"error": "wrong pairing code"})
         return False
 

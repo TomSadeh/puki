@@ -13,12 +13,14 @@ object WhisperNative {
 
     @Volatile private var loaded = false
 
-    /** The fast build on chips with the i8mm instructions (e.g. a Galaxy S25), else the baseline one. */
+    /** On ARM, the fast build on chips with the i8mm instructions (e.g. a Galaxy S25), else the
+     *  baseline one; x86_64 (an emulator) has only the one build. */
     @Synchronized
     fun load() {
         if (loaded) return
-        val i8mm = runCatching { File("/proc/cpuinfo").readText().contains(" i8mm") }.getOrDefault(false)
-        System.loadLibrary(if (i8mm) "puki_whisper" else "puki_whisper_base")
+        val arm = android.os.Build.SUPPORTED_ABIS.firstOrNull() == "arm64-v8a"
+        val i8mm = arm && runCatching { File("/proc/cpuinfo").readText().contains(" i8mm") }.getOrDefault(false)
+        System.loadLibrary(if (i8mm || !arm) "puki_whisper" else "puki_whisper_base")
         loaded = true
     }
 }

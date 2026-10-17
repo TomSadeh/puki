@@ -53,8 +53,10 @@ app/src/main/java/io/github/tomsadeh/puki/
 ├── update/Updater.kt            # In-app updates from GitHub releases
 └── theme/
 brain/                           # The PC brain (Python): doorbell.py (HTTPS), brain.py, persona.py, safety.py, tls.py,
-                                 #   install.py + pins.json (make_pins.py), tray.py / build_exe.py (Puki.exe)
-scripts/                         # Voices (generate/check), release.py
+                                 #   common.py (pairing, private files), install.py + pins.json (make_pins.py),
+                                 #   update_signers, bundle.py, tray.py / build_exe.py (Puki.exe)
+scripts/                         # Voices (generate/check), release.py, safety_eval.py (the stress test),
+                                 #   sync_safety_kt.py (safety.py's word lists -> Safety.kt)
 native/whisper/                  # Builds libpuki_whisper.so (prebuilt copies are in jniLibs)
 ```
 
@@ -66,10 +68,12 @@ native/whisper/                  # Builds libpuki_whisper.so (prebuilt copies ar
 
 - Use Kotlin idioms. Prefer `data class`, `sealed class`, `when`, extension functions.
 - Composable functions are PascalCase. Non-composable functions are camelCase.
-- Every screen has a `*Screen.kt` composable and a `*ViewModel.kt`. The Screen observes state from the ViewModel via `collectAsStateWithLifecycle()`.
-- State flows down, events flow up. No mutable state in composables — all state lives in ViewModels as `StateFlow`.
-- Use `remember` and `derivedStateOf` for local UI-only state (animation values, drag positions).
-- No `mutableStateOf` in ViewModels — use `MutableStateFlow` / `StateFlow`.
+- Every game screen has a ViewModel that owns what outlives a round: its `GameSession` (stars, the
+  level, the end of the session) and any game logic worth testing. Small games define it in the
+  Screen file. The Screen observes it via `collectAsStateWithLifecycle()`.
+- A round's moment-to-moment state (the step of the car wash, which pieces are on, animations, drag
+  positions) lives in the composable with `remember`, `mutableStateOf` and `derivedStateOf`.
+- ViewModels expose `StateFlow`s, not `mutableStateOf`.
 
 ### Shared Components (`ui/components/`)
 
@@ -95,7 +99,7 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 
 ### Naming
 
-- Route names: `"hub"`, `"animals"`, `"colors"`, `"shapes"`, `"counting"`, `"music"`, `"words"`, `"say"`, `"peekaboo"`, `"echo"`, `"myday"`, `"myday/bath"`, `"myday/brush"`, `"myday/tidy"`, `"myday/dress"`, `"myday/table"`, `"myday/bedtime"`, `"canvas"`, `"stickers"`, `"settings"`.
+- Route names: `"hub"`, `"animals"`, `"colors"`, `"shapes"`, `"counting"`, `"music"`, `"dance"`, `"words"`, `"say"`, `"peekaboo"`, `"echo"`, `"myday"`, `"myday/bath"`, `"myday/brush"`, `"myday/tidy"`, `"myday/dress"`, `"myday/table"`, `"myday/bedtime"`, `"myday/kitchen"`, `"myday/garage"`, `"canvas"`, `"stickers"`, `"settings"`. Safety's game allowances key on these.
 - Resource files: `ic_animal_cow.xml`, `ic_shape_circle.xml`, `snd_tap.ogg`, `snd_success.ogg`. Prefix with `ic_` for icons, `snd_` for sounds, `bg_` for backgrounds.
 - Data classes: `Animal`, `ShapeItem`, `ColorItem`, `Sticker`, `GameProgress`, `AppSettings`.
 - ViewModels: `AnimalGardenViewModel`, `ColorSplashViewModel`, etc.
@@ -140,10 +144,13 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
 
 ### Testing Considerations
 
-- JVM unit tests in `app/src/test` (`./gradlew testGithubDebugUnitTest`): the phone brain's Persona and
-  voice text, the level rule, pairing links, and `RegexPortabilityTest` (no Java-only regex flags:
-  Android's ICU engine rejects `(?U)`, which crashed 0.3.0 at start).
-- The PC brain's persona: `python -m pytest brain/tests`.
+- JVM unit tests in `app/src/test` (`./gradlew testGithubDebugUnitTest`): the phone brain's Persona,
+  Safety and voice text, the level rule, pairing links, `PinnedTlsTest`, `UpdaterTest` (which version
+  is newer), and `RegexPortabilityTest` (no Java-only regex flags: Android's ICU engine rejects
+  `(?U)`, which crashed 0.3.0 at start).
+- The PC brain: `python -m pytest brain/tests` (persona, safety and its mirror in Safety.kt,
+  pairing and the lockout, TLS, the signed update, the bundle, reports).
+- `python scripts/sync_safety_kt.py --check`: Safety.kt has safety.py's word lists.
 - `python scripts/check_voices.py`: every voice line the app plays has audio.
 - CI (`.github/workflows/ci.yml`) runs all of these on every push.
 - Before a release, run it on a real device: the debug build's `SelfTestReceiver`
@@ -159,21 +166,23 @@ and redraw only what moves; the tablet (Galaxy Tab A7 Lite) is slow.
   the pairing QR code carries its fingerprint; `PinnedTls` refuses any other). Never add a cleartext
   fallback.
 - **The child's name and words** never go in git, logs or crash reports: personal voice lines and
-  `brain/config.json` are git-ignored, and errors are logged by type, not message.
+  `brain/config.json` are git-ignored, errors are logged by type, not message, and brain.py logs
+  lengths, not what she said or what Puki answered (`log_text` turns that on for debugging).
+- **What the child says goes through safety.py first** (brain.py's /listen; Safety.kt on the
+  phone, with the same word lists via `scripts/sync_safety_kt.py`): word lists, then a one-token
+  gate on the model's probabilities (`safety_threshold`, default 0.8; on the phone one greedy
+  digit) give hurt, danger, big questions, secrets and the like a fixed reply that points to mommy
+  or daddy; the model never writes those. The gate fails closed: an error or a non-digit is
+  "unclear", a neutral line. Every model line (replies, drawings, stories) then passes `reply_ok`
+  (no promises, no "best friend"). A stress test (October 2026) showed why: with Puki's cheerful
+  prompt, every Gemma size cheered at "let's make a fire" or "I fell down". Don't remove a net
+  without re-running it (`scripts/safety_eval.py`).
 - **Installer downloads** are pinned in `brain/pins.json`; regenerate with `brain/make_pins.py` after
   changing a version or model.
 - **Releases** are signed with the key in `~/keys`; `release.py` won't publish a debug-signed APK.
 - **Puki.exe** freezes the PC brain's code inside the exe: PC-side changes need a new exe on the
   release. In it there's no stdout and no console, so every subprocess uses `CREATE_NO_WINDOW`.
 
----
-
-- **What the child says goes through safety.py first** (brain.py's /listen): word lists, then a
-  one-token gate on the model's probabilities (`safety_threshold`, default 0.8), give hurt,
-  danger, big questions, secrets and the like a fixed reply that points to mommy or daddy; the
-  model never writes those. A stress test (October 2026) showed why: with Puki's cheerful prompt,
-  every Gemma size cheered at "let's make a fire" or "I fell down". Don't remove a net without
-  re-running that test; the phone brain (Persona.kt) doesn't have these yet.
 
 ## Things to Avoid
 
