@@ -94,11 +94,20 @@ android {
     }
 
     packaging {
-        // Compressed in the APK (unpacked on install): the device brain's libraries are big
+        // The GitHub APK keeps the device brain's big libraries compressed (a smaller download,
+        // unpacked on install); the Play build leaves them uncompressed (see androidComponents)
         jniLibs { useLegacyPackaging = true }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+}
+
+// On Play, uncompressed native libraries: nothing is unpacked on install (about 46 MB less on the
+// device), and Play compresses the download itself
+androidComponents {
+    onVariants(selector().withFlavor("store" to "play")) { variant ->
+        variant.packaging.jniLibs.useLegacyPackaging.set(false)
     }
 }
 
@@ -117,7 +126,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
 
     // Compose BOM
-    implementation(platform("androidx.compose:compose-bom:2024.01.00"))
+    implementation(platform("androidx.compose:compose-bom:2025.05.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -141,7 +150,7 @@ dependencies {
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.01.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2025.05.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

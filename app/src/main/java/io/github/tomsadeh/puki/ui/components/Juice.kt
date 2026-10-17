@@ -23,15 +23,16 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Indication
-import androidx.compose.foundation.IndicationInstance
+import androidx.compose.foundation.IndicationNodeFactory
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.interaction.InteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -58,25 +59,30 @@ import kotlin.math.sin
  * a grey rectangle around anything that isn't clipped). Provided app-wide in the theme, so
  * every clickable gets it.
  */
-object SquishIndication : Indication {
-    @Composable
-    override fun rememberUpdatedInstance(interactionSource: InteractionSource): IndicationInstance {
-        val pressed by interactionSource.collectIsPressedAsState()
-        val scale by animateFloatAsState(
-            targetValue = if (pressed) 0.88f else 1f,
-            animationSpec = spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium),
-            label = "squish"
-        )
-        val instance = remember { SquishInstance() }
-        instance.scale = scale
-        return instance
-    }
+object SquishIndication : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode = SquishNode(interactionSource)
+    override fun equals(other: Any?) = other === this
+    override fun hashCode() = 1
 }
 
-private class SquishInstance : IndicationInstance {
-    var scale by mutableFloatStateOf(1f)
-    override fun ContentDrawScope.drawIndication() {
-        scale(scale) { this@drawIndication.drawContent() }
+/** Scales what it's on down while pressed, with a springy return (a node: nothing recomposes). */
+private class SquishNode(private val interactionSource: InteractionSource) : Modifier.Node(), DrawModifierNode {
+    private val scale = Animatable(1f)
+    private val spec = spring<Float>(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium)
+
+    override fun onAttach() {
+        coroutineScope.launch {
+            interactionSource.interactions.collect { interaction ->
+                when (interaction) {
+                    is PressInteraction.Press -> launch { scale.animateTo(0.88f, spec) }
+                    is PressInteraction.Release, is PressInteraction.Cancel -> launch { scale.animateTo(1f, spec) }
+                }
+            }
+        }
+    }
+
+    override fun ContentDrawScope.draw() {
+        scale(scale.value) { this@draw.drawContent() }
     }
 }
 
