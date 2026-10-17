@@ -27,6 +27,15 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REPO = "TomSadeh/puki"
 UPDATE_KEY = os.path.join(os.path.expanduser("~"), "keys", "puki-update")
+sys.path.insert(0, os.path.join(ROOT, "brain"))
+from common import SIGN_NAMESPACE, ssh_keygen as _ssh_keygen  # noqa: E402
+
+
+def ssh_keygen():
+    found = _ssh_keygen()
+    if not found:
+        sys.exit("Stopping: ssh-keygen (OpenSSH) is needed to sign the PC brain.")
+    return found
 
 
 def run(cmd, **kw):
@@ -56,15 +65,6 @@ def signer(apk):
     return dn, fp
 
 
-def ssh_keygen():
-    found = shutil.which("ssh-keygen")
-    if not found and os.name == "nt":
-        found = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "OpenSSH", "ssh-keygen.exe")
-    if not found or not os.path.exists(found):
-        sys.exit("Stopping: ssh-keygen (OpenSSH) is needed to sign the PC brain.")
-    return found
-
-
 def brain_release(version):
     """The PC brain for this release, and its signature: (zip, sig)."""
     out = os.path.join(ROOT, "dist", f"puki-brain-{version}.zip")
@@ -78,11 +78,11 @@ def brain_release(version):
     if not os.path.exists(UPDATE_KEY):
         sys.exit(f"Stopping: Puki's update key isn't in {UPDATE_KEY}, so the PC brain can't be signed.")
     exe = ssh_keygen()
-    subprocess.run([exe, "-Y", "sign", "-q", "-f", UPDATE_KEY, "-n", "puki-update", out], check=True)
+    subprocess.run([exe, "-Y", "sign", "-q", "-f", UPDATE_KEY, "-n", SIGN_NAMESPACE, out], check=True)
     # Checked the way install.py --update will check it, so a release never carries a bad signature
     with open(out, "rb") as f:
         ok = subprocess.run([exe, "-Y", "verify", "-f", os.path.join(ROOT, "brain", "update_signers"), "-I", "puki",
-                             "-n", "puki-update", "-s", sig], stdin=f, capture_output=True).returncode == 0
+                             "-n", SIGN_NAMESPACE, "-s", sig], stdin=f, capture_output=True).returncode == 0
     if not ok:
         sys.exit("Stopping: the brain's signature doesn't check out against brain/update_signers (another key?).")
     print(f"  {out}  {os.path.getsize(out) / 1e6:.1f} MB, signed with Puki's update key")

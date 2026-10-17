@@ -105,21 +105,21 @@ def gate(heard):
     return safety.gate_category(probs, CFG.get("safety_threshold", 0.8))
 
 
+def shown(text):
+    """What the log shows of something the child said or Puki answered: its length, or the text
+    itself with log_text on (for debugging). The log may outlive the evening (journald, a
+    terminal), and the child's words and name don't belong in it."""
+    if text is None:
+        return "nothing"
+    text = str(text)
+    return repr(text) if CFG.get("log_text") else f"({len(text)} characters)"
+
+
 def guarded_reply(heard, lang, game=""):
     """(category, fixed reply) when what the child said needs a careful answer, else None.
     [game]: the app's screen, for words that game uses itself (a knife in the kitchen)."""
-    if not heard:
-        return None
-    caught = safety.guard(heard, lang, persona.GIRL, game)
-    if caught:
-        return caught
-    try:
-        cat = gate(heard)
-    except Exception as e:
-        log(f"safety gate failed: {e}")
-        return None
-    return (cat, safety.replies(lang, persona.GIRL)[cat]) if cat else None
-
+    return safety.guarded_reply(heard, lang, persona.GIRL, game, gate=gate,
+                                on_error=lambda e: log(f"safety gate failed ({type(e).__name__}); answering with the neutral line"))
 
 def chat(messages, max_tokens=48, temperature=0.9, response_format=None, timeout=45):
     payload = {
@@ -157,9 +157,9 @@ def look_line(png_bytes, lang):
     for _ in range(3):
         raw = chat(messages, max_tokens=60, temperature=0.8, timeout=60)
         text = clean(raw, lang)
-        if text:
+        if text and safety.reply_ok(text):
             return text
-        log(f"rejected look: {raw!r}")
+        log(f"rejected look: {shown(raw)}")
     return None
 
 
@@ -202,17 +202,17 @@ def story(played, icons, lang):
         try:
             items = json.loads(raw)["sentences"]
         except (ValueError, KeyError, TypeError):
-            log(f"story not JSON: {raw[:120]!r}")
+            log(f"story not JSON: {shown(raw)}")
             continue
         out = []
         for it in items:
             text = clean(str(it.get("text", "")), lang)
-            if text and it.get("icon") in icons:
+            if text and safety.reply_ok(text) and it.get("icon") in icons:
                 out.append({"text": text, "icon": it["icon"]})
         if len(out) >= 3:
             out.append({"text": closing, "icon": "ic_bedtime_moon" if "ic_bedtime_moon" in icons else out[-1]["icon"]})
             return out
-        log(f"story rejected: {raw[:160]!r}")
+        log(f"story rejected: {shown(raw)}")
     return None
 
 
@@ -225,7 +225,7 @@ def line_for(situation, lang, listening=False):
         if text:
             recent.append(text)
             return text
-        log(f"rejected: {raw!r}")
+        log(f"rejected: {shown(raw)}")
     return None
 
 
@@ -440,7 +440,7 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/say":
             situation = str(req.get("situation", ""))[:300]
             text = self._line(situation, lang)
-            log(f"{situation} -> {text}")
+            log(f"{shown(situation)} -> {shown(text)}")
             self._reply(text, lang)
         elif url.path == "/speak":
             # Fixed text from the app (a question, a story sentence): just say it
@@ -461,14 +461,14 @@ class Handler(BaseHTTPRequestHandler):
             # Hurt, danger, big questions and the like get a fixed, kind reply (safety.py)
             caught = guarded_reply(heard, lang, query.get("game", [""])[0][:40])
             if caught:
-                log(f"heard {heard!r} -> [{caught[0]}] {caught[1]}")
+                log(f"heard {shown(heard)} -> [{caught[0]}] fixed reply")
                 return self._reply(caught[1], lang, heard)
             situation = listen_situation(heard, lang)
             context = query.get("context", [""])[0][:200]
             if context:
                 situation = context + " " + situation
             text = self._line(situation, lang, listening=True)
-            log(f"heard {heard!r} -> {text}")
+            log(f"heard {shown(heard)} -> {shown(text)}")
             self._reply(text, lang, heard)
         elif url.path == "/repeat":
             # Say it with Puki. Body: a WAV of the child trying to say ?target= (with ?alt= for
@@ -491,7 +491,7 @@ class Handler(BaseHTTPRequestHandler):
                 match2 = word_match(heard2, target, alts)
                 if heard2 and ["tried", "close", "word"].index(match2) > ["tried", "close", "word"].index(match):
                     heard, match = heard2, match2
-            log(f"say {target!r}: heard {heard!r} -> {match}")
+            log(f"say {shown(target)}: heard {shown(heard)} -> {match}")
             self._json({"heard": heard, "match": match})
         elif url.path == "/look":
             # Body: PNG of the child's drawing
@@ -500,7 +500,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 log(f"look failed: {e}")
                 text = None
-            log(f"looked at a drawing -> {text}")
+            log(f"looked at a drawing -> {shown(text)}")
             self._reply(text, lang)
         elif url.path == "/story":
             # The pictures the story may use (the app sends about 20); capped, it all goes into the prompt
@@ -511,7 +511,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 log(f"story failed: {e}")
                 sentences = None
-            log(f"story about {played!r} -> {sentences}")
+            log(f"story about {shown(played)} -> {len(sentences or [])} sentences")
             self._json({"sentences": sentences}) if sentences else self._fail(204)
         else:
             self._fail(404)

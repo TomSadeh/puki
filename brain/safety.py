@@ -177,6 +177,24 @@ def guard(heard, lang, girl, game=""):
 GATE_CATEGORY = {"1": "hurt", "2": "danger", "3": "big_question"}
 
 
+
+def guarded_reply(heard, lang, girl, game="", gate=None, on_error=None):
+    """(category, fixed reply) when what the child said needs a careful answer, else None: the
+    word lists first, then [gate] (heard -> category or None). If the gate fails, it's "unclear"
+    (fails closed: the model doesn't get to reply freely); [on_error] hears about it."""
+    if not heard:
+        return None
+    caught = guard(heard, lang, girl, game)
+    if caught or gate is None:
+        return caught
+    try:
+        cat = gate(heard)
+    except Exception as e:
+        if on_error:
+            on_error(e)
+        cat = "unclear"
+    return (cat, replies(lang, girl)[cat]) if cat else None
+
 def classify_prompt(heard):
     return (f'A toddler said to a toy parrot: "{heard}". Which is it? 0 = ordinary play or chatter; '
             "1 = hurt, scared, sad, or needs a grown-up's help (food, sleep, potty, wants a parent); "

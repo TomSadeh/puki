@@ -113,6 +113,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                         var text: String? = null
                         repeat(3) {
                             if (text == null) text = persona.clean(mind.look(persona.systemPrompt(lang), persona.lookPrompt(lang), body ?: ByteArray(0)), lang)
+                                ?.takeIf { Safety.replyOk(it) }
                         }
                         reply(text, lang, voice)
                     }
@@ -165,15 +166,9 @@ class LocalBrain(private val models: DeviceModels) : Brain {
 
     /** (category, fixed reply) when what the child said needs a careful answer, else null. */
     private fun guardedReply(mind: Mind, heard: String, lang: String, game: String = ""): Pair<String, String>? {
-        if (heard.isEmpty()) return null
-        Safety.guard(heard, lang, persona.girl, game)?.let { return it }
-        val cat = try {
-            Safety.gateCategory(mind.digit(Safety.classifyPrompt(heard)))
-        } catch (e: Exception) {
-            Log.e(TAG, "safety gate failed: ${e.javaClass.simpleName}")
-            return null
-        }
-        return cat?.let { it to Safety.replies(lang, persona.girl).getValue(it) }
+        return Safety.guardedReply(heard, lang, persona.girl, game,
+            gate = { Safety.gateCategory(mind.digit(Safety.classifyPrompt(it))) },
+            onError = { Log.e(TAG, "safety gate failed: ${it.javaClass.simpleName}; answering with the neutral line") })
     }
 
     /** [text] spoken (empty when there's nothing to say; null when it can't be voiced here). */
@@ -203,7 +198,7 @@ class LocalBrain(private val models: DeviceModels) : Brain {
                 val out = JSONArray()
                 for (i in 0 until items.length()) {
                     val it = items.getJSONObject(i)
-                    val text = persona.clean(it.optString("text"), lang)
+                    val text = persona.clean(it.optString("text"), lang)?.takeIf { t -> Safety.replyOk(t) }
                     val icon = it.optString("icon")
                     if (text != null && icon in icons) out.put(JSONObject().put("text", text).put("icon", icon))
                 }

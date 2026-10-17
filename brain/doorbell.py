@@ -41,9 +41,7 @@ import hmac
 import json
 import os
 import queue
-import secrets
 import shutil
-import socket
 import ssl
 import subprocess
 import sys
@@ -55,6 +53,8 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dashboard
+from common import load_config as _load_config, normalize_code, pairing_code, pair_url, port_open, pretty_code, write_private
+from common import lan_address as _lan_address
 import reports
 import tls
 
@@ -63,12 +63,7 @@ HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__fil
 
 
 def load_config():
-    with open(os.path.join(HERE, "config.example.json"), encoding="utf-8") as f:
-        cfg = json.load(f)
-    local = os.path.join(HERE, "config.json")
-    if os.path.exists(local):
-        with open(local, encoding="utf-8") as f:
-            cfg.update(json.load(f))
+    cfg = _load_config(HERE)
     # "~" in paths means the user's home folder
     for key in ("llama_dir", "model", "mmproj", "brain_python", "whisper_model", "parakeet_model", "model_12b", "mmproj_12b", "bluetts_dir", "renikud_model"):
         cfg[key] = os.path.expanduser(cfg[key])
@@ -87,41 +82,16 @@ def log(msg):
 # ---------- Pairing code ----------
 
 CODE_FILE = os.path.join(HERE, "pairing_code.txt")
-CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I to mix up
-MAX_BODY = 25 * 1024 * 1024
-ERRORS_FILE = os.path.join(HERE, "brain_errors.log")  # the brain's errors when run without a console  # a recording or a drawing is far smaller
-
-
-def normalize_code(code):
-    """Case, spaces and dashes don't matter when typing the code."""
-    return "".join(c for c in code.upper() if c.isalnum())
-
-
-def write_private(path, text):
-    """Writes a file only this user may read (the pairing code, the child's name). On Windows
-    the user's folders already keep other users out; this covers Linux and shared machines."""
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(text)
-    try:
-        os.chmod(path, 0o600)  # also when the file was already there
-    except OSError:
-        pass
+MAX_BODY = 25 * 1024 * 1024  # a recording or a drawing is far smaller
+ERRORS_FILE = os.path.join(HERE, "brain_errors.log")  # the brain's errors when run without a console
 
 
 def load_pairing_code(new=False):
-    if not new and os.path.exists(CODE_FILE):
-        with open(CODE_FILE, encoding="utf-8") as f:
-            code = normalize_code(f.read())
-        if len(code) >= 8:
-            return code
-    code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))  # 40 bits
-    write_private(CODE_FILE, pretty_code(code) + "\n")
-    return code
+    return pairing_code(CODE_FILE, new)
 
 
-def pretty_code(code):
-    return f"{code[:4]}-{code[4:]}"
+def lan_address():
+    return _lan_address() or "127.0.0.1"
 
 
 class Guard:
@@ -439,7 +409,7 @@ def clear_leftovers():
     """Stops a llama-server or brain.py left running by an earlier doorbell (one that was killed
     before this version), so the new one gets the ports and the GPU memory back."""
     ports = [CFG["llama_port"], CFG["brain_port"]]
-    if not any(_port_open(p) for p in ports):
+    if not any(port_open(p) for p in ports):
         return
     log("an earlier brain is still running; stopping it")
     if os.name == "nt":
@@ -455,15 +425,9 @@ def clear_leftovers():
         for pattern in (os.path.join(HERE, "brain.py"), os.path.join(CFG["llama_dir"], "llama-server")):
             subprocess.run(["pkill", "-f", pattern], capture_output=True)
     for _ in range(20):
-        if not any(_port_open(p) for p in ports):
+        if not any(port_open(p) for p in ports):
             break
         time.sleep(0.5)
-
-
-def _port_open(port):
-    with socket.socket() as s:
-        s.settimeout(0.3)
-        return s.connect_ex(("127.0.0.1", port)) == 0
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -619,18 +583,6 @@ def describe_reply(path, headers, data):
     return ""
 
 
-def lan_address():
-    """This PC's address on the home network (no packet is sent)."""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("10.255.255.255", 1))
-        return s.getsockname()[0]
-    except OSError:
-        return "127.0.0.1"
-    finally:
-        s.close()
-
-
 def save_local_config(key, value):
     """Remembers a setting changed from the dashboard in config.json."""
     path = os.path.join(HERE, "config.json")
@@ -639,9 +591,7 @@ def save_local_config(key, value):
         with open(path, encoding="utf-8") as f:
             local = json.load(f)
     local[key] = value
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(local, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+    write_private(path, json.dumps(local, ensure_ascii=False, indent=2) + "\n")  # holds the child's name
 
 
 class DashboardApp:
@@ -651,8 +601,7 @@ class DashboardApp:
         self._vram = (0.0, 0)
 
     def pair_url(self):
-        # What the app's QR scanner reads: where the PC is, and the code
-        return f"puki://pair?host={lan_address()}:{CFG['port']}&code={PAIRING_CODE}&fp={tls.for_link(CERT_FP)}"
+        return pair_url(lan_address(), CFG["port"], PAIRING_CODE, tls.for_link(CERT_FP))
 
     def free_vram(self):
         if time.time() - self._vram[0] > 10:  # nvidia-smi is slowish; the page polls every 2 s
@@ -692,7 +641,7 @@ class DashboardApp:
     def new_code(self):
         global PAIRING_CODE
         PAIRING_CODE = load_pairing_code(new=True)
-        log(f"new pairing code: {pretty_code(PAIRING_CODE)}")
+        log("made a new pairing code (it's on the dashboard)")
         EVENTS.add("pairing", text="made a new pairing code; tablets need the new one")
 
     def set_model(self, choice):

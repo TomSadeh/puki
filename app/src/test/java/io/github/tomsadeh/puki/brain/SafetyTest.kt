@@ -149,4 +149,21 @@ class SafetyTest {
         assertTrue("אותו" in Safety.systemExtra("he", girl = false))
         assertTrue("playmate" in Safety.systemExtra("en", girl = true))
     }
+
+    @Test
+    fun aFailingGateFailsClosed() {
+        var errors = 0
+        val caught = Safety.guardedReply("בוא נשחק בכדור", "he", true,
+            gate = { throw IllegalStateException("the model didn't answer") }, onError = { errors++ })
+        assertEquals("unclear" to Safety.replies("he", true).getValue("unclear"), caught)
+        assertEquals(1, errors)
+    }
+
+    @Test
+    fun theGateDecidesAfterTheWordLists() {
+        assertNull(Safety.guardedReply("בוא נשחק בכדור", "he", true, gate = { null }))
+        assertEquals("hurt", Safety.guardedReply("let's play", "en", false, gate = { "hurt" })?.first)
+        // The word lists answer first, without asking the gate
+        assertEquals("danger", Safety.guardedReply("I want to play with fire", "en", false, gate = { error("not asked") })?.first)
+    }
 }

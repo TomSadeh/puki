@@ -105,3 +105,19 @@ def test_gate_threshold():
     # Fails closed: when the first token wasn't mostly a digit, it's "unclear", not ordinary
     assert safety.gate_category({}, 0.9) == "unclear"
     assert safety.gate_category({"0": 0.3, "1": 0.05}, 0.9) == "unclear"
+
+
+def test_a_failing_gate_fails_closed():
+    def broken(heard):
+        raise TimeoutError("llama-server didn't answer")
+    errors = []
+    cat, reply = safety.guarded_reply("בוא נשחק בכדור", "he", True, gate=broken, on_error=errors.append)
+    assert cat == "unclear" and reply == safety.replies("he", True)["unclear"]
+    assert len(errors) == 1
+
+
+def test_the_gate_decides_after_the_word_lists():
+    assert safety.guarded_reply("בוא נשחק בכדור", "he", True, gate=lambda h: None) is None
+    assert safety.guarded_reply("let's play", "en", False, gate=lambda h: "hurt")[0] == "hurt"
+    # The word lists answer first, without asking the gate
+    assert safety.guarded_reply("I want to play with fire", "en", False, gate=lambda h: 1 / 0)[0] == "danger"

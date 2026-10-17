@@ -177,6 +177,27 @@ object Safety {
         return null
     }
 
+    /**
+     * (category, fixed reply) when what the child said needs a careful answer, else null: the
+     * word lists first, then [gate] (heard -> category or null). If the gate fails, it's
+     * "unclear" (fails closed: the model doesn't get to reply freely); [onError] hears about it.
+     */
+    fun guardedReply(
+        heard: String, lang: String, girl: Boolean, game: String = "",
+        gate: ((String) -> String?)? = null, onError: (Exception) -> Unit = {}
+    ): Pair<String, String>? {
+        if (heard.isEmpty()) return null
+        guard(heard, lang, girl, game)?.let { return it }
+        if (gate == null) return null
+        val cat = try {
+            gate(heard)
+        } catch (e: Exception) {
+            onError(e)
+            "unclear"
+        }
+        return cat?.let { it to replies(lang, girl).getValue(it) }
+    }
+
     // ---- The gate: the digits the model picks from, and what each one gets ----
 
     val GATE_CATEGORY = mapOf("1" to "hurt", "2" to "danger", "3" to "big_question")

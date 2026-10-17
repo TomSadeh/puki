@@ -41,6 +41,8 @@ import urllib.request
 import zipfile
 
 import bundle
+from common import SIGN_NAMESPACE, lan_address, pair_url, pairing_code, port_open, ssh_keygen, write_private
+from common import load_config as _load_config
 
 # Puki.exe unpacks the brain's files elsewhere and says where (tray.py)
 HERE = os.environ.get("PUKI_BRAIN_DIR") or os.path.dirname(os.path.abspath(__file__))
@@ -438,13 +440,6 @@ def powershell(cmd):
                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
-def port_open(port):
-    import socket
-    with socket.socket() as s:
-        s.settimeout(0.5)
-        return s.connect_ex(("127.0.0.1", port)) == 0
-
-
 # ---------- Steps ----------
 
 def read_marker(folder):
@@ -682,18 +677,6 @@ def write_config(root, py, model, dry):
     say(f"    ✓ {path}")
 
 
-def write_private(path, text):
-    """Writes a file only this user may read (the pairing code, the child's name). On Windows
-    the user's folders already keep other users out; this covers Linux and shared machines."""
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(text)
-    try:
-        os.chmod(path, 0o600)  # also when the file was already there
-    except OSError:
-        pass
-
-
 def port_rule():
     """Name of an enabled inbound rule that already opens the port, if any."""
     return powershell(
@@ -922,41 +905,42 @@ def where_errors_are(root):
 
 def doorbell_config(root):
     """The doorbell's settings as doorbell.py reads them: config.example.json, then config.json."""
-    with open(os.path.join(brain_dir(root), "config.example.json"), encoding="utf-8") as f:
-        cfg = json.load(f)
-    local = os.path.join(brain_dir(root), "config.json")
-    if os.path.exists(local):
-        with open(local, encoding="utf-8") as f:
-            cfg.update(json.load(f))
-    return cfg
-
-
-def lan_address():
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(("10.255.255.255", 1))
-        return s.getsockname()[0]
-    except OSError:
-        return None
-    finally:
-        s.close()
+    return _load_config(brain_dir(root))
 
 
 def pairing(root):
-    """The pairing code (made now if the doorbell hasn't run yet) and the link the app scans."""
-    code_file = os.path.join(brain_dir(root), "pairing_code.txt")
-    if not os.path.exists(code_file):
-        # Same format as the doorbell's: 8 characters without 0/O or 1/I
-        import secrets
-        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-        raw = "".join(secrets.choice(alphabet) for _ in range(8))
-        write_private(code_file, f"{raw[:4]}-{raw[4:]}\n")
-    with open(code_file, encoding="utf-8") as f:
-        code = f.read().strip()
+    """The pairing code (made now if the doorbell hasn't run yet) and the link the app scans,
+    with the certificate's fingerprint so the tablet pins it before it sends anything (made now
+    too, if the doorbell hasn't made it yet). No link when there's no network or no certificate."""
+    from common import pretty_code
+    brain = brain_dir(root)
+    code = pairing_code(os.path.join(brain, "pairing_code.txt"))
     ip = lan_address()
-    url = f"puki://pair?host={ip}:{PORT}&code={code.replace('-', '')}" if ip else None
-    return code, url
+    fp = certificate_fingerprint(root)
+    url = pair_url(ip, PORT, code, tls_link(fp)) if ip and fp else None
+    return pretty_code(code), url
+
+
+def certificate_fingerprint(root):
+    """The doorbell's certificate fingerprint, making the certificate first if there's none
+    (in the brain's own Python when this one lacks the cryptography package); None if that fails."""
+    import tls
+    brain = brain_dir(root)
+    cert, key = os.path.join(brain, "puki_cert.pem"), os.path.join(brain, "puki_key.pem")
+    if not (os.path.exists(cert) and os.path.exists(key)):
+        try:
+            tls.make(cert, key)
+        except ImportError:
+            py = os.path.join(root, VENV_PY)
+            if not os.path.exists(py) or subprocess.run([py, os.path.join(HERE, "tls.py"), cert, key],
+                                                        capture_output=True).returncode != 0:
+                return None
+    return tls.fingerprint(cert)
+
+
+def tls_link(fp):
+    import tls
+    return tls.for_link(fp)
 
 
 def startup_folder():
@@ -1016,15 +1000,7 @@ def installed_model(root):
 # signatures, so nothing extra is needed: OpenSSH comes with Windows 10 and up, and with Linux).
 # The key's public half is update_signers; its private half stays with Puki's makers.
 SIGNERS_FILE = os.path.join(HERE, "update_signers")
-SIGN_NAMESPACE = "puki-update"  # a signature made for anything else doesn't count
 RELEASE_FILE = "release.txt"  # in the signed zip: its version, so an old signed release can't pass as new
-
-
-def ssh_keygen():
-    found = shutil.which("ssh-keygen")
-    if not found and WINDOWS:
-        found = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "OpenSSH", "ssh-keygen.exe")
-    return found if found and os.path.exists(found) else None
 
 
 def signature_ok(path, sig, signers=SIGNERS_FILE):
