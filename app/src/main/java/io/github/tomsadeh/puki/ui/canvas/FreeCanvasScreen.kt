@@ -64,7 +64,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
@@ -172,6 +171,20 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
     val pageShapes = remember(pageIndex, canvasSize) {
         (coloringPages[pageIndex] as? ColoringPage)?.placed(paperSize) ?: emptyList()
     }
+    // The paint (the page's fills and the finished strokes) lives in one bitmap: a new stroke is
+    // drawn into it once, the eraser clears it, and the screen just shows it
+    val art = remember { ArtLayer() }
+    fun repaint() {
+        art.reset(canvasSize, density) {
+            drawPageFills(pageShapes, fills, PaperColor)
+            paths.forEach { drawStroke(it) }
+        }
+    }
+    LaunchedEffect(canvasSize, pageShapes) { if (canvasSize.width > 0) repaint() }
+    fun addStroke(stroke: DrawPath) {
+        paths.add(stroke)
+        art.paint(density) { drawStroke(stroke) }
+    }
 
     // Tracing: the next letter (or number) each time its page comes round
     val language = LocalLanguage.current
@@ -233,6 +246,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
         stamps.clear()
         fills.clear()
         currentPath.clear()
+        repaint()
         sfxPlayer.play(Sfx.WHOOSH)
     }
     var flash by remember { mutableStateOf(false) }  // a camera flash over the paper when it's saved
@@ -285,7 +299,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                 val bitmap = snapshot(canvasSize, density, maxSide = 2048, paper = {
                                     traceGlyph?.let { drawTraceGlyph(it) }
                                 }, over = { traceGlyph?.let { drawTraceEdge(it) } }) {
-                                    drawArtwork(paths, pageShapes, fills, stamps, stampPainters)
+                                    drawArtwork(art, pageShapes, stamps, stampPainters)
                                 }
                                 withContext(Dispatchers.IO) { saveDrawing(context, bitmap.toPng()) }
                                 delay(150)
@@ -326,13 +340,14 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                         stamping -> stampAt(offset)
                                         erasing -> {
                                             eraseStampsAt(offset)
-                                            paths.add(DrawPath(listOf(offset), PaperColor, brushSize, erase = true))
+                                            addStroke(DrawPath(listOf(offset), PaperColor, brushSize, erase = true))
                                         }
                                         shape >= 0 -> {
                                             fills[shape] = selectedColor
+                                            repaint()  // the fill goes under the strokes already there
                                             sfxPlayer.play(Sfx.POP, 0.8f)
                                         }
-                                        else -> paths.add(DrawPath(listOf(offset), selectedColor, brushSize))
+                                        else -> addStroke(DrawPath(listOf(offset), selectedColor, brushSize))
                                     }
                                 }
                             }
@@ -344,8 +359,11 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                             stampAt(offset)
                                             lastStamp = offset
                                         } else {
-                                            if (erasing) eraseStampsAt(offset)
                                             currentPath.clear(); currentPath.add(offset)
+                                            if (erasing) {
+                                                eraseStampsAt(offset)
+                                                art.paint(density) { drawStroke(DrawPath(listOf(offset), PaperColor, brushSize, erase = true)) }
+                                            }
                                         }
                                     },
                                     onDrag = { change, _ ->
@@ -356,14 +374,27 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                                 stampAt(change.position)
                                                 lastStamp = change.position
                                             }
-                                        } else {
-                                            if (erasing) eraseStampsAt(change.position)
+                                        } else if (erasing) {
+                                            // Rubbed straight out of the paint, as the finger moves
+                                            eraseStampsAt(change.position)
+                                            val from = currentPath.lastOrNull() ?: change.position
                                             currentPath.add(change.position)
+                                            art.paint(density) { drawStroke(DrawPath(listOf(from, change.position), PaperColor, brushSize, erase = true)) }
+                                        } else {
+                                            currentPath.add(change.position)
+                                            // A long scribble goes into the paint in pieces, so the live stroke stays short
+                                            if (currentPath.size >= LIVE_POINTS) {
+                                                val last = currentPath.last()
+                                                addStroke(DrawPath(currentPath.toList(), selectedColor, brushSize))
+                                                currentPath.clear(); currentPath.add(last)
+                                            }
                                         }
                                     },
                                     onDragEnd = {
-                                        if (currentPath.size > 1) {
-                                            paths.add(DrawPath(currentPath.toList(), selectedColor, brushSize, erase = erasing))
+                                        if (erasing) {
+                                            if (currentPath.isNotEmpty()) paths.add(DrawPath(currentPath.toList(), PaperColor, brushSize, erase = true))
+                                        } else if (currentPath.size > 1) {
+                                            addStroke(DrawPath(currentPath.toList(), selectedColor, brushSize))
                                         }
                                         currentPath.clear()
                                     }
@@ -375,11 +406,9 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                             drawPaperGrain()
                             traceGlyph?.let { drawTraceGlyph(it) }
                         }
-                        // The finished strokes, in a layer of their own (the eraser clears it down to the
-                        // paper), redrawn only when a stroke is added, or as the eraser moves
-                        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
-                            drawArtwork(paths, pageShapes, fills, stamps, stampPainters)
-                            if (erasing) drawStroke(DrawPath(currentPath, PaperColor, brushSize, erase = true))
+                        // The paint, the page's lines and the stickers, in a layer of their own
+                        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
+                            drawArtwork(art, pageShapes, stamps, stampPainters)
                         }
                         // The stroke being drawn right now (the only thing redrawn as the finger moves)
                         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -403,7 +432,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                     lastLooked = drawn
                     scope.launch {
                         // Drawn here (the stickers' painters belong to this thread), compressed in the background
-                        val bitmap = snapshot(canvasSize, density) { drawArtwork(paths, pageShapes, fills, stamps, stampPainters) }
+                        val bitmap = snapshot(canvasSize, density) { drawArtwork(art, pageShapes, stamps, stampPainters) }
                         val png = withContext(Dispatchers.Default) { bitmap.toPng() }
                         companion.look(png)
                         looking = false
@@ -468,6 +497,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                 (coloringPages[pageIndex] as? TracePage)?.let { if (it.numbers) numberTurn++ else letterTurn++ }
                                 if (coloringPages[pageIndex] is TracePage) paths.clear()  // a clean sheet to trace on
                                 fills.clear()
+                                repaint()
                                 sfxPlayer.play(Sfx.WHOOSH, 0.6f)
                             },
                         contentAlignment = Alignment.Center
@@ -715,16 +745,15 @@ private fun DrawScope.drawStroke(stroke: DrawPath) {
     drawPath(stroke.smooth, stroke.color, style = Stroke(width = stroke.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = blend)
 }
 
-/** The page's paint, the strokes, the page's lines over them, and the stickers on top. */
+/** The paint (fills and strokes, from [art]), the page's lines over it, and the stickers on top. */
 private fun DrawScope.drawArtwork(
-    paths: List<DrawPath>,
+    art: ArtLayer,
     pageShapes: List<androidx.compose.ui.graphics.Path>,
-    fills: Map<Int, Color>,
     stamps: List<Stamp>,
     painters: Map<Int, Painter>
 ) {
-    drawPageFills(pageShapes, fills, PaperColor)
-    paths.forEach { drawStroke(it) }
+    art.version  // read, so this redraws when the paint changes
+    art.bitmap?.let { drawImage(it) }
     drawPageLines(pageShapes)
     stamps.forEach { stamp ->
         val painter = painters[stamp.icon] ?: return@forEach
@@ -733,6 +762,36 @@ private fun DrawScope.drawArtwork(
                 with(painter) { draw(Size(stamp.size, stamp.size)) }
             }
         }
+    }
+}
+
+/** How many points the stroke being drawn holds before it goes into the paint (see [ArtLayer]). */
+private const val LIVE_POINTS = 64
+
+/**
+ * The drawing's paint as a bitmap the size of the paper: strokes are drawn into it once (and the
+ * eraser clears it with BlendMode.Clear), so the screen shows one image however long the drawing
+ * gets. [version] changes with every stroke, to redraw what shows it.
+ */
+private class ArtLayer {
+    var bitmap: ImageBitmap? = null
+        private set
+    var version by mutableIntStateOf(0)
+        private set
+
+    /** A new, empty bitmap of [size], with [paint] drawn on it. */
+    fun reset(size: IntSize, density: Density, paint: DrawScope.() -> Unit) {
+        if (size.width <= 0 || size.height <= 0) return
+        bitmap = ImageBitmap(size.width, size.height)
+        paint(density, paint)
+    }
+
+    /** Draws [paint] onto the bitmap. */
+    fun paint(density: Density, paint: DrawScope.() -> Unit) {
+        val b = bitmap ?: return
+        CanvasDrawScope().draw(density, LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(b),
+            Size(b.width.toFloat(), b.height.toFloat())) { paint() }
+        version++
     }
 }
 
