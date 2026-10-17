@@ -40,12 +40,13 @@ import io.github.tomsadeh.puki.audio.Companion
 import io.github.tomsadeh.puki.data.models.BilingualText
 import io.github.tomsadeh.puki.theme.CloudWhite
 import io.github.tomsadeh.puki.theme.EarthBrown
+import io.github.tomsadeh.puki.ui.common.LocalGender
 import io.github.tomsadeh.puki.ui.common.LocalLanguage
 
 /**
  * מלשין לרנינג: what Puki said this session, newest first, each with a flag for a parent who
- * heard something that wasn't right. A report stays at home (the tablet, and the PC if there is
- * one) and becomes a case to fix Puki by.
+ * heard something that wasn't right, and three short steps saying what the list is, what to flag
+ * and where a report goes (at home; to Puki's makers only by the parent's own email).
  */
 @Composable
 fun ReportCard(companion: Companion) {
@@ -67,13 +68,33 @@ fun ReportCard(companion: Companion) {
             style = MaterialTheme.typography.bodyLarge,
             color = EarthBrown
         )
-        Text(
-            (if (Contact.REPORT_EMAIL.isBlank()) BilingualText("לוחצים על 🚩 ליד המשפט. הדיווח נשמר אצלכם בבית.", "Tap 🚩 next to the line. Reports stay in your home.")
-            else BilingualText("לוחצים על 🚩 ליד המשפט. הדיווח נשמר אצלכם בבית, ואפשר לשלוח אותו אלינו ✉️.",
-                "Tap 🚩 next to the line. Reports stay in your home, and you can send one to us ✉️.")).resolve(language),
-            style = MaterialTheme.typography.bodyMedium,
-            color = EarthBrown.copy(alpha = 0.7f)
+        // What this is, what counts, and where a report goes: in three short steps
+        val gender = LocalGender.current
+        val canSend = Contact.REPORT_EMAIL.isNotBlank()
+        val steps = listOf(
+            BilingualText(
+                "כאן רואים מה פוקי אמר מאז שהמשחק נפתח, מהחדש לישן, ומעל כל משפט מה הילד אמר לפניו.",
+                "Here's what Puki has said since the game opened, newest first, with what your child said just before each line.",
+                heGirl = "כאן רואים מה פוקי אמר מאז שהמשחק נפתח, מהחדש לישן, ומעל כל משפט מה הילדה אמרה לפניו."
+            ),
+            BilingualText(
+                "משהו לא התאים? מפחיד, לא נכון, מבטיח משהו או סתם מוזר: לוחצים על 🚩 ליד המשפט.",
+                "Something not right? Scary, untrue, a promise, or just odd: tap 🚩 next to the line."
+            ),
+            if (canSend) BilingualText(
+                "הדיווח נשמר בטאבלט (ובמחשב שבבית, אם יש), ואז מופיע ✉️: שולחים לנו אותו מהמייל שלכם, ורואים בדיוק מה יישלח, עם השם מוחלף. ככה נתקן את פוקי לכל המשפחות. שום דבר לא נשלח בלי שתבחרו.",
+                "The report is kept on this tablet (and your home PC, if there is one), and ✉️ appears: send it to Puki's makers from your own email, seeing exactly what goes, with your child's name replaced. That's how Puki gets fixed for every family. Nothing is sent unless you choose to."
+            ) else BilingualText(
+                "הדיווח נשמר בטאבלט (ובמחשב שבבית, אם יש), כדי שאפשר יהיה לתקן את פוקי שלא יחזור על זה. שום דבר לא יוצא מהבית.",
+                "The report is kept on this tablet (and your home PC, if there is one), so Puki can be fixed not to say it again. Nothing leaves your home."
+            )
         )
+        steps.forEachIndexed { i, step ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("${i + 1}.", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = EarthBrown)
+                Text(step.resolve(language, gender), style = MaterialTheme.typography.bodyMedium, color = EarthBrown.copy(alpha = 0.85f))
+            }
+        }
         if (lines.isEmpty()) {
             Text(
                 BilingualText("פוקי עוד לא אמר כלום הפעם.", "Puki hasn't said anything yet this time.").resolve(language),
