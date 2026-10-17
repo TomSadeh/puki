@@ -107,10 +107,19 @@ class ConsoleUI:
         self.say(f"\n[{n}/{total}] {title}")
 
     def progress(self, name, done, total, speed, overall):
-        line = f"\r    {name}: {done * 100 // max(total, 1):3d}%  {done / 1e6:,.0f}/{total / 1e6:,.0f} MB  {speed:.1f} MB/s"
+        # One line, redrawn with \r: a line wider than the terminal wraps, and \r only returns to
+        # its last row, so every update would leave a row behind. So: the fullest line that fits
+        # (the last column stays empty, as some terminals wrap on writing it), padded to clear
+        # what a longer line left.
+        width = shutil.get_terminal_size().columns - 1
+        head = f"    {name}: {done * 100 // max(total, 1):3d}%"
+        mb, rate = f"  {done / 1e6:,.0f}/{total / 1e6:,.0f} MB", f"  {speed:.1f} MB/s"
+        lines = [head + mb + rate]
         if overall:
-            line += f"   (all downloads: {overall[0] / 1e9:.1f}/{overall[1] / 1e9:.1f} GB)"
-        print(line + "   ", end="", flush=True)
+            sizes = f"{overall[0] / 1e9:.1f}/{overall[1] / 1e9:.1f} GB"
+            lines = [head + mb + rate + f"   (all downloads: {sizes})", head + rate + f"  (all: {sizes})"] + lines
+        line = next((l for l in lines if len(l) <= width), lines[-1][:width])
+        print("\r" + line.ljust(width), end="", flush=True)
 
     def progress_done(self):
         print()
