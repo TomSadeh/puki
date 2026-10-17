@@ -211,6 +211,11 @@ The Play listing (texts, icon, feature graphic, screenshots) is in `fastlane/met
 steps and form answers in `fastlane/PLAY_CHECKLIST.md`; the privacy policy is `docs/privacy.html`.
 All builds are signed with the release key in `~/keys` (puki-release.jks + puki-signing.properties,
 never in git); without it they fall back to the debug key, which release.py won't publish.
+The PC brain's updates are signed the same way: release.py adds `puki-brain-<version>.zip` (the brain
+folder, with `brain/release.txt`) and its `.sig`, made with `~/keys/puki-update` (an ssh-keygen ed25519
+key, never in git), and `install.py --update` uses a release only if it verifies against
+`brain/update_signers`. Losing that key means installed PCs can't take signed updates any more; a new
+key reaches them only in a release signed with the old one.
 
 ---
 

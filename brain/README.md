@@ -73,9 +73,13 @@ Downloads show progress and resume if interrupted, and running it again only doe
 missing. Options: `--dry-run` (just show the plan), `--model e4b|12b|both`, `--dir D:\puki-brain`, `--cpu`,
 `--only firewall,autostart` (repeat single steps), `--no-firewall`, `--no-autostart`.
 
-**Later:** `python brain\install.py --update` gets the latest Puki (with git, or as a zip if
-the folder isn't a clone) and redoes only what changed, including a newer llama.cpp or
-BlueTTS. `python brain\install.py --uninstall` stops Puki and removes the login shortcut,
+**Later:** `python brain\install.py --update` gets the newest Puki release and redoes only what
+changed, including a newer llama.cpp or BlueTTS. Updates are **signed**, like the tablet's: the
+release's brain comes with a signature (`ssh-keygen -Y`, made with Puki's update key), and the
+update is used only if it checks out against `brain/update_signers`, the key's public half. A
+release can't pass for a newer one either: the version is inside what's signed. The folder you
+installed from is left as it is (the release is unpacked into `~/puki-brain/update`); after a
+`git pull`, run the installer itself (without `--update`) to install what you pulled. `python brain\install.py --uninstall` stops Puki and removes the login shortcut,
 the firewall rule it added, and everything it downloaded, asking before each part.
 
 ## Tray app and Puki.exe

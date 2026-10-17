@@ -4,4 +4,4 @@ on this list (tests/test_bundle.py checks), or the brain fails to start where it
 
 FILES = ["bundle.py", "doorbell.py", "brain.py", "persona.py", "safety.py", "reports.py", "tls.py", "pins.json",
          "dashboard.py", "dashboard.html", "qr.py", "parakeet.py", "install.py", "setup_gui.py", "tray.py",
-         "config.example.json", "requirements.txt"]
+         "config.example.json", "requirements.txt", "update_signers"]

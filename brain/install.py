@@ -20,7 +20,7 @@ takes; everything it prints also goes to install.log in the folder. At the end i
 pairing code and a QR code for the tablet. --gui shows all this in a window instead (Puki.exe
 always does). Standard library only, so any Python 3.10+ can run it.
 
-    python brain\\install.py --update      # the latest Puki, then only what changed
+    python brain\\install.py --update      # the newest signed Puki release, then only what changed
     python brain\\install.py --uninstall   # remove it all (asks before each part)
 """
 
@@ -70,7 +70,7 @@ BLUETTS_ONNX_REPO = "notmax123/BlueTTS2.5-onnx"
 RENIKUD_REPO = "notmax123/RenikudPlus"
 RENIKUD_FILE = "model.onnx"
 
-REPO = "TomSadeh/puki"  # where --update gets the latest Puki
+REPO = "TomSadeh/puki"  # where --update gets the latest Puki (signed releases)
 PORT = 8790
 DASHBOARD = "http://127.0.0.1:8793"
 FIREWALL_RULE = "Puki companion"
@@ -169,8 +169,8 @@ def say(msg=""):
 STEPS = 9
 
 
-def step(n, title):
-    UI.step(n, STEPS, title)
+def step(n, title, total=None):
+    UI.step(n, total or STEPS, title)
 
 
 def fail(msg):
@@ -264,7 +264,7 @@ def file_sha256(path, label):
 
 def download(url, dest, size=None, dry=False, sha256=None, unpinned=False):
     """Downloads [url] to [dest] with a progress bar, resuming a partial .part file, and checks
-    it against [sha256] (from pins.json). Only Puki's own code (--update) comes [unpinned]."""
+    it against [sha256] (from pins.json). Only Puki's own release (--update) comes [unpinned]: its signature vouches for it."""
     if not sha256 and not unpinned:
         fail(f"no checksum pinned for {os.path.basename(dest)}; refusing to download it.")
     name = os.path.basename(dest)
@@ -1011,51 +1011,139 @@ def installed_model(root):
     return "both" if e4b and big else "12b" if big else "e4b"
 
 
+# PC updates are signed, like the tablet's: Android installs a new APK only if Puki's release key
+# signed it, and --update takes a new brain only if Puki's update key signed it (ssh-keygen's
+# signatures, so nothing extra is needed: OpenSSH comes with Windows 10 and up, and with Linux).
+# The key's public half is update_signers; its private half stays with Puki's makers.
+SIGNERS_FILE = os.path.join(HERE, "update_signers")
+SIGN_NAMESPACE = "puki-update"  # a signature made for anything else doesn't count
+RELEASE_FILE = "release.txt"  # in the signed zip: its version, so an old signed release can't pass as new
+
+
+def ssh_keygen():
+    found = shutil.which("ssh-keygen")
+    if not found and WINDOWS:
+        found = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "OpenSSH", "ssh-keygen.exe")
+    return found if found and os.path.exists(found) else None
+
+
+def signature_ok(path, sig, signers=SIGNERS_FILE):
+    """True only if [sig] is a signature of [path] by a key in [signers], made for Puki's updates."""
+    exe = ssh_keygen()
+    if not exe:
+        fail("ssh-keygen (OpenSSH) isn't installed, so the update's signature can't be checked; "
+             "install OpenSSH and run the update again.")
+    with open(path, "rb") as f:
+        r = subprocess.run([exe, "-Y", "verify", "-f", signers, "-I", "puki", "-n", SIGN_NAMESPACE, "-s", sig],
+                           stdin=f, capture_output=True)
+    return r.returncode == 0
+
+
+def version_tuple(v):
+    return tuple(int(x) if x.isdigit() else 0 for x in v.strip().lstrip("v").split("."))
+
+
+def latest_release():
+    """(version, zip url, zip size, signature url) of the newest release that has a signed brain."""
+    req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/releases?per_page=10",
+                                 headers={"Accept": "application/vnd.github+json", "User-Agent": "puki-installer"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        releases = json.load(r)
+    best = None
+    for rel in releases:
+        if rel.get("draft"):
+            continue
+        version = rel["tag_name"].lstrip("v")
+        assets = {a["name"]: a for a in rel.get("assets", [])}
+        name = f"puki-brain-{version}.zip"
+        if name in assets and name + ".sig" in assets and (best is None or version_tuple(version) > version_tuple(best[0])):
+            best = (version, assets[name]["browser_download_url"], assets[name]["size"],
+                    assets[name + ".sig"]["browser_download_url"])
+    return best
+
+
+def installed_release(root):
+    """The version of the signed release this Puki was last updated to, or None."""
+    try:
+        with open(os.path.join(brain_dir(root), RELEASE_FILE), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+
+def unpack_release(z, dest, version):
+    """Unpacks the verified zip into [dest] and checks the version it carries inside."""
+    if os.path.isdir(dest):
+        shutil.rmtree(dest)
+    with zipfile.ZipFile(z) as f:
+        top = f.namelist()[0].split("/")[0] + "/"
+        for member in f.infolist():
+            rel = member.filename[len(top):]
+            target = os.path.normpath(os.path.join(dest, rel))
+            if not rel or member.is_dir():
+                continue
+            if not target.startswith(os.path.normpath(dest) + os.sep):
+                fail(f"the update has a file outside its folder ({member.filename}); not using it")
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with f.open(member) as src, open(target, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+    try:
+        with open(os.path.join(dest, "brain", RELEASE_FILE), encoding="utf-8") as f:
+            inside = f.read().strip()
+    except OSError:
+        inside = None
+    if inside != version:
+        fail(f"the update says it's {inside}, but its release is {version}; not using it")
+
+
 def update(args, root):
-    """Fetches the latest Puki, then re-runs the (new) installer, which only does what changed."""
-    repo_dir = os.path.dirname(HERE)
-    if not FROZEN and os.path.isdir(brain_dir(root)) and os.path.samefile(HERE, brain_dir(root)):
-        fail("run --update from the Puki folder you downloaded or cloned, not from the installed copy in " + HERE)
+    """Fetches the newest signed release, checks its signature, then runs its installer, which
+    only does what changed. A folder you cloned or downloaded is left as it is: the release is
+    unpacked into the install folder (<folder>/update) and installed from there."""
     say("Puki: update\n")
-    step(1, "Stop Puki")
-    stop_puki(root, args.dry_run)
-    step(2, "The latest Puki")
-    if os.path.isdir(os.path.join(repo_dir, ".git")):
-        if args.dry_run:
-            say("    → would run  git pull --ff-only")
-        else:
-            r = subprocess.run(["git", "-C", repo_dir, "pull", "--ff-only"], capture_output=True, text=True)
-            if r.returncode != 0:
-                fail("git pull didn't work:\n" + (r.stderr or r.stdout).strip())
-            say("    ✓ " + (r.stdout.strip().splitlines() or ["up to date"])[-1])
-    else:
-        z = os.path.join(root, "downloads", "puki-latest.zip")
-        if args.dry_run:
-            say(f"    → would download github.com/{REPO} and update this folder")
-        else:
-            if os.path.exists(z):
-                os.remove(z)
-            # Puki's own code, the newest: nothing to pin it to (it brings the new pins.json)
-            download(f"https://github.com/{REPO}/archive/refs/heads/main.zip", z, unpinned=True)
-            with zipfile.ZipFile(z) as f:
-                top = f.namelist()[0].split("/")[0] + "/"
-                for member in f.infolist():
-                    rel = member.filename[len(top):]
-                    if not rel or member.is_dir():
-                        continue
-                    target = os.path.join(repo_dir, rel)
-                    os.makedirs(os.path.dirname(target), exist_ok=True)
-                    with f.open(member) as src, open(target, "wb") as dst:
-                        shutil.copyfileobj(src, dst)
-            say("    ✓ updated (your settings and pairing code are kept)")
+    step(1, "The newest Puki", 3)
     if args.dry_run:
-        say("\n  → would then run the new installer, which only does what changed")
+        say(f"    → would download the newest signed release from github.com/{REPO}, check its signature,"
+            " stop Puki and run its installer")
         return
+    try:
+        latest = latest_release()
+    except OSError as e:
+        fail(f"couldn't reach GitHub ({e})")
+    if not latest:
+        fail(f"no signed release on github.com/{REPO} yet")
+    version, url, size, sig_url = latest
+    have = installed_release(root)
+    if have and version_tuple(version) <= version_tuple(have):
+        say(f"    ✓ up to date (Puki {have})")
+        return
+    say(f"    Puki {version}" + (f" (this one is {have})" if have else ""))
+    downloads = os.path.join(root, "downloads")
+    z = os.path.join(downloads, f"puki-brain-{version}.zip")
+    for f in (z, z + ".sig"):
+        if os.path.exists(f):
+            os.remove(f)
+    # Not pinned (it's newer than any pins.json): the signature below is what vouches for it
+    download(url, z, size=size, unpinned=True)
+    download(sig_url, z + ".sig", unpinned=True)
+    step(2, "Its signature", 3)
+    if not signature_ok(z, z + ".sig"):
+        os.remove(z)
+        fail("the update isn't signed with Puki's key, so it isn't used (it may be damaged, or not from Puki's makers).")
+    say("    ✓ signed with Puki's update key")
+    source = os.path.join(root, "update", f"puki-{version}")
+    unpack_release(z, source, version)
+    step(3, "Stop Puki", 3)
+    stop_puki(root, False)
     say("\n  Running the new installer...\n")
-    cmd = [sys.executable, os.path.join(HERE, "install.py"), "--dir", root, "--yes",
+    cmd = [sys.executable, os.path.join(source, "brain", "install.py"), "--dir", root, "--yes",
            "--model", args.model or installed_model(root)]
     cmd += ["--cpu"] if args.cpu else []
-    sys.exit(subprocess.run(cmd).returncode)
+    code = subprocess.run(cmd).returncode
+    if code == 0:
+        with open(os.path.join(brain_dir(root), RELEASE_FILE), "w", encoding="utf-8") as f:
+            f.write(version + "\n")
+    sys.exit(code)
 
 
 def uninstall_windows_firewall(dry, ask):
@@ -1152,7 +1240,7 @@ def main():
     ap.add_argument("--model", choices=["e4b", "12b", "both"],
                     help="which Gemma: e4b (lighter, faster), 12b (smarter, needs ~9 GB free GPU memory) or both "
                          "(12B when the GPU has room, E4B when it's busy). Default: asks, recommending 12b on a 12 GB+ GPU")
-    ap.add_argument("--update", action="store_true", help="get the latest Puki and redo only what changed")
+    ap.add_argument("--update", action="store_true", help="get the newest signed Puki release and redo only what changed")
     ap.add_argument("--uninstall", action="store_true", help="stop Puki and remove everything it installed")
     ap.add_argument("--gui", action="store_true", help="show the setup in a window (Puki.exe always does)")
     ap.add_argument("--only", help="run just these steps, e.g. --only firewall,autostart "
