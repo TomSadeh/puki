@@ -806,25 +806,89 @@ def setup_autostart(dry):
 
 def start_puki(pythonw, doorbell, dry):
     if dry:
-        say("    → would start Puki and open the dashboard")
+        say("    → would start Puki, open the dashboard, and ask Puki for a line in Hebrew and in English")
         return
-    if port_open(PORT):
+    cfg = doorbell_config()
+    port = cfg["port"]
+    if port_open(port):
         say("    ✓ Puki is already running (restart the PC, or the doorbell, to pick up new settings)")
-    elif not WINDOWS and os.path.exists(SERVICE):
-        subprocess.run(["systemctl", "--user", "start", "puki"])
-    elif not WINDOWS:
-        subprocess.Popen([sys.executable, doorbell], cwd=HERE, start_new_session=True,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     else:
-        subprocess.Popen([pythonw, doorbell], cwd=HERE, creationflags=0x00000008)  # DETACHED_PROCESS
-        for _ in range(20):
-            if port_open(PORT):
-                break
+        if not WINDOWS and os.path.exists(SERVICE):
+            r = subprocess.run(["systemctl", "--user", "start", "puki"], capture_output=True, text=True)
+            if r.returncode != 0:
+                fail("systemd couldn't start Puki:\n" + (r.stderr or r.stdout).strip())
+        elif not WINDOWS:
+            subprocess.Popen([sys.executable, doorbell], cwd=HERE, start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.Popen([pythonw, doorbell], cwd=HERE, creationflags=0x00000008)  # DETACHED_PROCESS
+        deadline = time.time() + cfg["startup_timeout_s"]
+        while not port_open(port) and time.time() < deadline:
             time.sleep(0.5)
-        say("    ✓ Puki is running" if port_open(PORT) else "    ! Puki didn't start; run  python brain/doorbell.py  to see why")
+        if not port_open(port):
+            fail(f"Puki didn't start (nothing answers on port {port}). {where_errors_are()}")
+        say("    ✓ Puki is running")
     import webbrowser
     webbrowser.open(DASHBOARD)
     say(f"  The dashboard ({DASHBOARD}) shows the pairing code too.")
+    check_puki_talks(port, cfg["startup_timeout_s"])
+
+
+# What the installer asks Puki for at the end, to hear that everything works
+HELLO = "Puki was just set up on this computer and says hello to the family"
+
+
+def check_puki_talks(port, startup_timeout_s):
+    """Wakes the brain and asks for a line in Hebrew and in English, the way the tablet does
+    (HTTPS, pinned to this PC's certificate, with the pairing code): a finished install is a
+    Puki who talks, not a service that started."""
+    import http.client
+    import ssl
+    import urllib.parse
+    import tls
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname, ctx.verify_mode = False, ssl.CERT_NONE  # self-signed: pinned below instead
+    code = pairing()[0]
+    # The doorbell waits up to startup_timeout_s for the brain to wake, then 120 s for its answer
+    timeout = startup_timeout_s + 120
+    say("    asking Puki for a line in each language (waking the brain takes up to a minute)...")
+    for lang, language in (("he", "Hebrew"), ("en", "English")):
+        start = time.time()
+        conn = http.client.HTTPSConnection("127.0.0.1", port, timeout=timeout, context=ctx)
+        try:
+            conn.request("POST", "/say", body=json.dumps({"situation": HELLO, "lang": lang}).encode(),
+                         headers={"X-Puki-Code": code, "Content-Type": "application/json"})
+            if hashlib.sha256(conn.sock.getpeercert(binary_form=True)).hexdigest() != tls.fingerprint():
+                fail(f"something other than Puki answered on port {port} (its certificate isn't this PC's Puki's)")
+            r = conn.getresponse()
+            audio = r.read()
+        except OSError as e:
+            fail(f"Puki didn't answer in {language} ({type(e).__name__}: {e}). {where_errors_are()}")
+        finally:
+            conn.close()
+        if r.status != 200 or not audio:
+            fail(f"Puki didn't talk in {language} (HTTP {r.status} {r.reason}). {where_errors_are()}")
+        say(f"    ✓ {language}, {time.time() - start:.0f} s: {urllib.parse.unquote(r.getheader('X-Text', ''))}")
+
+
+def where_errors_are():
+    if WINDOWS:
+        return (f"The brain's errors are in {os.path.join(HERE, 'brain_errors.log')}; running"
+                "  python brain\\doorbell.py  in a console shows the doorbell's.")
+    if os.path.exists(SERVICE):
+        return "Its log:  journalctl --user -u puki -e"
+    return "Run  python3 brain/doorbell.py  to see why."
+
+
+def doorbell_config():
+    """The doorbell's settings as doorbell.py reads them: config.example.json, then config.json."""
+    with open(os.path.join(HERE, "config.example.json"), encoding="utf-8") as f:
+        cfg = json.load(f)
+    local = os.path.join(HERE, "config.json")
+    if os.path.exists(local):
+        with open(local, encoding="utf-8") as f:
+            cfg.update(json.load(f))
+    return cfg
 
 
 def lan_address():
@@ -1131,7 +1195,7 @@ def main():
         pythonw, doorbell = setup_autostart(dry)
     else:
         say("    skipped")
-    step(8, "Start Puki")
+    step(8, "Start Puki and hear it talk")
     start_puki(pythonw, doorbell, dry) if run("start") and not args.no_start else say("    skipped")
     if dry:
         return

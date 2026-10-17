@@ -51,7 +51,10 @@ It shows what it will do, then:
 5. adds the home-network-only firewall rule (Windows asks for permission once), and tells
    you if your Wi-Fi is set to *Public*;
 6. makes Puki start at login, starts it, and opens the [dashboard](#dashboard) with the
-   pairing code and QR code.
+   pairing code and QR code;
+7. wakes the brain and asks it for a line in Hebrew and in English, the way the tablet does
+   (HTTPS, the pairing code), and prints what Puki said. If Puki doesn't talk, the setup
+   stops there and says where the error is.
 
 Before it starts, it shows how much it will download and about how long that takes (from a
 short speed test). Everything it downloads (the models, llama.cpp, uv, the BlueTTS code) is
