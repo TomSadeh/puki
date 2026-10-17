@@ -232,4 +232,7 @@ key reaches them only in a release signed with the old one.
 
 The original build plan is done (all islands, My Day, canvas, stickers, bedtime, levels), and so
 are the security pass and the first new toys (0.6: Peekaboo barn, Echo Puki, the calm goodbye).
-What's next is in ROADMAP.md.
+0.7 is most of v1: counting one by one, shadow match, drawing modes with an eraser and a camera,
+the cake and the car wash, offline Puki, Dance and Freeze, tracing, a redrawn dress-up and bath,
+safety nets for what the child says (PC and phone), מלשין לרנינג, signed PC updates, and a
+hygiene, security and performance pass. What's next is in ROADMAP.md (the Play launch).
