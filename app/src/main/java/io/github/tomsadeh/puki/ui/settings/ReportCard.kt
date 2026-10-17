@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.tomsadeh.puki.audio.Companion
@@ -46,14 +47,16 @@ fun ReportCard(companion: Companion) {
             .width(400.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(BilingualText("מלשין לרנינג", "What Puki said").resolve(language), style = MaterialTheme.typography.titleMedium, color = EarthBrown)
+        Text("🚩 " + BilingualText("מלשין לרנינג", "What Puki said").resolve(language), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = EarthBrown)
         Text(
-            BilingualText(
-                "מה פוקי אמר. משהו לא היה בסדר? 🚩 שומר את זה בבית, כדי לתקן את פוקי.",
-                "Something wasn't right? 🚩 keeps it at home, to fix Puki by."
-            ).resolve(language),
+            BilingualText("פוקי אמר משהו לא בסדר? ספרו לנו!", "Did Puki say something wrong? Tell us!").resolve(language),
+            style = MaterialTheme.typography.bodyLarge,
+            color = EarthBrown
+        )
+        Text(
+            BilingualText("לוחצים על 🚩 ליד המשפט. הדיווח נשמר אצלכם בבית.", "Tap 🚩 next to the line. Reports stay in your home.").resolve(language),
             style = MaterialTheme.typography.bodyMedium,
-            color = EarthBrown.copy(alpha = 0.8f)
+            color = EarthBrown.copy(alpha = 0.7f)
         )
         if (lines.isEmpty()) {
             Text(
