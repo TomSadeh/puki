@@ -160,7 +160,7 @@ everything (about 10 GB), sets up the firewall and autostart, and shows the pair
 [brain/README.md](brain/README.md). Ideally the PC has an NVIDIA GPU with about 6 GB of free
 VRAM (it falls back to the CPU otherwise).
 Pair the app by scanning the QR code on the PC's dashboard (http://127.0.0.1:8793). The code
-is also in `brain/pairing_code.txt`, to type in with the PC's address instead.
+is also in `~/puki-brain/brain/pairing_code.txt`, to type in with the PC's address instead.
 
 **Personal voice lines:** the game can say the child's name ("כל הכבוד, ___!"). The first time
 the companion is reachable, Puki records these lines onto the tablet, so they also play when

@@ -47,8 +47,8 @@ def main():
         f.write(f"{rev or 'dev'} {time.strftime('%Y-%m-%d %H:%M')}\n")
 
     sys.path.insert(0, HERE)
-    import tray
-    data = [f"{os.path.join(HERE, f)};." for f in tray.BRAIN_FILES] + [f"{stamp};."]
+    import bundle
+    data = [f"{os.path.join(HERE, f)};." for f in bundle.FILES] + [f"{stamp};."]
     cmd = [PY, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed", "--name", "Puki", "--icon", ico,
            "--distpath", os.path.join(HERE, "dist"), "--workpath", os.path.join(BUILD, "work"),
            "--specpath", BUILD, "--paths", HERE,
