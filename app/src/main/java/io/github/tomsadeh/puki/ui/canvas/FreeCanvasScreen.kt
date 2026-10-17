@@ -32,7 +32,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -63,7 +62,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
@@ -78,6 +79,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Density
@@ -100,7 +102,8 @@ import kotlinx.coroutines.Dispatchers
 import java.io.ByteArrayOutputStream
 import kotlin.math.sin
 
-data class DrawPath(val path: List<Offset>, val color: Color, val strokeWidth: Float) {
+/** A stroke of paint, or of the eraser ([erase]), which rubs out what's under it. */
+data class DrawPath(val path: List<Offset>, val color: Color, val strokeWidth: Float, val erase: Boolean = false) {
     /** The smoothed outline, built once (finished strokes never change), not on every frame. */
     val smooth: Path by lazy {
         // Through the midpoints, so lines look painted, not jagged
@@ -125,6 +128,9 @@ private val rightColors = listOf(Color(0xFFF48FB1), Color(0xFF8D6E63), Color(0xF
 /** Thin and fat brushes, as stroke widths in dp. */
 private val brushWidths = listOf(10f, 28f)
 
+/** The eraser is fatter than the fat brush: rubbing out is for big mistakes. */
+private const val EraserDp = 44f
+
 /** The stamp tool's stickers: each tap puts down the next one. */
 private val stampIcons = listOf(
     R.drawable.ic_sticker_star, R.drawable.ic_sticker_heart, R.drawable.ic_sticker_flower,
@@ -145,6 +151,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
     var selectedColor by remember { mutableStateOf(leftColors[0]) }
     var brushDp by remember { mutableStateOf(brushWidths[1]) }
     var stamping by remember { mutableStateOf(false) }  // the stamp tool instead of a brush
+    var erasing by remember { mutableStateOf(false) }  // the eraser instead of a brush
     val paths = remember { mutableStateListOf<DrawPath>() }
     val stamps = remember { mutableStateListOf<Stamp>() }
     var nextStamp by remember { mutableIntStateOf(0) }
@@ -157,7 +164,8 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
     val sfxPlayer = LocalSfxPlayer.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val brushSize = with(density) { brushDp.dp.toPx() }
+    val context = LocalContext.current
+    val brushSize = with(density) { (if (erasing) EraserDp else brushDp).dp.toPx() }
     val stampSize = with(density) { 96.dp.toPx() }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val paperSize = Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
@@ -188,6 +196,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
         if (traceGlyph == null || traced) return@LaunchedEffect
         if (paths.isEmpty()) { covered.fill(false); return@LaunchedEffect }
         val stroke = paths.last()
+        if (stroke.erase) return@LaunchedEffect
         val reach = stroke.strokeWidth / 2 + traceStep * 0.6f
         traceSamples.forEachIndexed { i, s ->
             if (!covered[i] && stroke.path.any { (it - s).getDistance() < reach }) covered[i] = true
@@ -213,22 +222,37 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
         stamps.add(Stamp(icon, offset, stampSize, (offset.x * 7 + offset.y * 13) % 30f - 15f))
         sfxPlayer.play(Sfx.POP, 0.7f)
     }
+
+    /** The eraser at [at] lifts off any sticker it touches (they sit on top of the paint). */
+    fun eraseStampsAt(at: Offset) {
+        stamps.removeAll { (it.center - at).getDistance() < it.size * 0.45f + brushSize / 2 }
+    }
+
+    fun wipe() {
+        paths.clear()
+        stamps.clear()
+        fills.clear()
+        currentPath.clear()
+        sfxPlayer.play(Sfx.WHOOSH)
+    }
+    var flash by remember { mutableStateOf(false) }  // a camera flash over the paper when it's saved
     var looking by remember { mutableStateOf(false) }
     var lastLooked by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) { companion?.wake() }
 
     fun pickColor(color: Color) {
         selectedColor = color
+        erasing = false  // a pot of paint means painting again
         sfxPlayer.play(Sfx.POP, 0.6f)
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        // Pots and tool plates sized so each side column fits: a round button and six of them
-        val unit = ((maxHeight - 32.dp - 64.dp) / 6.6f).coerceIn(48.dp, 92.dp)
+        // Pots and tool plates sized so each side column fits: a round button and seven of them
+        val unit = ((maxHeight - 32.dp - 64.dp) / 7.6f).coerceIn(48.dp, 92.dp)
         Canvas(modifier = Modifier.fillMaxSize()) { drawStudioWall() }
 
         Row(modifier = Modifier.fillMaxSize()) {
-            // Left: back, then the paint pots
+            // Left: back, the paint pots, and the camera that saves the drawing
             Column(
                 modifier = Modifier.width(136.dp).fillMaxHeight().padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -246,6 +270,30 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                 leftColors.forEachIndexed { i, color ->
                     PaintPot(color = color, selected = color == selectedColor, index = i, height = unit, onClick = { pickColor(color) })
                 }
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .shadow(6.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Color(0xFF81D4FA))
+                        .clickable {
+                            if (canvasSize.width == 0 || flash) return@clickable
+                            flash = true
+                            sfxPlayer.play(Sfx.SUCCESS, 0.7f)
+                            scope.launch {
+                                // As it looks on the easel: the paper and the letter to trace under the artwork
+                                val bitmap = snapshot(canvasSize, density, maxSide = 2048, paper = {
+                                    traceGlyph?.let { drawTraceGlyph(it) }
+                                }, over = { traceGlyph?.let { drawTraceEdge(it) } }) {
+                                    drawArtwork(paths, pageShapes, fills, stamps, stampPainters)
+                                }
+                                withContext(Dispatchers.IO) { saveDrawing(context, bitmap.toPng()) }
+                                delay(150)
+                                flash = false
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) { Text("📸", fontSize = 30.sp) }
             }
 
             // The easel with a sheet of paper taped to it
@@ -270,12 +318,16 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                             .clip(RoundedCornerShape(6.dp))
                             .background(PaperColor)
                             .onSizeChanged { canvasSize = it }
-                            .pointerInput(selectedColor, brushSize, stamping, pageShapes) {
-                                // A tap stamps a sticker, fills the shape it lands in, or leaves a dot of paint
+                            .pointerInput(selectedColor, brushSize, stamping, erasing, pageShapes) {
+                                // A tap stamps a sticker, rubs out a spot, fills the shape it lands in, or leaves a dot of paint
                                 detectTapGestures { offset ->
                                     val shape = shapeAt(pageShapes, offset)
                                     when {
                                         stamping -> stampAt(offset)
+                                        erasing -> {
+                                            eraseStampsAt(offset)
+                                            paths.add(DrawPath(listOf(offset), PaperColor, brushSize, erase = true))
+                                        }
                                         shape >= 0 -> {
                                             fills[shape] = selectedColor
                                             sfxPlayer.play(Sfx.POP, 0.8f)
@@ -284,7 +336,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                     }
                                 }
                             }
-                            .pointerInput(selectedColor, brushSize, stamping) {
+                            .pointerInput(selectedColor, brushSize, stamping, erasing) {
                                 var lastStamp = Offset.Zero
                                 detectDragGestures(
                                     onDragStart = { offset ->
@@ -292,6 +344,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                             stampAt(offset)
                                             lastStamp = offset
                                         } else {
+                                            if (erasing) eraseStampsAt(offset)
                                             currentPath.clear(); currentPath.add(offset)
                                         }
                                     },
@@ -304,29 +357,38 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                                                 lastStamp = change.position
                                             }
                                         } else {
+                                            if (erasing) eraseStampsAt(change.position)
                                             currentPath.add(change.position)
                                         }
                                     },
                                     onDragEnd = {
                                         if (currentPath.size > 1) {
-                                            paths.add(DrawPath(currentPath.toList(), selectedColor, brushSize))
+                                            paths.add(DrawPath(currentPath.toList(), selectedColor, brushSize, erase = erasing))
                                         }
                                         currentPath.clear()
                                     }
                                 )
                             }
                     ) {
-                        // The paper and the finished strokes, in a layer redrawn only when a stroke is added
+                        // The paper, with the letter to trace
                         Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
                             drawPaperGrain()
                             traceGlyph?.let { drawTraceGlyph(it) }
+                        }
+                        // The finished strokes, in a layer of their own (the eraser clears it down to the
+                        // paper), redrawn only when a stroke is added, or as the eraser moves
+                        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }) {
                             drawArtwork(paths, pageShapes, fills, stamps, stampPainters)
-                            traceGlyph?.let { drawTraceEdge(it) }
+                            if (erasing) drawStroke(DrawPath(currentPath, PaperColor, brushSize, erase = true))
                         }
                         // The stroke being drawn right now (the only thing redrawn as the finger moves)
                         Canvas(modifier = Modifier.fillMaxSize()) {
-                            drawStroke(DrawPath(currentPath, selectedColor, brushSize))
+                            if (!erasing) drawStroke(DrawPath(currentPath, selectedColor, brushSize))
+                            traceGlyph?.let { drawTraceEdge(it) }
                         }
+                        // The camera flash when the drawing is saved
+                        val flashAlpha by animateFloatAsState(if (flash) 0.85f else 0f, tween(if (flash) 80 else 500), label = "flash")
+                        if (flashAlpha > 0f) Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = flashAlpha)))
                     }
                 }
                 // Strips of tape holding the paper's corners
@@ -375,7 +437,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Right: clear (long press, for the grown-up), brushes and three more pots
+            // Right: wipe the paper clean, the next page, brushes, stamps, the eraser and three more pots
             Column(
                 modifier = Modifier.width(136.dp).fillMaxHeight().padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -388,15 +450,7 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                             .shadow(6.dp, CircleShape)
                             .clip(CircleShape)
                             .background(Color(0xFFFF8A80))
-                            .combinedClickable(
-                                onClick = { },
-                                onLongClick = {
-                                    paths.clear()
-                                    stamps.clear()
-                                    fills.clear()
-                                    sfxPlayer.play(Sfx.WHOOSH)
-                                }
-                            ),
+                            .clickable { wipe() },
                         contentAlignment = Alignment.Center
                     ) {
                         Image(painter = painterResource(R.drawable.ic_stamp_trash), contentDescription = null, modifier = Modifier.size(36.dp))
@@ -429,9 +483,10 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                     }
                 }
                 brushWidths.forEachIndexed { i, width ->
-                    ToolPlate(selected = !stamping && brushDp == width, index = i, size = unit, onClick = {
+                    ToolPlate(selected = !stamping && !erasing && brushDp == width, index = i, size = unit, onClick = {
                         brushDp = width
                         stamping = false
+                        erasing = false
                         sfxPlayer.play(Sfx.POP, 0.6f)
                     }) {
                         Canvas(modifier = Modifier.size(unit * 0.84f)) { drawBrush(selectedColor, fat = i == 1) }
@@ -439,12 +494,20 @@ fun FreeCanvasScreen(onBack: () -> Unit) {
                 }
                 ToolPlate(selected = stamping, index = 2, size = unit, onClick = {
                     stamping = true
+                    erasing = false
                     sfxPlayer.play(Sfx.POP, 0.6f)
                 }) {
                     Image(painter = painterResource(stampOrder[nextStamp % stampOrder.size]), contentDescription = null, modifier = Modifier.size(unit * 0.64f))
                 }
+                ToolPlate(selected = erasing, index = 3, size = unit, onClick = {
+                    erasing = true
+                    stamping = false
+                    sfxPlayer.play(Sfx.POP, 0.6f)
+                }) {
+                    Canvas(modifier = Modifier.size(unit * 0.7f)) { drawEraser() }
+                }
                 rightColors.forEachIndexed { i, color ->
-                    PaintPot(color = color, selected = color == selectedColor, index = i + 6, height = unit, onClick = { pickColor(color) })
+                    PaintPot(color = color, selected = color == selectedColor, index = i + 7, height = unit, onClick = { pickColor(color) })
                 }
             }
         }
@@ -625,16 +688,31 @@ private fun DrawScope.drawBrush(color: Color, fat: Boolean) {
     }
 }
 
+/** A pink rubber eraser with a blue paper sleeve, lying at a slant. */
+private fun DrawScope.drawEraser() {
+    val w = size.width
+    val h = size.height
+    rotate(-30f, pivot = Offset(w / 2, h / 2)) {
+        val top = h * 0.3f
+        val bodyH = h * 0.4f
+        drawRoundRect(Color(0xFFF48FB1), Offset(w * 0.08f, top), Size(w * 0.84f, bodyH), CornerRadius(w * 0.08f))
+        drawRect(Color(0xFF64B5F6), Offset(w * 0.5f, top), Size(w * 0.3f, bodyH))
+        drawRoundRect(Color.White.copy(alpha = 0.45f), Offset(w * 0.14f, top + bodyH * 0.15f), Size(w * 0.28f, bodyH * 0.18f), CornerRadius(w * 0.04f))
+    }
+}
+
 // ---------- The artwork ----------
 
 private fun DrawScope.drawStroke(stroke: DrawPath) {
     val pts = stroke.path
     if (pts.isEmpty()) return
+    // The eraser clears its own layer (the artwork's), so the paper underneath shows again
+    val blend = if (stroke.erase) BlendMode.Clear else DrawScope.DefaultBlendMode
     if (pts.size == 1) {
-        drawCircle(stroke.color, stroke.strokeWidth / 2, pts[0])
+        drawCircle(stroke.color, stroke.strokeWidth / 2, pts[0], blendMode = blend)
         return
     }
-    drawPath(stroke.smooth, stroke.color, style = Stroke(width = stroke.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    drawPath(stroke.smooth, stroke.color, style = Stroke(width = stroke.strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = blend)
 }
 
 /** The page's paint, the strokes, the page's lines over them, and the stickers on top. */
@@ -658,14 +736,32 @@ private fun DrawScope.drawArtwork(
     }
 }
 
-/** The drawing scaled down to at most 640 px (plenty for Gemma to see it). */
-private fun snapshot(size: IntSize, density: Density, artwork: DrawScope.() -> Unit): ImageBitmap {
-    val factor = 640f / maxOf(size.width, size.height)
-    val bitmap = ImageBitmap((size.width * factor).toInt(), (size.height * factor).toInt())
-    CanvasDrawScope().draw(density, LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(bitmap),
-        Size(bitmap.width.toFloat(), bitmap.height.toFloat())) {
-        drawRect(Color.White)
+/**
+ * The drawing on white paper, scaled to at most [maxSide] px (640 is plenty for Gemma to see it):
+ * [paper] under the artwork, which the eraser doesn't clear, and [over] on top of it.
+ */
+private fun snapshot(
+    size: IntSize,
+    density: Density,
+    maxSide: Int = 640,
+    paper: DrawScope.() -> Unit = {},
+    over: DrawScope.() -> Unit = {},
+    artwork: DrawScope.() -> Unit
+): ImageBitmap {
+    val factor = minOf(1f, maxSide.toFloat() / maxOf(size.width, size.height))
+    val w = (size.width * factor).toInt()
+    val h = (size.height * factor).toInt()
+    // The artwork on its own clear layer first (the eraser clears it), then onto the paper
+    val art = ImageBitmap(w, h)
+    CanvasDrawScope().draw(density, LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(art), Size(w.toFloat(), h.toFloat())) {
         scale(factor, factor, pivot = Offset.Zero) { artwork() }
+    }
+    val bitmap = ImageBitmap(w, h)
+    CanvasDrawScope().draw(density, LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(bitmap), Size(w.toFloat(), h.toFloat())) {
+        drawRect(Color.White)
+        scale(factor, factor, pivot = Offset.Zero) { paper() }
+        drawImage(art)
+        scale(factor, factor, pivot = Offset.Zero) { over() }
     }
     return bitmap
 }
