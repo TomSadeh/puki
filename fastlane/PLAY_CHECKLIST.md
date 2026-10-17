@@ -91,25 +91,32 @@ purchases. Expected rating: everyone / 3+.
 
 **Data safety:** what the form asks, and Puki's answers. Play counts data as "collected" when it
 leaves the device. The child's voice, drawings and name are sent to the family's own PC, not to
-the developer. Declaring them as collected-but-ephemeral is the honest, safe choice.
+the developer, but that PC is off the device, so declare them. Recordings are never kept
+(ephemeral); the PC's memory keeps the child's words as text and the name (not ephemeral).
 
 - Does the app collect or share any of the required user data types? **Yes**
 - Is all user data encrypted in transit? **Yes** (HTTPS with a pinned certificate)
-- Do you provide a way for users to request that their data be deleted? **No server-side data is
-  kept.** Answer per the form's options: data isn't stored, and uninstalling deletes everything on
-  the device.
-- Data types, each: collected **yes**, shared **no**, **processed ephemerally: yes**, **optional**
-  (only with the companion turned on), purpose **App functionality**:
-  - **Audio → Voice or sound recordings** (the child talking to Puki, Say it, the echo game)
-  - **Photos and videos → Photos**, if Play counts drawings here (the drawing Puki looks at)
-  - **Personal info → Name** (the child's name, so Puki can say it)
-- Not collected: location, contacts, identifiers, app activity, analytics, crash logs, financial
-  info, messages, health, calendar, web history, device IDs.
+- Do you provide a way for users to request that their data be deleted? Nothing is kept by the
+  developer. Answer per the form's options: uninstalling deletes everything on the device, and
+  the family deletes Puki's folder (or its `memory` folder) on their PC.
+- Data types, each: collected **yes**, shared **no**, **optional** (only with the companion
+  turned on), purpose **App functionality**:
+  - **Audio → Voice or sound recordings**: processed ephemerally **yes** (talking to Puki, Say it,
+    answering a game out loud, the echo game; no recording is kept)
+  - **Photos and videos → Photos**, if Play counts drawings here: ephemeral **yes** (the drawing
+    Puki looks at)
+  - **Personal info → Name**: ephemeral **no** (the child's name, so Puki can say it; the PC's
+    memory may keep it)
+  - **App activity → Other user-generated content**: ephemeral **no** (the words the child says,
+    as text, in Puki's memory on the family's PC: the log, diary and profile)
+- Not collected: location, contacts, identifiers, analytics, crash logs, financial info,
+  messages, health, calendar, web history, device IDs.
 
 **News app:** No. **COVID-19:** No. **Government app:** No. **Financial features:** none.
 **Health:** none.
 
-**Permissions declarations:** RECORD_AUDIO (talking to Puki and the voice games) and CAMERA
+**Permissions declarations:** RECORD_AUDIO (talking to Puki, the voice games, and answering a
+game's question out loud) and CAMERA
 (scanning the pairing QR code). No sensitive-permission forms are needed for the play flavor.
 
 ## 8. After it's public

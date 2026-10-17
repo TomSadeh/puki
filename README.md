@@ -113,8 +113,11 @@ BlueTTS voice and the Hebrew Whisper) and switches over. On the phone Gemma runs
   once). Requests without it are refused, and a device that keeps guessing is locked out.
 - **The child's name** lives only on the tablet and your PC, and the files that hold it are
   git-ignored.
-- **The live log** of what the child said is kept in the PC's memory only, and is gone when
-  the server stops. The dashboard is never served to the network.
+- **The live log** on the dashboard is kept in the PC's memory only, and is gone when the
+  server stops. The dashboard is never served to the network.
+- **Puki's memory** (a log of playing, a diary and a short profile, as text) stays in the
+  brain's `memory` folder on your PC and is never sent anywhere. Recordings are never kept,
+  careful moments (hurt, scared) aren't logged, and `"memory": false` in config.json turns it off.
 - **Firewall:** the setup opens one port (8790) for home networks only. Keep your home Wi-Fi
   set to *Private* in Windows, and don't give Python itself a firewall exception.
 - **Signed releases:** every APK on the releases page (from 0.4.1) is signed with Puki's release
