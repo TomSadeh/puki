@@ -37,6 +37,7 @@ Standard library only, so it runs with any Python 3 (making the certificate, onc
 brain's Python, see tls.py).
 """
 
+import base64
 import hmac
 import json
 import os
@@ -54,6 +55,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dashboard
+import packs
 from common import load_config as _load_config, normalize_code, pairing_code, pair_url, port_open, pretty_code, write_private
 from common import lan_address as _lan_address
 import reports
@@ -136,6 +138,8 @@ PAIRING_CODE = load_pairing_code(new="--new-code" in sys.argv)
 CERT_FP = ""  # the HTTPS certificate's fingerprint, set by start()
 GUARD = Guard()
 EVENTS = dashboard.Events()  # what the dashboard's log shows; memory only
+PACK = packs.Pack(HERE)  # lines for the game's moments, written at night, approved by a parent
+CHILD = {"name": "", "gender": "girl"}  # who's playing, as the app last said (for the night's lines)
 
 
 GPU = {"error": None, "lock": threading.Lock()}  # why nvidia-smi fails, while it does
@@ -321,6 +325,8 @@ class Brain:
         while True:
             time.sleep(20)
             self.check()
+            if PACK_MAKER.due():
+                PACK_MAKER.start("the nightly run")
             if self.state == "ready" and time.time() - self.last_used > CFG["idle_minutes"] * 60:
                 log("idle, putting brain to sleep")
                 self.stop(f"idle for {CFG['idle_minutes']} minutes")
@@ -470,8 +476,22 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self._authorized():
             return
-        if self.path == "/health":
+        path, _, query = self.path.partition("?")
+        if path == "/health":
             self._json(200, {"brain": BRAIN.state})
+        elif path == "/pack":
+            # The approved lines the tablet keeps, to play without waking the brain
+            self._json(200, PACK.manifest())
+        elif path == "/pack/audio":
+            audio = PACK.audio(urllib.parse.parse_qs(query).get("id", [""])[0])
+            if audio is None:
+                self._json(404, {"error": "not found"})
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "audio/ogg")
+            self.send_header("Content-Length", str(len(audio)))
+            self.end_headers()
+            self.wfile.write(audio)
         else:
             self._json(404, {"error": "not found"})
 
@@ -513,6 +533,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_response(503)
                 self.end_headers()
                 return
+            if path == "/say":
+                note_situation(self.path, body)
             started = time.time()
             event = describe_request(path, self.path, body)
             event["ip"] = self.client_address[0]
@@ -593,6 +615,94 @@ def describe_reply(path, headers, data):
         except ValueError:
             pass
     return ""
+
+
+def note_situation(full_path, body):
+    """Counts a /say situation for the night's lines (see packs.py): the app's own words for a
+    moment in a game, never the child's. One that names the child is left out of the pack."""
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(full_path).query)
+    name = query.get("name", [""])[0].strip()
+    gender = query.get("gender", [""])[0]
+    if gender in ("girl", "boy"):
+        CHILD["name"], CHILD["gender"] = name, gender
+    try:
+        req = json.loads(body or b"{}")
+    except ValueError:
+        return
+    situation = str(req.get("situation", ""))
+    if name and name in situation:
+        return
+    PACK.note_situation(situation, "en" if req.get("lang") == "en" else "he", gender)
+
+
+class PackMaker:
+    """Writes new pack lines while the brain has nothing else to do: at pack_hour (3 at night by
+    default; null turns it off) after 20 quiet minutes, or when the parent asks on the dashboard."""
+
+    def __init__(self):
+        self.running = False
+        self.last_day = None
+        self.made = 0
+
+    def due(self):
+        hour = CFG.get("pack_hour", 3)
+        if hour is None or self.running:
+            return False
+        now = time.localtime()
+        quiet = time.time() - BRAIN.last_used > 20 * 60
+        return now.tm_hour == int(hour) and self.last_day != now.tm_yday and quiet
+
+    def start(self, why):
+        if self.running:
+            return False
+        self.running = True
+        self.last_day = time.localtime().tm_yday
+        threading.Thread(target=self._run, args=(why,), daemon=True).start()
+        return True
+
+    def _run(self, why):
+        try:
+            wanted = PACK.wanted(CFG.get("pack_lines_per_moment", 3), CFG.get("pack_moments_per_night", 20))
+            if not wanted:
+                EVENTS.add("pack", text="no new moments to write lines for")
+                return
+            log(f"writing pack lines for {len(wanted)} moments ({why})")
+            EVENTS.add("pack", text=f"writing new lines for {len(wanted)} moments ({why})")
+            BRAIN.wake()
+            deadline = time.time() + CFG["startup_timeout_s"]
+            while BRAIN.state != "ready" and time.time() < deadline:
+                time.sleep(1)
+            if BRAIN.state != "ready":
+                EVENTS.add("pack", text="the brain didn't wake; no new lines this time")
+                return
+            made = 0
+            for key, s, n in wanted:
+                if BRAIN.state != "ready":
+                    break
+                BRAIN.touch()
+                q = urllib.parse.urlencode({"name": CHILD["name"], "gender": s["gender"]})
+                body = json.dumps({"situation": s["situation"], "lang": s["lang"], "n": n,
+                                   "avoid": PACK.known_texts(key)}, ensure_ascii=False).encode()
+                req = urllib.request.Request(f"{BRAIN_URL}/pack/make?{q}", data=body, headers={
+                    "Content-Type": "application/json", "X-Puki-Brain-Token": BRAIN.token})
+                try:
+                    with urllib.request.urlopen(req, timeout=300) as r:
+                        lines = json.load(r).get("lines", [])
+                except Exception as e:
+                    log(f"pack lines failed ({type(e).__name__})")
+                    continue
+                for line in lines:
+                    if PACK.add(key, line.get("text", ""), base64.b64decode(line.get("audio", ""))):
+                        made += 1
+            self.made = made
+            log(f"wrote {made} pack lines")
+            EVENTS.add("pack", text=f"{made} new lines are waiting for you to check")
+        finally:
+            self.running = False
+            BRAIN.touch()
+
+
+PACK_MAKER = PackMaker()
 
 
 def request_deadline(headers):
@@ -680,6 +790,20 @@ class DashboardApp:
                     event.get("lang", "he"), event.get("game", ""))
         EVENTS.add("report", text="reported from the dashboard", reply=event["reply"], heard=event.get("heard", ""))
         return True
+
+    def pack(self):
+        """The lines waiting for the parent, and the pack's counts."""
+        return {"pending": [{k: l[k] for k in ("id", "situation", "lang", "gender", "text")} for l in PACK.pending()],
+                "counts": PACK.counts(), "running": PACK_MAKER.running, "hour": CFG.get("pack_hour", 3)}
+
+    def pack_decide(self, line_id, approve):
+        return PACK.decide(line_id, approve)
+
+    def pack_make(self):
+        return PACK_MAKER.start("asked from the dashboard")
+
+    def pack_audio(self, line_id):
+        return PACK.audio(line_id, approved_only=False)
 
     def set_idle(self, minutes):
         CFG["idle_minutes"] = minutes

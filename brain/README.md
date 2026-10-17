@@ -210,6 +210,8 @@ While the doorbell runs, **http://127.0.0.1:8793** on the PC shows:
 - the pairing code, the PC's address, and a QR code with both (for the app to scan once it
   can), plus a button that makes a new code;
 - how many idle minutes before it sleeps (saved to `config.json`);
+- **Puki's new lines:** lines for the games' moments, written at night (see below), waiting for
+  you to listen and approve (✓) or turn down (✗); "Write lines now" runs the writing at once;
 - a live log: what each game asked, what Whisper heard, what Puki said and how long it took,
   and any wrong pairing codes. If `nvidia-smi` starts failing (so the brain wakes on the CPU
   next to a GPU), the log says so, and again when it works; the free GPU memory line shows the
@@ -219,6 +221,21 @@ The dashboard is served on 127.0.0.1 only, never to the home network, because th
 the child's words. The log lives in memory and disappears when the doorbell stops. Pages from
 other websites can't read or use it (requests must address it as 127.0.0.1/localhost, and its
 buttons need a header a foreign page can't send). The port is `dashboard_port` in the config.
+
+## Line packs: Puki's lines, written at night
+
+The games ask Puki to react to moments ("in the animal game: the cow found its food"). The
+doorbell counts each such moment (text the app writes, never the child's words; one that names
+the child is skipped). At `pack_hour` (3 at night; `null` turns it off), after 20 quiet minutes,
+the brain writes up to `pack_lines_per_moment` (3) lines for each of the `pack_moments_per_night`
+(20) most common moments that don't have enough yet. Each line has to pass the line filter,
+`reply_ok`, and a one-token check on the model's own probabilities (`pack_line_threshold`,
+0.9); the ones that pass are voiced and wait on the dashboard. Only approved lines go to the
+tablet: it fetches them with their audio (`GET /pack`, `GET /pack/audio?id=`, with the pairing
+code) and plays one at once when that moment comes up, instead of the recorded fallback when
+the brain is asleep or the PC is off, and half the time even when it's awake. A turned-down line
+is never said, and never written again. They're kept in `pack.json` and `pack/` next to the
+brain (git-ignored; a line may say the child's name), and in the tablet's own storage.
 
 ## Trying it
 

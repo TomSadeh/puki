@@ -51,6 +51,17 @@ class Companion(
     private val _speaking = MutableStateFlow(false)
     val speaking: StateFlow<Boolean> = _speaking
 
+    /** Lines for the game's moments that a parent approved on the PC, kept here with their audio. */
+    private val pack = LinePack(context.filesDir) { path -> pcBrain.request("GET", path, null, 8000, "") }
+    private var packSynced = 0L
+
+    /** Brings the approved lines up to date, at most once an hour (the PC answers even asleep). */
+    private fun syncPack() {
+        if (onDevice || System.currentTimeMillis() - packSynced < 60 * 60 * 1000L) return
+        packSynced = System.currentTimeMillis()
+        scope.launch(Dispatchers.IO) { runCatching { pack.sync() } }
+    }
+
     /** True while the parrot listens on its own (after asking a question). */
     private val _listening = MutableStateFlow(false)
     val listening: StateFlow<Boolean> = _listening
@@ -183,6 +194,7 @@ class Companion(
         if (address.isBlank() && !isEmulator() && !onDevice) return  // not set up yet
         wakeJob = scope.launch(Dispatchers.IO) {
             val state = health() ?: run { _status.value = CompanionStatus.OFF; return@launch }
+            syncPack()
             if (state == "ready") {
                 _status.value = CompanionStatus.READY
                 refreshNameLines()
@@ -209,11 +221,35 @@ class Companion(
 
     private fun react(situation: String, fallback: () -> Unit) {
         remember(situation)
+        // A line the parent approved for this moment plays at once, with no wait for the brain;
+        // when the brain is awake, half the time it writes a fresh one instead
+        val approved = pack.pick(situation, lang(), childGirl)
         if (!isReady) {
-            fallback()
+            if (approved != null) playApproved(situation, approved) else fallback()
             return
         }
-        scope.launch { if (!say(situation)) fallback() }
+        if (approved != null && kotlin.random.Random.nextBoolean()) {
+            playApproved(situation, approved)
+            return
+        }
+        scope.launch {
+            if (!say(situation)) {
+                if (approved != null) playApproved(situation, approved) else fallback()
+            }
+        }
+    }
+
+    /** Plays an approved pack line, and lists it on the report card like any other. */
+    private fun playApproved(situation: String, approved: Pair<LinePack.Line, File>) {
+        val (line, file) = approved
+        _recentLines.value = (_recentLines.value + SaidLine(System.nanoTime(), line.text, "", situation, game, lang())).takeLast(20)
+        _speaking.value = true
+        voicePlayer.playFile(file)
+        scope.launch {
+            delay(200)
+            while (voicePlayer.isPlaying()) delay(120)
+            _speaking.value = false
+        }
     }
 
     /** The child tapped the parrot. */

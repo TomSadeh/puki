@@ -70,6 +70,12 @@ cooking, the car wash, offline Puki, Dance and Freeze, tracing)
   regular GitHub releases instead of pre-releases.
 - A project status note in the README, issue templates, and GitHub Discussions for questions.
 
+**Puki grows with her (started)**
+- **Line packs (done):** at night the PC writes lines for the games' moments, checks them, voices
+  them, and the parent approves them on the dashboard; the tablet plays approved lines at once,
+  even with the PC off. Next: packs for bedtime stories, new words for "Say it with Puki", and
+  lines that follow her age.
+
 ## After v1: ideas for contributors
 
 1. **Rewards and the parent's view** (M each)

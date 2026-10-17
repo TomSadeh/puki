@@ -53,7 +53,8 @@ app/src/main/java/io/github/tomsadeh/puki/
 ├── update/Updater.kt            # In-app updates from GitHub releases
 └── theme/
 brain/                           # The PC brain (Python): doorbell.py (HTTPS), brain.py, persona.py, safety.py, tls.py,
-                                 #   common.py (pairing, private files), install.py + pins.json (make_pins.py),
+                                 #   common.py (pairing, private files), packs.py (night-written lines a parent
+                                 #   approves), install.py + pins.json (make_pins.py),
                                  #   update_signers, bundle.py, tray.py / build_exe.py (Puki.exe)
 scripts/                         # Voices (generate/check), release.py, safety_eval.py (the stress test),
                                  #   sync_safety_kt.py (safety.py's word lists -> Safety.kt)

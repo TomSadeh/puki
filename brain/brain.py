@@ -65,7 +65,7 @@ LLAMA_HEADERS = {"Content-Type": "application/json", **({"Authorization": f"Bear
 recent = deque(maxlen=6)
 
 
-def ask_gemma(situation, lang, listening=False):
+def ask_gemma(situation, lang, listening=False, avoid=None):
     kind = "food" if any(w in situation for w in FOOD_WORDS) else "other"
     # A suggested opening sound keeps game lines varied; not for answering the child, where a
     # forced "Hooray!" can land on "I fell down"
@@ -74,13 +74,13 @@ def ask_gemma(situation, lang, listening=False):
     if lang == "he":
         if opener:
             hint += f"\n(תתחיל את התשובה ב-'{opener}!')"
-        if recent:
-            hint += "\n(אל תחזור על מה שאמרת קודם: " + " / ".join(recent) + ")"
+        if avoid or recent:
+            hint += "\n(אל תחזור על מה שאמרת קודם: " + " / ".join(avoid or recent) + ")"
     else:
         if opener:
             hint += f"\n(Start your reply with '{opener}!')"
-        if recent:
-            hint += "\n(Don't repeat what you said before: " + " / ".join(recent) + ")"
+        if avoid or recent:
+            hint += "\n(Don't repeat what you said before: " + " / ".join(avoid or recent) + ")"
     messages = [{"role": "system", "content": system_prompt(lang) + safety.system_extra(lang, persona.GIRL)}]
     for user, reply in examples(lang):
         messages += [{"role": "user", "content": user}, {"role": "assistant", "content": reply}]
@@ -88,12 +88,10 @@ def ask_gemma(situation, lang, listening=False):
     return chat(messages)
 
 
-def gate(heard):
-    """The model's one-token read of what the child said (greedy): the category to answer with
-    a fixed reply (see safety.py), or None when it's ordinary play. P(ordinary) comes from the
-    first token's probabilities, so the threshold (safety_threshold) can be set as strict as wanted."""
+def digit_probs(prompt):
+    """The probability of each digit 0-3 as the model's first (greedy) token for [prompt]."""
     payload = {
-        "messages": [{"role": "user", "content": safety.classify_prompt(heard)}],
+        "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 1,
         "temperature": 0,
         "logprobs": True,
@@ -109,7 +107,39 @@ def gate(heard):
         d = t["token"].strip()
         if d in ("0", "1", "2", "3"):
             probs[d] = probs.get(d, 0.0) + math.exp(t["logprob"])
-    return safety.gate_category(probs, CFG.get("safety_threshold", 0.8))
+    return probs
+
+
+def gate(heard):
+    """The model's one-token read of what the child said (greedy): the category to answer with
+    a fixed reply (see safety.py), or None when it's ordinary play. P(ordinary) comes from the
+    first token's probabilities, so the threshold (safety_threshold) can be set as strict as wanted."""
+    return safety.gate_category(digit_probs(safety.classify_prompt(heard)), CFG.get("safety_threshold", 0.8))
+
+
+def pack_lines(situation, lang, n, avoid=()):
+    """Up to [n] new lines for a game moment, for a pack a parent will approve: each passes the
+    line filter, reply_ok and the model's own one-token check, and differs from [avoid] (lines
+    already written for it) and from the others."""
+    def norm(t):
+        return re.sub(r"[^\w]", "", persona._plain(t)).lower()
+    seen = {norm(t) for t in avoid}
+    out = []
+    for _ in range(n * 4):
+        if len(out) >= n:
+            break
+        text = clean(ask_gemma(situation, lang, avoid=list(avoid)[-6:] + out), lang)
+        if not text or not safety.reply_ok(text) or norm(text) in seen:
+            continue
+        try:
+            if not safety.line_ok(digit_probs(safety.line_check_prompt(text)), CFG.get("pack_line_threshold", 0.9)):
+                continue
+        except Exception as e:  # no answer from the check: not in the pack
+            log(f"line check failed ({type(e).__name__})")
+            continue
+        seen.add(norm(text))
+        out.append(text)
+    return out
 
 
 def shown(text):
@@ -468,7 +498,7 @@ class Handler(BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(url.query)
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         try:
-            if url.path in ("/say", "/speak", "/story"):
+            if url.path in ("/say", "/speak", "/story", "/pack/make"):
                 req = json.loads(body or b"{}")
                 lang = "en" if req.get("lang") == "en" else "he"
             else:
@@ -554,6 +584,19 @@ class Handler(BaseHTTPRequestHandler):
                 sentences = None
             log(f"story about {shown(played)} -> {len(sentences or [])} sentences")
             self._json({"sentences": sentences}) if sentences else self._fail(204)
+        elif url.path == "/pack/make":
+            # Night work for the doorbell: new lines for one game moment, voiced, for a parent to approve
+            situation = str(req.get("situation", ""))[:300]
+            n = max(1, min(int(req.get("n", 3)), 5))
+            avoid = [str(t)[:200] for t in list(req.get("avoid", []))[:20]]
+            try:
+                lines = pack_lines(situation, lang, n, avoid)
+            except Exception as e:
+                log(f"pack lines failed ({type(e).__name__})")
+                lines = []
+            out = [{"text": t, "audio": base64.b64encode(speak(t, lang)).decode()} for t in lines]
+            log(f"pack: {shown(situation)} -> {len(out)} lines")
+            self._json({"lines": out})
         else:
             self._fail(404)
 

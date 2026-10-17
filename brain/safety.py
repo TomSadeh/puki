@@ -219,6 +219,23 @@ def gate_category(digit_probs, threshold):
     return GATE_CATEGORY[worst]
 
 
+# ---- Checking a line before it joins a pack (written at night, approved by a parent) ----
+
+def line_check_prompt(line):
+    """Asks the model, in one digit, whether a line is fine for Puki to say to a toddler."""
+    return (f"A toy parrot in a game for a 2-year-old is about to say: \"{line}\". Is it fine to say to a "
+            "toddler? 0 = fine: kind, simple and true, about the game; 1 = not fine: scary, sad, rude, "
+            "confusing, a promise, says it loves the child or is her best friend, or anything a toddler "
+            "shouldn't hear. Answer with one digit.")
+
+
+def line_ok(digit_probs, threshold=0.9):
+    """From P("0") and P("1") of the first token: True only when "fine" clearly wins. Fails closed:
+    a first token that isn't mostly a digit means no."""
+    total = digit_probs.get("0", 0.0) + digit_probs.get("1", 0.0)
+    return total >= MIN_DIGIT_MASS and digit_probs.get("0", 0.0) / total >= threshold
+
+
 # What the model must not say, whatever it was asked: promises, and bonding a playmate shouldn't do
 BANNED_PHRASES = ["אוהב אותך", "אוהבת אותך", "החבר הכי טוב", "החברה הכי טובה", "תמיד איתך", "תמיד כאן",
                   "אמא בדרך", "אבא בדרך", "היא בדרך", "הוא בדרך", "הם בדרך", "בדרך אלייך", "בדרך אליך",

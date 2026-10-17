@@ -43,7 +43,8 @@ class Events:
 
 def serve(app, port):
     """Starts the dashboard in a background thread. [app] provides status(), events,
-    sleep(), new_code(), set_idle(minutes), set_model(choice), report(event_id) and pair_url()."""
+    sleep(), new_code(), set_idle(minutes), set_model(choice), report(event_id), pair_url(), and the
+    pack's pack(), pack_decide(id, ok), pack_make() and pack_audio(id)."""
     allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
 
     class Handler(BaseHTTPRequestHandler):
@@ -86,6 +87,15 @@ def serve(app, port):
                     if part.startswith("after="):
                         after = int(part[6:] or 0)
                 self._json(200, app.events.since(after))
+            elif path == "/api/pack":
+                self._json(200, app.pack())
+            elif path == "/api/pack/audio":
+                line_id = query.partition("id=")[2].split("&")[0]
+                audio = app.pack_audio(line_id)
+                if audio is None:
+                    self._json(404, {"error": "not found"})
+                else:
+                    self._send(200, audio, "audio/ogg")
             elif path == "/api/qr.svg":
                 self._send(200, qr.svg(app.pair_url()).encode(), "image/svg+xml")
             else:
@@ -113,6 +123,16 @@ def serve(app, port):
                 if not app.report(int(body.get("id", 0))):
                     self._json(404, {"error": "that line is no longer in the log"})
                     return
+            elif self.path == "/api/pack/decide":
+                if not app.pack_decide(str(body.get("id", "")), bool(body.get("ok"))):
+                    self._json(404, {"error": "no such line"})
+                    return
+                self._json(200, app.pack())
+                return
+            elif self.path == "/api/pack/make":
+                app.pack_make()
+                self._json(200, app.pack())
+                return
             elif self.path == "/api/idle":
                 minutes = int(body.get("minutes", 0))
                 if not 1 <= minutes <= 240:

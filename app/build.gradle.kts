@@ -149,6 +149,7 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")  // the real org.json (Android's is a stub in JVM tests)
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation(platform("androidx.compose:compose-bom:2025.05.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
