@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -294,7 +295,7 @@ private fun RoomButton(room: RoomDef, index: Int, onClick: () -> Unit, modifier:
     val language = LocalLanguage.current
     val shape = RoundedCornerShape(24.dp)
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .popIn(index)
             .shadow(6.dp, shape)
@@ -304,19 +305,27 @@ private fun RoomButton(room: RoomDef, index: Int, onClick: () -> Unit, modifier:
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
+        // On a short screen (a phone on its side) the picture and the label shrink to fit the room
+        val name = room.name.resolve(language)
+        val iconSize = minOf(124.dp, maxHeight - 72.dp).coerceAtLeast(40.dp)
+        val baseSize = MaterialTheme.typography.labelLarge.fontSize
+        val fitSize = with(LocalDensity.current) { ((maxWidth - 52.dp) / (name.length * 0.5f)).toSp() }
         Image(
             painter = painterResource(room.icon),
             contentDescription = null,
             modifier = Modifier
                 .padding(bottom = 36.dp)
-                .size(124.dp)
+                .size(iconSize)
                 .idleBob(index, amount = 1.3f)
         )
         Text(
-            text = room.name.resolve(language),
+            text = name,
             style = MaterialTheme.typography.labelLarge.copy(shadow = null),
+            fontSize = if (fitSize < baseSize) fitSize else baseSize,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF5D4037),
+            maxLines = 1,
+            softWrap = false,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 10.dp)

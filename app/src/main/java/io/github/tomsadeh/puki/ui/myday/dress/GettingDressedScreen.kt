@@ -1,6 +1,12 @@
 package io.github.tomsadeh.puki.ui.myday.dress
 
 import io.github.tomsadeh.puki.ui.components.hintGlow
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import io.github.tomsadeh.puki.data.models.Gender
+import io.github.tomsadeh.puki.ui.common.LocalGender
+import io.github.tomsadeh.puki.ui.myday.drawToddler
 import io.github.tomsadeh.puki.ui.components.noticeTouches
 import io.github.tomsadeh.puki.ui.components.rememberHelp
 import io.github.tomsadeh.puki.ui.common.LocalCompanion
@@ -15,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.foundation.layout.absoluteOffset
+import io.github.tomsadeh.puki.ui.myday.PukiCorner
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -155,14 +162,14 @@ fun GettingDressedScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // The child, dressed as far as we've got, and the open wardrobe
+            // The child, dressed as far as we've got, and the open wardrobe (clear of Puki's corner)
             Row(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(start = PukiCorner),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DressedChild(worn = state.clothes.filter { it.order < state.currentStep },
                     modifier = Modifier.weight(1f).fillMaxHeight())
-                Wardrobe(modifier = Modifier.width(430.dp).fillMaxHeight()) {
+                Wardrobe(modifier = Modifier.width(430.dp).fillMaxHeight()) { s ->
                     state.clothes.forEach { item ->
                         if (item.order >= state.currentStep) {
                             val spot = WARDROBE_SPOTS.getValue(item.id)
@@ -173,11 +180,11 @@ fun GettingDressedScreen(
                                 contentDescription = item.name.resolve(language),
                                 modifier = Modifier
                                     .align(AbsoluteAlignment.TopLeft)
-                                    .absoluteOffset(spot.x.dp, spot.y.dp)
+                                    .absoluteOffset(spot.x.dp * s, spot.y.dp * s)
                                     .idleBob(item.order, if (next) 1.4f else 0.4f)  // what comes next moves a little more
                                     .reaction(reaction)
                                     .hintGlow(help.showHint && next)
-                                    .size(spot.size.dp)
+                                    .size(spot.size.dp * s)
                                     .graphicsLayer { rotationZ = spot.tilt }
                                     .clickable {
                                         val correct = viewModel.onClothingTapped(item.id)
@@ -207,42 +214,21 @@ fun GettingDressedScreen(
 }
 
 
-/** Where a piece of clothing sits on the child (fractions of the picture), its size, and
- *  whether it's the mirrored one (the second sock or shoe). */
-private data class OnBody(val x: Float, val y: Float, val size: Float, val mirrored: Boolean = false)
-
-private val ON_BODY = mapOf(
-    "underwear" to listOf(OnBody(0.50f, 0.64f, 0.30f)),
-    "shirt" to listOf(OnBody(0.50f, 0.53f, 0.50f)),
-    "pants" to listOf(OnBody(0.50f, 0.78f, 0.46f)),
-    // One on each foot
-    "socks" to listOf(OnBody(0.37f, 0.885f, 0.17f), OnBody(0.63f, 0.885f, 0.17f, mirrored = true)),
-    "shoes" to listOf(OnBody(0.35f, 0.91f, 0.19f), OnBody(0.65f, 0.91f, 0.19f, mirrored = true)),
-)
-
-/** The big child, with whatever's been put on so far shown on the body. */
+/** The big child, drawn with whatever's been put on so far (each piece grows into place). */
 @Composable
 private fun DressedChild(worn: List<ClothingItem>, modifier: Modifier = Modifier) {
+    val girl = LocalGender.current == Gender.GIRL
+    val ids = listOf("underwear", "shirt", "pants", "socks", "shoes")
+    val shown = ids.associateWith { id ->
+        animateFloatAsState(
+            targetValue = if (worn.any { it.id == id }) 1f else 0f,
+            animationSpec = spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow),
+            label = "worn_$id"
+        ).value
+    }
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
-        Box(modifier = Modifier.size(side)) {
-            Image(painter = painterResource(R.drawable.ic_myday_child_bath), contentDescription = null, modifier = Modifier.fillMaxSize())
-            // In dressing order, so the shirt goes over the underwear and the shoes over the socks
-            worn.sortedBy { it.order }.forEach { item ->
-                ON_BODY.getValue(item.id).forEach { at ->
-                    Image(
-                        painter = painterResource(item.icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(AbsoluteAlignment.TopLeft)  // the picture doesn't mirror in Hebrew
-                            .absoluteOffset(side * (at.x - at.size / 2), side * (at.y - at.size / 2))
-                            .popIn(key = item.id)
-                            .size(side * at.size)
-                            .graphicsLayer { scaleX = if (at.mirrored) -1f else 1f }
-                    )
-                }
-            }
-        }
+        Canvas(modifier = Modifier.size(side)) { drawToddler(girl, shown) }
     }
 }
 
@@ -257,11 +243,13 @@ private val WARDROBE_SPOTS = mapOf(
     "shoes" to WardrobeSpot(140f, 390f, 130f, 0f),
 )
 
-/** An open wardrobe: a rail with hangers, a shelf, and the floor for shoes. */
+/** An open wardrobe: a rail with hangers, a shelf, and the floor for shoes. Drawn 430 × 540 dp,
+ *  smaller where that doesn't fit (a phone on its side); [content] gets the scale for its spots. */
 @Composable
-private fun Wardrobe(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(430.dp, 540.dp)) {
+private fun Wardrobe(modifier: Modifier = Modifier, content: @Composable BoxScope.(Float) -> Unit) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val s = minOf(1f, maxWidth / 430.dp, maxHeight / 540.dp)
+        Box(modifier = Modifier.size(430.dp * s, 540.dp * s)) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
@@ -286,7 +274,7 @@ private fun Wardrobe(modifier: Modifier = Modifier, content: @Composable BoxScop
                 drawRect(wood.copy(alpha = 0.9f), Offset(-w * 0.0f, h * 0.02f), Size(w * 0.03f, h * 0.96f))
                 drawRect(wood.copy(alpha = 0.9f), Offset(w * 0.97f, h * 0.02f), Size(w * 0.03f, h * 0.96f))
             }
-            content()
+            content(s)
         }
     }
 }
