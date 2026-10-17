@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -93,7 +94,8 @@ fun MyDayScreen(
     onRoomClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val smoke by rememberInfiniteTransition(label = "smoke").animateFloat(
+    // Read only by the smoke's own layer: the house is drawn once, not every frame
+    val smoke = rememberInfiniteTransition(label = "smoke").animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing)),
@@ -102,7 +104,8 @@ fun MyDayScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         SceneBackdrop(Scene.GARDEN)
-        Canvas(modifier = Modifier.fillMaxSize()) { drawHouse(smoke) }
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) { drawSmoke(smoke.value) }
+        Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) { drawHouse() }
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             // Puki peeks out of the round attic window
@@ -163,8 +166,20 @@ fun MyDayScreen(
     }
 }
 
-/** Bushes, a tiled roof with a smoking chimney, and the walls the rooms sit in. */
-private fun DrawScope.drawHouse(smoke: Float) {
+/** Little clouds puffing out of the chimney ([smoke] 0..1 moves them up), behind the house. */
+private fun DrawScope.drawSmoke(smoke: Float) {
+    val w = size.width
+    val h = size.height
+    val chimneyX = w * HOUSE_RIGHT - w * 0.14f
+    for (k in 0 until 3) {
+        val t = (smoke + k / 3f) % 1f
+        val puff = Offset(chimneyX + w * 0.025f + kotlin.math.sin(t * 6f) * w * 0.012f + t * w * 0.03f, h * (0.05f - t * 0.1f))
+        drawCircle(Color.White.copy(alpha = 0.8f * (1f - t)), h * (0.018f + t * 0.03f), puff)
+    }
+}
+
+/** Bushes, a tiled roof with its chimney, and the walls the rooms sit in. */
+private fun DrawScope.drawHouse() {
     val w = size.width
     val h = size.height
     val l = w * HOUSE_LEFT
@@ -172,13 +187,8 @@ private fun DrawScope.drawHouse(smoke: Float) {
     val top = h * WALL_TOP
     val bottom = h * WALL_BOTTOM
 
-    // Chimney behind the roof, puffing little clouds
+    // Chimney behind the roof
     val chimneyX = r - w * 0.14f
-    for (k in 0 until 3) {
-        val t = (smoke + k / 3f) % 1f
-        val puff = Offset(chimneyX + w * 0.025f + kotlin.math.sin(t * 6f) * w * 0.012f + t * w * 0.03f, h * (0.05f - t * 0.1f))
-        drawCircle(Color.White.copy(alpha = 0.8f * (1f - t)), h * (0.018f + t * 0.03f), puff)
-    }
     drawRect(Color(0xFF8D6E63), Offset(chimneyX, h * 0.06f), Size(w * 0.05f, h * 0.18f))
     drawRect(Color(0xFF6D4C41), Offset(chimneyX - w * 0.005f, h * 0.05f), Size(w * 0.06f, h * 0.025f))
 

@@ -211,7 +211,7 @@ fun CakeScreen(
                                 0f, 1f, infiniteRepeatable(tween(2200, easing = LinearEasing)), label = "stir_phase"
                             )
                             Box(contentAlignment = Alignment.Center) {
-                                if (smooth < 1f) Canvas(modifier = Modifier.size(unit * 0.66f, unit * 0.48f)) { drawStirGuide(guide) }
+                                if (smooth < 1f) Canvas(modifier = Modifier.size(unit * 0.66f, unit * 0.48f).graphicsLayer()) { drawStirGuide(guide) }  // own layer: it moves, the kitchen doesn't
                                 Canvas(
                                     modifier = Modifier
                                         .size(unit * 0.5f, unit * 0.4f)

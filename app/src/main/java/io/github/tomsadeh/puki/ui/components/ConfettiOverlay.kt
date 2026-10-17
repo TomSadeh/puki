@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -72,7 +73,8 @@ fun ConfettiOverlay(
         onFinished()
     }
 
-    Canvas(modifier = modifier.fillMaxSize()) {
+    // Its own layer: the confetti redraws every frame, the scene behind it doesn't have to
+    Canvas(modifier = modifier.fillMaxSize().graphicsLayer()) {
         val now = time.value
         val fade = if (now < DURATION - 0.8f) 1f else ((DURATION - now) / 0.8f).coerceIn(0f, 1f)
         pieces.forEach { drawPiece(it, now - it.delay, fade) }

@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
@@ -331,6 +331,5 @@ fun DrawScope.drawTub(wave: Float, fall: Float, rinsing: Boolean) {
 
 /** Wraps [draw] so only what's above the tub's water line shows (the legs go into the water). */
 fun DrawScope.aboveWater(draw: DrawScope.() -> Unit) {
-    val clip = Path().apply { addRect(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.width * 0.83f)) }
-    clipPath(clip) { draw() }
+    clipRect(0f, 0f, size.width, size.width * 0.83f) { draw() }
 }

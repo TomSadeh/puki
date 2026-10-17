@@ -373,7 +373,7 @@ class Companion(
         return play(audio)
     }
 
-    private fun play(audio: ByteArray?): Boolean {
+    private suspend fun play(audio: ByteArray?): Boolean {
         if (audio == null) {
             // The brain may have gone to sleep after being idle; wake it for next time
             _status.value = CompanionStatus.OFF
@@ -385,8 +385,10 @@ class Companion(
         val ext = if (audio.size > 4 && String(audio, 0, 4, Charsets.US_ASCII) == "RIFF") "wav" else "ogg"
         // A line cut off by another voice never reaches the delete below: clear those first (they
         // may say the child's name, and nothing Puki said is kept)
-        context.cacheDir.listFiles { f -> f.name.startsWith("companion_") }?.forEach { it.delete() }
-        val file = File(context.cacheDir, "companion_${System.nanoTime()}.$ext").apply { writeBytes(audio) }
+        val file = withContext(Dispatchers.IO) {
+            context.cacheDir.listFiles { f -> f.name.startsWith("companion_") }?.forEach { it.delete() }
+            File(context.cacheDir, "companion_${System.nanoTime()}.$ext").apply { writeBytes(audio) }
+        }
         _speaking.value = true
         voicePlayer.playFile(file) { file.delete() }
         // Done talking when the line ends or another voice line cuts in

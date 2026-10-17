@@ -160,10 +160,11 @@ fun DanceScreen(
             GameTopBar(onBack = onBack, roundIndex = stops.coerceAtMost(STOPS - 1), totalRounds = STOPS, starsEarned = if (sessionComplete) 1 else 0)
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 val size = minOf(maxWidth / 3.6f, maxHeight * 0.62f)
-                val beat by rememberInfiniteTransition(label = "beat").animateFloat(
+                // Read only inside graphicsLayer, so the beat redraws the dancers without recomposing them
+                val beat = rememberInfiniteTransition(label = "beat").animateFloat(
                     0f, 1f, infiniteRepeatable(tween(520, easing = LinearEasing), RepeatMode.Restart), label = "beat_phase"
                 )
-                val spin by rememberInfiniteTransition(label = "spin").animateFloat(
+                val spin = rememberInfiniteTransition(label = "spin").animateFloat(
                     0f, 360f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "spin_turn"
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxSize()) {
@@ -179,8 +180,6 @@ fun DanceScreen(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(size * 0.15f), verticalAlignment = Alignment.Bottom) {
                         dancers.forEachIndexed { i, animal ->
-                            val phase = (beat + i * 0.33f) % 1f
-                            val wave = sin(phase * 2 * Math.PI).toFloat()
                             Image(
                                 painter = painterResource(animal.drawableRes),
                                 contentDescription = null,
@@ -188,6 +187,7 @@ fun DanceScreen(
                                     .size(size)
                                     .reaction(reactions[i])
                                     .graphicsLayer {
+                                        val wave = sin(((beat.value + i * 0.33f) % 1f) * 2 * Math.PI).toFloat()
                                         transformOrigin = TransformOrigin(0.5f, 1f)
                                         when {
                                             dancing -> {  // sway and bounce to the beat
@@ -195,7 +195,7 @@ fun DanceScreen(
                                                 translationY = -kotlin.math.abs(wave) * size.toPx() * 0.12f
                                             }
                                             move == Move.JUMP -> translationY = -kotlin.math.abs(wave) * size.toPx() * 0.3f
-                                            move == Move.SPIN -> rotationY = spin
+                                            move == Move.SPIN -> rotationY = spin.value
                                             move == Move.CLAP -> { scaleX = 1f + 0.08f * wave; scaleY = 1f - 0.06f * wave }
                                             move == Move.FREEZE -> rotationZ = if (i % 2 == 0) -10f else 10f  // a funny frozen pose
                                         }

@@ -12,6 +12,8 @@ class VoicePlayer(private val context: Context) {
     private val personalDir = java.io.File(context.filesDir, "voice")
 
     private var mediaPlayer: MediaPlayer? = null
+    /** A line is loading (prepareAsync) and will start by itself: busy, as if playing. */
+    private var preparing = false
     var enabled = true
 
     var gender: Gender = Gender.GIRL
@@ -38,6 +40,7 @@ class VoicePlayer(private val context: Context) {
     /** A line ended: tell its caller, then start the next waiting one (unless the caller just did). */
     private fun finished(onComplete: (() -> Unit)?) {
         mediaPlayer = null
+        preparing = false
         onComplete?.invoke()
         if (mediaPlayer == null) waiting.removeFirstOrNull()?.first?.invoke()
     }
@@ -61,16 +64,40 @@ class VoicePlayer(private val context: Context) {
             onComplete?.invoke()
             return
         }
-        mediaPlayer = MediaPlayer.create(context, resId)?.apply {
-            setVolume(level, level)
-            setOnCompletionListener {
+        startAsync(onComplete) { player ->
+            context.resources.openRawResourceFd(resId).use { player.setDataSource(it.fileDescriptor, it.startOffset, it.length) }
+        }
+    }
+
+    /**
+     * Loads a line off the main thread (prepareAsync) and starts it when it's ready, so a tap's
+     * animation doesn't wait for the decoder. Until then the player counts as busy.
+     */
+    private fun startAsync(onComplete: (() -> Unit)?, source: (MediaPlayer) -> Unit) {
+        val player = MediaPlayer()
+        runCatching {
+            source(player)
+            player.setVolume(level, level)
+            player.setOnCompletionListener {
                 it.release()
-                finished(onComplete)
+                if (mediaPlayer === it) finished(onComplete)
             }
-            start()
-        } ?: run {
-            finished(onComplete)
-            null
+            player.setOnErrorListener { mp, _, _ ->
+                mp.release()
+                if (mediaPlayer === mp) finished(onComplete)
+                true
+            }
+            player.setOnPreparedListener {
+                if (mediaPlayer !== it) return@setOnPreparedListener  // stopped while loading
+                preparing = false
+                it.start()
+            }
+            mediaPlayer = player
+            preparing = true
+            player.prepareAsync()
+        }.onFailure {
+            player.release()  // a broken or half-written file: don't leak the player
+            if (mediaPlayer === player || mediaPlayer == null) finished(onComplete)
         }
     }
 
@@ -85,23 +112,7 @@ class VoicePlayer(private val context: Context) {
             return
         }
         releaseStale()
-        val player = MediaPlayer()
-        mediaPlayer = runCatching {
-            player.apply {
-                setDataSource(file.absolutePath)
-                setVolume(level, level)
-                setOnCompletionListener {
-                    it.release()
-                    finished(onComplete)
-                }
-                prepare()
-                start()
-            }
-        }.getOrElse {
-            player.release()  // a broken or half-written file: don't leak the player
-            finished(onComplete)
-            null
-        }
+        startAsync(onComplete) { it.setDataSource(file.absolutePath) }
     }
 
     fun playSequence(voiceKeys: List<String>, language: Language, onAllComplete: (() -> Unit)? = null) {
@@ -140,7 +151,21 @@ class VoicePlayer(private val context: Context) {
 
     private fun personalFile(voiceKey: String, language: Language): java.io.File? {
         val suffix = if (language == Language.HEBREW) "_he" else "_en"
-        return java.io.File(personalDir, "$voiceKey$suffix.ogg").takeIf { it.exists() }
+        val name = "$voiceKey$suffix.ogg"
+        return if (name in personalNames()) java.io.File(personalDir, name) else null
+    }
+
+    // Which personal lines exist, listed once and again only when the folder changes (a praise
+    // pick asks about a dozen names, and each would be a file check on the main thread)
+    private var personalListed = -1L
+    private var personalSet = emptySet<String>()
+    private fun personalNames(): Set<String> {
+        val stamp = personalDir.lastModified()
+        if (stamp != personalListed) {
+            personalSet = personalDir.list()?.toSet() ?: emptySet()
+            personalListed = stamp
+        }
+        return personalSet
     }
 
     // For Hebrew, try the gendered variant first (e.g. voice_prompt_bath_he_f),
@@ -164,22 +189,21 @@ class VoicePlayer(private val context: Context) {
     private fun rawId(name: String): Int =
         ids.getOrPut(name) { context.resources.getIdentifier(name, "raw", context.packageName) }
 
-    fun isPlaying(): Boolean = runCatching { mediaPlayer?.isPlaying == true }.getOrDefault(false)
+    fun isPlaying(): Boolean = preparing || runCatching { mediaPlayer?.isPlaying == true }.getOrDefault(false)
 
     /** A player that's no longer playing but never said it finished: let it go (keeps the queue moving). */
     private fun releaseStale() {
         mediaPlayer?.let { runCatching { it.release() } }
         mediaPlayer = null
+        preparing = false
     }
 
     /** Silence now: the line playing and everything waiting (e.g. before the microphone listens). */
     fun stop() {
         waiting.clear()
-        mediaPlayer?.apply {
-            if (isPlaying) stop()
-            release()
-        }
+        mediaPlayer?.let { runCatching { if (it.isPlaying) it.stop() }; runCatching { it.release() } }
         mediaPlayer = null
+        preparing = false
     }
 
     fun release() {

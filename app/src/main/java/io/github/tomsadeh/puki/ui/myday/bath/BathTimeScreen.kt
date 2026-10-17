@@ -56,6 +56,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -236,22 +237,28 @@ private val SPOTS = listOf(
 @Composable
 private fun BathScene(parts: List<BodyPart>, rinsing: Boolean, modifier: Modifier = Modifier) {
     val girl = LocalGender.current == Gender.GIRL
-    val t = rememberInfiniteTransition(label = "bath")
-    val wave by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = LinearEasing)), label = "wave")
-    val fall by t.animateFloat(0f, 1f, infiniteRepeatable(tween(700, easing = LinearEasing)), label = "fall")
+    // Animations are read only inside the moving layer's drawing, so nothing recomposes per frame
+    val wave = rememberInfiniteTransition(label = "bath").animateFloat(0f, 1f, infiniteRepeatable(tween(2200, easing = LinearEasing)), label = "wave")
+    // The shower's water only runs while rinsing
+    val fall = if (rinsing) rememberInfiniteTransition(label = "shower").animateFloat(0f, 1f, infiniteRepeatable(tween(700, easing = LinearEasing)), label = "fall") else null
     // The rinse washes the bubbles away
-    val bubblesLeft by animateFloatAsState(if (rinsing) 0f else 1f, tween(1400, delayMillis = 300), label = "bubbles")
+    val bubblesLeft = animateFloatAsState(if (rinsing) 0f else 1f, tween(1400, delayMillis = 300), label = "bubbles")
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
         Box(modifier = Modifier.size(side)) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            // Still: the child and the mud left on her (redrawn only when a spot is soaped)
+            Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
                 aboveWater { drawToddler(girl) }
                 SPOTS.forEachIndexed { i, spot ->
-                    val cleaned = parts.firstOrNull { it.id == spot.partId }?.cleaned == true
-                    val at = Offset(spot.x, spot.y)
-                    if (cleaned) drawSoapBubbles(at, spot.r, wave, bubblesLeft) else drawMudSplat(at, spot.r, seed = i * 7 + 3)
+                    if (parts.none { it.id == spot.partId && it.cleaned }) drawMudSplat(Offset(spot.x, spot.y), spot.r, seed = i * 7 + 3)
                 }
-                drawTub(wave, fall, rinsing)
+            }
+            // Moving: the bubbles, the water and the shower
+            Canvas(modifier = Modifier.fillMaxSize().graphicsLayer()) {
+                SPOTS.forEach { spot ->
+                    if (parts.any { it.id == spot.partId && it.cleaned }) drawSoapBubbles(Offset(spot.x, spot.y), spot.r, wave.value, bubblesLeft.value)
+                }
+                drawTub(wave.value, fall?.value ?: 0f, rinsing)
             }
             // Where the soap goes: a little bigger than the mud, so it's easy to hit
             SPOTS.forEach { spot ->
