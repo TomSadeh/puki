@@ -642,8 +642,8 @@ class Handler(BaseHTTPRequestHandler):
                 log(f"whisper failed: {e}")
                 return self._fail(400)
             log(f"answer out loud: heard {shown(heard)}")
-            if heard:
-                note("hear", lang, situation=" / ".join(hints[:6]), heard=heard)
+            # Not kept in memory: the brain can't tell an answer from noise, and noise misheard
+            # ("...the blood") mustn't reach the diary; the game moment itself is kept (/say)
             self._json({"heard": heard})
         elif url.path == "/look":
             # Body: PNG of the child's drawing
