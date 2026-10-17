@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Puki code signing · חתימת הקוד של פוקי</title>
-<meta name="description" content="How Puki.exe is signed: built by GitHub Actions from this repository and signed through SignPath Foundation, with the team roles and privacy policy.">
+<meta name="description" content="How Puki's files are signed: the Android app and the PC brain's updates with Puki's own keys; Puki.exe is built from this repository and isn't code-signed yet.">
 <link rel="icon" href="puki.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,26 +48,26 @@
 <main>
   <div class="wrap">
     <div class="short">
-      <p lang="he" dir="ltr" style="text-align:right">Free code signing provided by <a href="https://about.signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a></p>
-      <p lang="en">Free code signing provided by <a href="https://about.signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a></p>
-      <p lang="he"><b>מצב:</b> הבקשה לחתימה הוגשה ל-SignPath Foundation באוקטובר 2026. עד שתאושר, Puki.exe בגרסאות עדיין לא חתום.</p>
-      <p lang="en"><b>Status:</b> applied to SignPath Foundation in October 2026. Until the project is approved, the Puki.exe in releases is not signed yet.</p>
+      <p lang="he"><b>מצב:</b> Puki.exe עדיין לא חתום בחתימת קוד של Windows, ולכן Windows עשוי להציג אזהרה בהפעלה הראשונה ("Windows הגן על המחשב": "מידע נוסף" ואז "הפעל בכל זאת"). האפליקציה ועדכוני המוח כן חתומים, כמתואר כאן.</p>
+      <p lang="en"><b>Status:</b> Puki.exe isn't code-signed for Windows yet, so Windows may warn the first time it runs ("Windows protected your PC": "More info", then "Run anyway"). The app and the brain's updates are signed, as described here.</p>
     </div>
 
     <h2><span lang="he">מה נחתם</span><span lang="en">What is signed</span></h2>
-    <p lang="he"><b>Puki.exe</b>, המוח של פוקי למחשב עם Windows. הוא נבנה ב-GitHub Actions ישירות מהקוד במאגר <a href="https://github.com/TomSadeh/puki">TomSadeh/puki</a>, מתג הגרסה (<a href="https://github.com/TomSadeh/puki/blob/main/.github/workflows/puki-exe.yml">תהליך הבנייה</a>). אחרי שהפרויקט יאושר, כל גרסה תיחתם רק אחרי שבקשת החתימה שלה אושרה ידנית, והקובץ החתום יצורף לגרסה ב-<a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</p>
-    <p lang="en"><b>Puki.exe</b>, Puki's brain for Windows PCs. It is built by GitHub Actions directly from the source in <a href="https://github.com/TomSadeh/puki">TomSadeh/puki</a> at the release's tag (<a href="https://github.com/TomSadeh/puki/blob/main/.github/workflows/puki-exe.yml">the build workflow</a>), and, once the project is approved, signed only after an approver confirms each signing request. The signed file will be attached to the release on <a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</p>
-    <p lang="he">האפליקציה לאנדרואיד נחתמת במפתח של פוקי עצמו, ועדכוני המוח במחשב (<code>install.py --update</code>) נחתמים במפתח העדכונים של פוקי ונבדקים לפני התקנה.</p>
-    <p lang="en">The Android app is signed with Puki's own key, and the PC brain's updates (<code>install.py --update</code>) with Puki's update key, checked before anything is installed.</p>
+    <p lang="he"><b>האפליקציה לאנדרואיד</b> נחתמת במפתח של פוקי עצמו, ועדכון של האפליקציה מותקן רק אם הוא חתום באותו מפתח.</p>
+    <p lang="en"><b>The Android app</b> is signed with Puki's own key, and an update to the app installs only if it's signed with that same key.</p>
+    <p lang="he"><b>עדכוני המוח במחשב</b> (<code>install.py --update</code>) נחתמים במפתח העדכונים של פוקי, והחתימה והגרסה נבדקות לפני שמשהו מותקן.</p>
+    <p lang="en"><b>The PC brain's updates</b> (<code>install.py --update</code>) are signed with Puki's update key, and the signature and version are checked before anything is installed.</p>
+    <p lang="he"><b>Puki.exe</b>, המוח של פוקי למחשב עם Windows, נבנה מהקוד במאגר <a href="https://github.com/TomSadeh/puki">TomSadeh/puki</a>, וגם GitHub Actions בונה אותו מתג הגרסה (<a href="https://github.com/TomSadeh/puki/blob/main/.github/workflows/puki-exe.yml">תהליך הבנייה</a>), כך שאפשר לבדוק שהוא נבנה מהקוד הזה. ה-SHA-256 שלו מופיע בכל גרסה ב-<a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</p>
+    <p lang="en"><b>Puki.exe</b>, Puki's brain for Windows PCs, is built from the source in <a href="https://github.com/TomSadeh/puki">TomSadeh/puki</a>, and GitHub Actions builds it from the release's tag too (<a href="https://github.com/TomSadeh/puki/blob/main/.github/workflows/puki-exe.yml">the build workflow</a>), so anyone can check it comes from this code. Its SHA-256 is listed with each release on <a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</p>
 
     <h2><span lang="he">תפקידים</span><span lang="en">Team roles</span></h2>
     <ul lang="he">
       <li><b>כותבים וסוקרים:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>. תרומות מאחרים נכנסות רק דרך pull request שנסקר ומאושר.</li>
-      <li><b>מאשרים (חתימה):</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>.</li>
+      <li><b>מחזיקי מפתחות החתימה:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>.</li>
     </ul>
     <ul lang="en">
       <li><b>Committers and reviewers:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>. Contributions from others come in only through reviewed and approved pull requests.</li>
-      <li><b>Approvers:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>.</li>
+      <li><b>Signing keys held by:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>.</li>
     </ul>
 
     <h2><span lang="he">פרטיות</span><span lang="en">Privacy policy</span></h2>
