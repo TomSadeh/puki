@@ -1,5 +1,17 @@
 package io.github.tomsadeh.puki.ui.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import io.github.tomsadeh.puki.data.Contact
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +51,8 @@ import io.github.tomsadeh.puki.ui.common.LocalLanguage
 fun ReportCard(companion: Companion) {
     val language = LocalLanguage.current
     val lines by companion.recentLines.collectAsState()
+    var sharing by remember { mutableStateOf<Companion.SaidLine?>(null) }
+    sharing?.let { line -> ShareDialog(companion, line) { sharing = null } }
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(24.dp))
@@ -54,7 +68,9 @@ fun ReportCard(companion: Companion) {
             color = EarthBrown
         )
         Text(
-            BilingualText("לוחצים על 🚩 ליד המשפט. הדיווח נשמר אצלכם בבית.", "Tap 🚩 next to the line. Reports stay in your home.").resolve(language),
+            (if (Contact.REPORT_EMAIL.isBlank()) BilingualText("לוחצים על 🚩 ליד המשפט. הדיווח נשמר אצלכם בבית.", "Tap 🚩 next to the line. Reports stay in your home.")
+            else BilingualText("לוחצים על 🚩 ליד המשפט. הדיווח נשמר אצלכם בבית, ואפשר לשלוח אותו אלינו ✉️.",
+                "Tap 🚩 next to the line. Reports stay in your home, and you can send one to us ✉️.")).resolve(language),
             style = MaterialTheme.typography.bodyMedium,
             color = EarthBrown.copy(alpha = 0.7f)
         )
@@ -83,7 +99,66 @@ fun ReportCard(companion: Companion) {
                         .clickable(enabled = !line.reported) { companion.report(line) },
                     contentAlignment = Alignment.Center
                 ) { Text(if (line.reported) "✓" else "🚩", fontSize = 20.sp) }
+                // Reported: the parent may also send it to Puki's makers (only when there's an address)
+                if (line.reported && Contact.REPORT_EMAIL.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE3F2FD))
+                            .clickable { sharing = line },
+                        contentAlignment = Alignment.Center
+                    ) { Text("✉️", fontSize = 20.sp) }
+                }
             }
         }
     }
+}
+
+/**
+ * What will be sent, before anything is: the text with the child's name replaced, which the parent
+ * can change or cut. "Open email" hands it to their own mail app, which sends it (Puki never does).
+ */
+@Composable
+private fun ShareDialog(companion: Companion, line: Companion.SaidLine, onDone: () -> Unit) {
+    val language = LocalLanguage.current
+    val context = LocalContext.current
+    var text by remember(line.id) { mutableStateOf(companion.shareText(line)) }
+    AlertDialog(
+        onDismissRequest = onDone,
+        title = { Text(BilingualText("שליחה ליוצרי פוקי", "Send to Puki's makers").resolve(language)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    BilingualText(
+                        "זה מה שיישלח, במייל מהטלפון שלכם. השם הוחלף, ואפשר לשנות או למחוק כל דבר.",
+                        "This is what will be sent, by email from your phone. The name is replaced, and you can change or cut anything."
+                    ).resolve(language),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedTextField(value = text, onValueChange = { text = it }, modifier = Modifier.fillMaxWidth(), minLines = 5)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val mail = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")).apply {
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf(Contact.REPORT_EMAIL))
+                    putExtra(Intent.EXTRA_SUBJECT, "מלשין לרנינג: Puki report")
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
+                try {
+                    context.startActivity(mail)
+                } catch (e: ActivityNotFoundException) {
+                    Toast.makeText(
+                        context,
+                        BilingualText("אין אפליקציית מייל בטלפון", "There's no email app on this device").resolve(language),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                onDone()
+            }) { Text(BilingualText("פתיחת המייל", "Open email").resolve(language)) }
+        },
+        dismissButton = { TextButton(onClick = onDone) { Text(BilingualText("ביטול", "Cancel").resolve(language)) } }
+    )
 }

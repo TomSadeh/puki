@@ -109,6 +109,32 @@ class Companion(
         }
     }
 
+    /**
+     * The text of a report a parent may send to Puki's makers: what Puki said and what came
+     * before, in the parent's language, with the child's name replaced. They see and can edit it
+     * before their own mail app sends it.
+     */
+    fun shareText(line: SaidLine): String {
+        val noNikud = { s: String -> s.replace(Regex("[\u0591-\u05C7]"), "") }
+        val placeholder = pick("[שם]", "[name]")
+        val hide = { s: String ->
+            var t = noNikud(s)
+            val name = noNikud(childName).trim()
+            if (name.length > 1) t = t.replace(name, placeholder, ignoreCase = true)
+            t
+        }
+        val before = line.heard.ifBlank { line.situation }
+        return buildString {
+            appendLine(pick("פוקי אמר:", "Puki said:") + " " + hide(line.said))
+            if (before.isNotBlank()) appendLine(pick("לפני זה:", "Before that:") + " " + hide(before))
+            if (line.game.isNotBlank()) appendLine(pick("משחק:", "Game:") + " " + line.game)
+            appendLine(pick("שפה:", "Language:") + " " + line.lang)
+            appendLine(pick("גרסה:", "Version:") + " " + io.github.tomsadeh.puki.BuildConfig.VERSION_NAME)
+            appendLine()
+            append(pick("מה לא היה בסדר? (לא חובה)", "What wasn't right? (optional)"))
+        }
+    }
+
     private fun recordSaid(route: String, body: ByteArray?) {
         val said = brain.lastSaid() ?: return
         val situation = when (route) {
