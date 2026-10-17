@@ -57,6 +57,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import dashboard
+import memory
 import packs
 from common import load_config as _load_config, normalize_code, pairing_code, pair_url, port_open, pretty_code, write_private
 from common import lan_address as _lan_address
@@ -233,8 +234,16 @@ class Brain:
     def touch(self):
         self.last_used = time.time()
 
+    @property
+    def shown_state(self):
+        """The state the app knows: cold, warming or ready (going to sleep is still asleep)."""
+        return "cold" if self.state == "stopping" else self.state
+
     def wake(self):
         self.check()
+        deadline = time.time() + 15
+        while self.state == "stopping" and time.time() < deadline:
+            time.sleep(0.1)  # going to sleep just now: wake once that's done
         with self.lock:
             if self.state != "cold":
                 return
@@ -309,17 +318,24 @@ class Brain:
             self.stop("stopped while awake: " + ", ".join(dead))
 
     def stop(self, reason=None):
-        for p in self.procs:
+        # "stopping" until the processes are gone: a request that comes meanwhile waits in wake(),
+        # rather than starting a second brain that this stop would then mark cold (two brains,
+        # two tokens, every reply refused)
+        with self.lock:
+            if self.state == "stopping":
+                return
+            procs, self.procs = self.procs, []
+            self.state = "stopping"
+        for p in procs:
             if p.poll() is None:
                 p.kill()
-        for p in self.procs:
+        for p in procs:
             p.wait()  # gone, GPU memory and all, before a new wake measures what's free
-        self.procs = []
-        with self.lock:
-            self.state = "cold"
         self.device = None
         self.model = None
         self.awake_since = None
+        with self.lock:
+            self.state = "cold"
         if reason:
             EVENTS.add("brain", text=f"asleep ({reason})")
 
@@ -330,8 +346,25 @@ class Brain:
             if PACK_MAKER.due():
                 PACK_MAKER.start("the nightly run")
             if self.state == "ready" and time.time() - self.last_used > CFG["idle_minutes"] * 60:
+                self.write_diary()
+                if time.time() - self.last_used <= CFG["idle_minutes"] * 60:
+                    continue  # she came back while the diary was written
                 log("idle, putting brain to sleep")
                 self.stop(f"idle for {CFG['idle_minutes']} minutes")
+
+    def write_diary(self):
+        """Before sleeping, brain.py writes the diary entry for this session (memory.py)."""
+        if not CFG.get("memory", True):
+            return
+        q = urllib.parse.urlencode({"name": CHILD["name"], "gender": CHILD["gender"]})
+        req = urllib.request.Request(f"{BRAIN_URL}/memory/diary?{q}", data=b"{}", headers={
+            "Content-Type": "application/json", "X-Puki-Brain-Token": self.token})
+        try:
+            with urllib.request.urlopen(req, timeout=150) as r:
+                if json.load(r).get("entry"):
+                    EVENTS.add("memory", text="Puki wrote in his diary about this session")
+        except Exception as e:
+            log(f"diary not written ({type(e).__name__})")
 
 
 BRAIN = Brain()
@@ -480,7 +513,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         path, _, query = self.path.partition("?")
         if path == "/health":
-            self._json(200, {"brain": BRAIN.state})
+            self._json(200, {"brain": BRAIN.shown_state})
         elif path == "/pack":
             # The approved lines the tablet keeps, to play without waking the brain
             self._json(200, PACK.manifest())
@@ -509,7 +542,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/wake":
             BRAIN.wake()
             BRAIN.touch()
-            self._json(200, {"brain": BRAIN.state})
+            self._json(200, {"brain": BRAIN.shown_state})
         elif path == "/report":
             # מלשין לרנינג: a parent flagged a line of Puki's on the tablet (kept here, see reports.py)
             try:
@@ -755,7 +788,7 @@ class DashboardApp:
         if BRAIN.state == "ready":
             sleeps_in = max(0, int(CFG["idle_minutes"] * 60 - (now - BRAIN.last_used)))
         return {
-            "brain": BRAIN.state,
+            "brain": BRAIN.shown_state,
             "device": BRAIN.device,
             "model": BRAIN.model,
             "model_choice": CFG.get("model_choice", "e4b"),
@@ -804,6 +837,12 @@ class DashboardApp:
         """The lines waiting for the parent, and the pack's counts."""
         return {"pending": [{k: l[k] for k in ("id", "situation", "lang", "gender", "text")} for l in PACK.pending()],
                 "counts": PACK.counts(), "running": PACK_MAKER.running, "hour": CFG.get("pack_hour", 3)}
+
+    def memory(self):
+        """What Puki remembers: the profile page and the last two weeks of diary."""
+        m = memory.Memory(HERE)
+        return {"on": bool(CFG.get("memory", True)), "profile": m.profile(), "diary": m.diary()[-14:][::-1],
+                "unwritten": len(m.unwritten())}
 
     def pack_decide(self, line_id, approve):
         return PACK.decide(line_id, approve)

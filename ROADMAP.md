@@ -75,6 +75,11 @@ cooking, the car wash, offline Puki, Dance and Freeze, tracing)
   them, and the parent approves them on the dashboard; the tablet plays approved lines at once,
   even with the PC off. Next: packs for bedtime stories, new words for "Say it with Puki", and
   lines that follow her age.
+- **Puki remembers (started):** a log of every exchange on the PC, a diary entry and a profile
+  page written by Gemma when the brain goes to sleep, all fed into the prompt (no retrieval yet;
+  see the design notes below). Game lines reach back only to an earlier moment about the same
+  thing. Next: the device brain, a parent page to read and correct the profile, and retrieval
+  once the diary outgrows the context.
 - **Answer out loud (done):** after a question in Colors, Counting ("how many?"), Peekaboo and
   the shadow round, Puki listens a few seconds and she can say the answer instead of tapping
   ("כחול!"). Tapping always works; a parent setting turns it off. Next: Shapes and My Day.

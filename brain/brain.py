@@ -30,7 +30,8 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from doorbell import CFG, LLAMA_URL, log  # noqa: E402
+from doorbell import CFG, HERE, LLAMA_URL, log  # noqa: E402
+import memory  # noqa: E402
 import persona  # noqa: E402
 import safety  # noqa: E402
 from persona import (  # noqa: E402
@@ -60,16 +61,62 @@ TOKEN = os.environ.get("PUKI_BRAIN_TOKEN", "")
 LLAMA_HEADERS = {"Content-Type": "application/json", **({"Authorization": f"Bearer {TOKEN}"} if TOKEN else {})}
 
 
+# What Puki remembers from playing (memory.py); "memory": false in config.json turns it off
+MEMORY = memory.Memory(HERE) if CFG.get("memory", True) else None
+
+
+def remembered():
+    """The memory block for the system prompt, or "" (memory off, or nothing yet)."""
+    if not MEMORY:
+        return ""
+    try:
+        return MEMORY.prompt_block(girl=persona.GIRL)
+    except Exception as e:  # a bad file never stops Puki from talking
+        log(f"memory unreadable ({type(e).__name__})")
+        return ""
+
+
+def note(kind, lang, **fields):
+    if MEMORY:
+        try:
+            MEMORY.note(kind, lang, **fields)
+        except OSError as e:
+            log(f"memory not written ({type(e).__name__})")
+
+
+def write_diary():
+    """Gemma writes the diary entry for the play since the last one, then updates the profile
+    page. Called by the doorbell before the brain goes to sleep. Returns what it wrote."""
+    if not MEMORY:
+        return None
+    entries = MEMORY.unwritten()
+    if len(entries) < 3:  # a moment of play: wait for more
+        return None
+    who = child("en")
+    entry = chat([{"role": "user", "content": MEMORY.diary_prompt(entries, who, persona.GIRL)}],
+                 max_tokens=220, temperature=0.3, timeout=120).strip()
+    if len(entry) < 20:
+        return None
+    MEMORY.add_entry(entry, entries[-1]["t"])
+    page = chat([{"role": "user", "content": MEMORY.profile_prompt(entry, who, persona.GIRL)}],
+                max_tokens=300, temperature=0.2, timeout=120)
+    lines = [l.strip() for l in page.splitlines() if l.strip().startswith("- ")][:8]
+    if lines:
+        MEMORY.set_profile("\n".join(lines))
+    return entry
+
+
 # Small models repeat themselves, so each request suggests a different opening
 # sound and lists the last few lines to avoid.
 recent = deque(maxlen=6)
 
 
-def ask_gemma(situation, lang, listening=False, avoid=None):
+def ask_gemma(situation, lang, listening=False, avoid=None, remember=False, reach_back=False):
     kind = "food" if any(w in situation for w in FOOD_WORDS) else "other"
     # A suggested opening sound keeps game lines varied; not for answering the child, where a
     # forced "Hooray!" can land on "I fell down"
-    opener = None if listening else random.choice(OPENERS[lang][kind])
+    before = MEMORY.related(situation) if reach_back and MEMORY else None
+    opener = None if listening or before else random.choice(OPENERS[lang][kind])
     hint = situation
     if lang == "he":
         if opener:
@@ -81,7 +128,18 @@ def ask_gemma(situation, lang, listening=False, avoid=None):
             hint += f"\n(Start your reply with '{opener}!')"
         if avoid or recent:
             hint += "\n(Don't repeat what you said before: " + " / ".join(avoid or recent) + ")"
-    messages = [{"role": "system", "content": system_prompt(lang) + safety.system_extra(lang, persona.GIRL)}]
+    memories = remembered() if remember or before else ""
+    if before:
+        # A game line that reaches back (memory_say_chance of them), when an earlier session had the
+        # same thing. Picked here: the small model ignores a mere invitation, and left to choose it
+        # links to unrelated memories and mixes them up
+        (when_en, when_he), then = before
+        hint += (f"\n(גם {when_he} היה רגע כזה: \"{then}\". תזכיר את זה במילים ספורות, בלי להוסיף פרטים.)"
+                 if lang == "he" else
+                 f"\n(Something like this happened {when_en} too: \"{then}\". Mention it in a few words, "
+                 "adding no details.)")
+    system = system_prompt(lang) + safety.system_extra(lang, persona.GIRL) + memories
+    messages = [{"role": "system", "content": system}]
     for user, reply in examples(lang):
         messages += [{"role": "user", "content": user}, {"role": "assistant", "content": reply}]
     messages.append({"role": "user", "content": hint})
@@ -232,7 +290,8 @@ def story(played, icons, lang):
         closing = f"לילה טוב{', ' + persona.NAME if persona.NAME else ''}."
     schema = json.loads(json.dumps(STORY_SCHEMA))
     schema["properties"]["sentences"]["items"]["properties"]["icon"]["enum"] = list(icons)
-    messages = [{"role": "system", "content": system_prompt(lang)}, {"role": "user", "content": ask}]
+    # The bedtime story may reach back to what she did this week
+    messages = [{"role": "system", "content": system_prompt(lang) + remembered()}, {"role": "user", "content": ask}]
     for _ in range(2):
         raw = chat(messages, max_tokens=400, temperature=0.8, timeout=90,
                    response_format={"type": "json_schema", "json_schema": {"schema": schema}})
@@ -253,9 +312,9 @@ def story(played, icons, lang):
     return None
 
 
-def line_for(situation, lang, listening=False):
+def line_for(situation, lang, listening=False, remember=False, reach_back=False):
     for _ in range(3):
-        raw = ask_gemma(situation, lang, listening)
+        raw = ask_gemma(situation, lang, listening, remember=remember, reach_back=reach_back)
         text = clean(raw, lang)
         if text and not safety.reply_ok(text):
             text = None
@@ -463,9 +522,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(audio)
 
-    def _line(self, situation, lang, listening=False):
+    def _line(self, situation, lang, listening=False, remember=False, reach_back=False):
         try:
-            return line_for(situation, lang, listening)
+            return line_for(situation, lang, listening, remember, reach_back)
         except Exception as e:
             log(f"gemma failed: {e}")
             return None
@@ -510,8 +569,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if url.path == "/say":
             situation = str(req.get("situation", ""))[:300]
-            text = self._line(situation, lang)
+            # Now and then a game line may reach back to a memory; most stay about the moment
+            text = self._line(situation, lang, reach_back=random.random() < CFG.get("memory_say_chance", 0.3))
             log(f"{shown(situation)} -> {shown(text)}")
+            note("say", lang, game=query.get("game", [""])[0][:40], situation=situation, said=text or "")
             self._reply(text, lang)
         elif url.path == "/speak":
             # Fixed text from the app (a question, a story sentence): just say it
@@ -538,8 +599,10 @@ class Handler(BaseHTTPRequestHandler):
             context = query.get("context", [""])[0][:200]
             if context:
                 situation = context + " " + situation
-            text = self._line(situation, lang, listening=True)
+            text = self._line(situation, lang, listening=True, remember=True)
             log(f"heard {shown(heard)} -> {shown(text)}")
+            if heard:  # (a careful answer above is never kept)
+                note("listen", lang, game=query.get("game", [""])[0][:40], situation=context, heard=heard, said=text or "")
             self._reply(text, lang, heard)
         elif url.path == "/repeat":
             # Say it with Puki. Body: a WAV of the child trying to say ?target= (with ?alt= for
@@ -563,6 +626,8 @@ class Handler(BaseHTTPRequestHandler):
                 if heard2 and ["tried", "close", "word"].index(match2) > ["tried", "close", "word"].index(match):
                     heard, match = heard2, match2
             log(f"say {shown(target)}: heard {shown(heard)} -> {match}")
+            if heard:
+                note("repeat", lang, situation=target, heard=heard)
             self._json({"heard": heard, "match": match})
         elif url.path == "/hear":
             # A game asked a question and the child answered out loud. Body: a WAV; ?hint= are the
@@ -575,6 +640,8 @@ class Handler(BaseHTTPRequestHandler):
                 log(f"whisper failed: {e}")
                 return self._fail(400)
             log(f"answer out loud: heard {shown(heard)}")
+            if heard:
+                note("hear", lang, situation=" / ".join(hints[:6]), heard=heard)
             self._json({"heard": heard})
         elif url.path == "/look":
             # Body: PNG of the child's drawing
@@ -584,6 +651,8 @@ class Handler(BaseHTTPRequestHandler):
                 log(f"look failed: {e}")
                 text = None
             log(f"looked at a drawing -> {shown(text)}")
+            if text:
+                note("look", lang, said=text)
             self._reply(text, lang)
         elif url.path == "/story":
             # The pictures the story may use (the app sends about 20); capped, it all goes into the prompt
@@ -595,6 +664,8 @@ class Handler(BaseHTTPRequestHandler):
                 log(f"story failed: {e}")
                 sentences = None
             log(f"story about {shown(played)} -> {len(sentences or [])} sentences")
+            if sentences:
+                note("story", lang, situation=played)
             self._json({"sentences": sentences}) if sentences else self._fail(204)
         elif url.path == "/pack/make":
             # Night work for the doorbell: new lines for one game moment, voiced, for a parent to approve
@@ -609,6 +680,15 @@ class Handler(BaseHTTPRequestHandler):
             out = [{"text": t, "audio": base64.b64encode(speak(t, lang)).decode()} for t in lines]
             log(f"pack: {shown(situation)} -> {len(out)} lines")
             self._json({"lines": out})
+        elif url.path == "/memory/diary":
+            # From the doorbell, before the brain sleeps: the diary entry for this session
+            try:
+                entry = write_diary()
+            except Exception as e:
+                log(f"diary not written ({type(e).__name__})")
+                entry = None
+            log(f"diary: {shown(entry)}")
+            self._json({"entry": entry})
         else:
             self._fail(404)
 

@@ -73,6 +73,8 @@
   #lines { list-style: none; margin: 8px 0 0; padding: 0; }
   #lines li { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   #lines li:first-child { border-top: 0; }
+  #diary { list-style: none; margin: 8px 0 0; padding: 0; }
+  #diary li { padding: 8px 0; border-top: 1px solid var(--line); }
   #lines .what { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   #lines .line { font-weight: 600; font-size: 16px; }
   #lines .actions { display: flex; gap: 6px; flex-shrink: 0; }
@@ -141,6 +143,14 @@
     <p class="muted small">At night, while nobody's playing, Puki writes lines for moments the games keep asking about, checks them and voices them. They wait here: listen, and only the ones you approve go to the tablet, which then plays them instantly, even when this PC is off.</p>
   </section>
 
+  <section class="card" style="margin-bottom:16px">
+    <h2 style="margin:0">What Puki remembers</h2>
+    <p class="muted small" id="memInfo">…</p>
+    <div id="memProfile" class="line" style="white-space:pre-line"></div>
+    <ul id="diary"></ul>
+    <p class="muted small">When Puki goes to sleep after playing, he writes a few lines in his diary and updates what he knows about your child. He uses them now and then ("yesterday you fed the elephant!") and in the bedtime story. It all stays on this PC, in the brain's memory folder; <code>"memory": false</code> in config.json turns it off. Careful moments (hurt, scared) are never kept.</p>
+  </section>
+
   <section class="card">
     <div class="log-head">
       <h2 style="margin:0">What Puki heard and said</h2>
@@ -154,7 +164,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const LABELS = { report: "reported", say: "reaction", listen: "talked", look: "drawing", story: "story", speak: "spoke", repeat: "say it",
-                 brain: "brain", gpu: "GPU", pack: "new lines", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
+                 brain: "brain", gpu: "GPU", pack: "new lines", memory: "diary", denied: "denied", lockout: "locked out", pairing: "pairing", settings: "settings" };
 const QUIET = new Set(["brain", "pairing", "settings"]);
 let lastId = 0, events = [], code = null, idleEdited = false;
 
@@ -256,6 +266,23 @@ function renderLog() {
 function whatHappened(situation) {
   return situation.split(/(?<=[.!?])\s+/).filter(p => !/^(תגיד|Say |Tell )/.test(p.trim())).join(" ");
 }
+let memShown = "";
+function showMemory(m) {
+  $("memInfo").textContent = !m.on ? "Memory is off (config.json)." :
+    (m.diary.length ? `${m.diary.length} diary entries` : "Nothing in the diary yet") +
+    (m.unwritten ? ` · ${m.unwritten} things from this session, written when Puki next goes to sleep` : "");
+  const key = JSON.stringify([m.profile, m.diary.map(e => e.until)]);
+  if (key === memShown) return;
+  memShown = key;
+  $("memProfile").textContent = m.profile;
+  const list = $("diary");
+  list.replaceChildren();
+  for (const e of m.diary) {
+    const li = el("li");
+    li.append(el("div", "meta", e.day), el("div", "", e.text));
+    list.append(li);
+  }
+}
 let packShown = "";
 function showPack(p) {
   const c = p.counts || {};
@@ -294,6 +321,7 @@ async function tick() {
   try {
     showStatus(await fetch("/api/status").then(r => r.json()));
     showPack(await fetch("/api/pack").then(r => r.json()));
+    showMemory(await fetch("/api/memory").then(r => r.json()));
     const fresh = await fetch("/api/events?after=" + lastId).then(r => r.json());
     if (fresh.length) {
       events = events.concat(fresh).slice(-300);

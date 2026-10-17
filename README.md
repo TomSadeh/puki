@@ -72,6 +72,8 @@ can reach a PC at home running the [brain server](brain/README.md):
   animal reply with its sound;
 - after a question ("which color?", "how many?", "who's hiding?") it listens for a few seconds,
   so the child can **say the answer instead of tapping** it;
+- it **remembers**: after playing it writes a short diary on the PC, and later reaches back
+  ("the elephant again!") or weaves the week into the bedtime story;
 - if the PC is off or out of reach, the parrot just doesn't show up and the game uses its
   recorded voices.
 
@@ -242,8 +244,8 @@ Models are downloaded separately and are not part of this repository.
 ## What's next
 
 A sticker moment and a progress page for the parent; English and a faster start for the
-phone brain; games that feel better; a few more small toys. Later, a memory that stays in your
-home, so Puki remembers yesterday. See [ROADMAP.md](ROADMAP.md).
+phone brain; games that feel better; a few more small toys. Puki's memory, which stays in your
+home, has started: he keeps a diary of playing and remembers yesterday. See [ROADMAP.md](ROADMAP.md).
 
 ## Contributing
 

@@ -89,6 +89,8 @@ def serve(app, port):
                 self._json(200, app.events.since(after))
             elif path == "/api/pack":
                 self._json(200, app.pack())
+            elif path == "/api/memory":
+                self._json(200, app.memory())
             elif path == "/api/pack/audio":
                 line_id = query.partition("id=")[2].split("&")[0]
                 audio = app.pack_audio(line_id)

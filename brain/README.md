@@ -237,6 +237,21 @@ the brain is asleep or the PC is off, and half the time even when it's awake. A 
 is never said, and never written again. They're kept in `pack.json` and `pack/` next to the
 brain (git-ignored; a line may say the child's name), and in the tablet's own storage.
 
+## Puki remembers
+
+Every exchange (a game moment and Puki's line, what the child said and his answer, a word tried
+in Say it) is appended to `brain/memory/log.jsonl`. When the brain goes to sleep after playing,
+Gemma reads the session and writes a short diary entry (`diary.json`, in English, with the
+child's own words quoted as said) and updates a profile page (`profile.json`: favorite things,
+words, what's being learned). The dashboard shows both.
+
+No retrieval yet: Puki's prompt gets the profile, the last week's diary and the session so far
+(`context` is 8192 for that). When the child talks to Puki and in the bedtime story, the memory
+is just there; about one game line in three (`memory_say_chance`) reaches back, but only when an
+earlier session had the same thing (the elephant again), picked in code from the log, so Gemma
+can't link unrelated memories or make one up. Careful moments (hurt, scared, big questions) are
+never logged. It all stays on the PC; `"memory": false` turns it off.
+
 ## Trying it
 
 ```
