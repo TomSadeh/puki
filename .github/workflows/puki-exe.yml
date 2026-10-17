@@ -1,0 +1,62 @@
+# Builds Puki.exe (the PC brain for Windows) from this repository's source, and signs it through
+# SignPath Foundation (free code signing for open source; see docs/code-signing.html).
+#
+# - Every run keeps the unsigned build as the "Puki-exe-unsigned" artifact.
+# - Once SignPath has approved the project and the SIGNPATH_API_TOKEN secret and the
+#   SIGNPATH_ORGANIZATION_ID variable are set, the build is sent to SignPath to sign (an approver
+#   confirms each release request on signpath.io), and the signed Puki.exe is attached to the
+#   release whose tag started the run.
+name: Puki.exe
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # attach the signed exe to the release
+  actions: read     # SignPath reads the build artifact
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      # Signing starts once SignPath has approved Puki and the token is set (see the top)
+      CAN_SIGN: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build Puki.exe
+        run: python brain/build_exe.py
+      - name: Keep the unsigned build
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: Puki-exe-unsigned
+          path: brain/dist/Puki.exe
+          if-no-files-found: error
+
+      - name: Sign with SignPath
+        if: ${{ env.CAN_SIGN == 'true' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: puki
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: puki-exe
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Attach the signed Puki.exe to the release
+        if: ${{ env.CAN_SIGN == 'true' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          signed=$(find signed -name 'Puki.exe' | head -1)
+          sha256sum "$signed"
+          gh release upload "${GITHUB_REF_NAME}" "$signed" --clobber -R "${GITHUB_REPOSITORY}"

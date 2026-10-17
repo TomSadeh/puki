@@ -19,7 +19,8 @@ BUILD = os.path.join(HERE, ".build")
 PY = os.path.join(BUILD, "venv", "Scripts", "python.exe")
 # cryptography: Puki.exe makes the HTTPS certificate itself (an updated exe may meet a brain
 # environment from before it was in requirements.txt)
-PACKAGES = ["pyinstaller==6.11.1", "pystray==0.19.5", "pillow", "cryptography"]
+# Pinned, so the same source builds the same exe (on a PC, or in GitHub Actions for signing)
+PACKAGES = ["pyinstaller==6.11.1", "pystray==0.19.5", "pillow==12.3.0", "cryptography==50.0.2"]
 
 
 def run(*cmd):

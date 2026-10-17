@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puki code signing · חתימת הקוד של פוקי</title>
+<meta name="description" content="How Puki.exe is signed: built by GitHub Actions from this repository and signed through SignPath Foundation, with the team roles and privacy policy.">
+<link rel="icon" href="puki.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --sand: #fff3e0; --ink: #3e2723; --muted: #6d5d57; --grass: #2e7d32; --shadow: 0 8px 24px rgba(62, 39, 35, 0.10); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: "Rubik", system-ui, "Segoe UI", Arial, sans-serif; color: var(--ink); background: var(--sand); line-height: 1.65; font-size: 17px; }
+  html[data-lang="he"] [lang="en"], html[data-lang="en"] [lang="he"] { display: none !important; }
+  a { color: #0277bd; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 20px; }
+  header { background: linear-gradient(180deg, #87ceeb, #e1f5fe); padding: 18px 0 28px; }
+  .bar { display: flex; justify-content: space-between; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; text-decoration: none; color: var(--ink); }
+  .brand img { width: 44px; height: 44px; }
+  .lang { font: inherit; font-size: 15px; font-weight: 500; border: 2px solid rgba(62, 39, 35, 0.15); background: rgba(255, 255, 255, 0.7); color: var(--ink); border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+  h1 { font-size: clamp(28px, 4vw, 40px); margin: 26px 0 4px; }
+  .date { color: var(--muted); margin: 0; }
+  main { padding: 26px 0 40px; }
+  .short { background: #fff; border: 2px solid #c8e6c9; border-radius: 22px; padding: 16px 22px; box-shadow: var(--shadow); }
+  .short ul { margin: 6px 0; padding-inline-start: 22px; }
+  .short li::marker { color: var(--grass); }
+  h2 { font-size: 22px; margin: 30px 0 6px; }
+  p, li { margin: 6px 0; }
+  footer { padding: 22px 0 34px; color: var(--muted); font-size: 15px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <a class="brand" href="./"><img src="puki.svg" alt=""> <span lang="he">פוקי</span><span lang="en">Puki</span></a>
+      <button class="lang" id="lang" type="button"><span lang="he">English</span><span lang="en">עברית</span></button>
+    </div>
+    <h1><span lang="he">מדיניות חתימת קוד</span><span lang="en">Code signing policy</span></h1>
+    <p class="date"><span lang="he">עודכן ב-17 באוקטובר 2026</span><span lang="en">Updated 17 October 2026</span></p>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="short">
+      <p lang="he" dir="ltr" style="text-align:right">Free code signing provided by <a href="https://about.signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a></p>
+      <p lang="en">Free code signing provided by <a href="https://about.signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a></p>
+    </div>
+
+    <h2><span lang="he">מה נחתם</span><span lang="en">What is signed</span></h2>
+    <p lang="he"><b>Puki.exe</b>, המוח של פוקי למחשב עם Windows. הוא נבנה ב-GitHub Actions ישירות מהקוד במאגר <a href="https://github.com/TomSadeh/puki">TomSadeh/puki</a>, מתג הגרסה (<a href="https://github.com/TomSadeh/puki/blob/main/.github/workflows/puki-exe.yml">תהליך הבנייה</a>), ונחתם רק אחרי שבקשת החתימה אושרה ידנית. הקובץ החתום מצורף לגרסה ב-<a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</p>
+    <p lang="en"><b>Puki.exe</b>, Puki's brain for Windows PCs. It is built by GitHub Actions directly from the source in <a href="https://github.com/TomSadeh/puki">TomSadeh/puki</a> at the release's tag (<a href="https://github.com/TomSadeh/puki/blob/main/.github/workflows/puki-exe.yml">the build workflow</a>), and signed only after an approver confirms the signing request. The signed file is attached to the release on <a href="https://github.com/TomSadeh/puki/releases">GitHub Releases</a>.</p>
+    <p lang="he">האפליקציה לאנדרואיד נחתמת במפתח של פוקי עצמו, ועדכוני המוח במחשב (<code>install.py --update</code>) נחתמים במפתח העדכונים של פוקי ונבדקים לפני התקנה.</p>
+    <p lang="en">The Android app is signed with Puki's own key, and the PC brain's updates (<code>install.py --update</code>) with Puki's update key, checked before anything is installed.</p>
+
+    <h2><span lang="he">תפקידים</span><span lang="en">Team roles</span></h2>
+    <ul lang="he">
+      <li><b>כותבים וסוקרים:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>. תרומות מאחרים נכנסות רק דרך pull request שנסקר ומאושר.</li>
+      <li><b>מאשרים (חתימה):</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>.</li>
+    </ul>
+    <ul lang="en">
+      <li><b>Committers and reviewers:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>. Contributions from others come in only through reviewed and approved pull requests.</li>
+      <li><b>Approvers:</b> <a href="https://github.com/TomSadeh">Tom Sadeh</a>.</li>
+    </ul>
+
+    <h2><span lang="he">פרטיות</span><span lang="en">Privacy policy</span></h2>
+    <p lang="he">התוכנה הזו לא מעבירה שום מידע למערכות אחרות ברשת, אלא אם המשתמש או מי שמתקין או מפעיל אותה ביקש זאת במפורש.</p>
+    <p lang="en">This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.</p>
+    <p lang="he">בפועל: ההתקנה מורידה את המודלים והכלים (כל קובץ נבדק מול SHA-256 קבוע מראש) מ-GitHub ומ-Hugging Face; עדכון בודק את GitHub Releases רק כשמבקשים אותו; והמוח מדבר רק עם הטאבלט של המשפחה ברשת הביתית. הפרטים ב<a href="privacy.html">מדיניות הפרטיות</a>.</p>
+    <p lang="en">In practice: setup downloads the models and tools (every file checked against a SHA-256 fixed in advance) from GitHub and Hugging Face; an update checks GitHub Releases only when asked to; and the brain talks only to the family's tablet on the home network. The details are in the <a href="privacy.html">privacy policy</a>.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap"><a href="./"><span lang="he">חזרה לפוקי</span><span lang="en">Back to Puki</span></a></div>
+</footer>
+
+<script>
+  const root = document.documentElement;
+  function setLang(lang) {
+    root.dataset.lang = lang;
+    root.lang = lang;
+    root.dir = lang === "he" ? "rtl" : "ltr";
+    try { localStorage.setItem("puki-lang", lang); } catch (e) {}
+  }
+  let saved = null;
+  try { saved = localStorage.getItem("puki-lang"); } catch (e) {}
+  setLang(saved || ((navigator.language || "").toLowerCase().startsWith("he") ? "he" : "en"));
+  document.getElementById("lang").addEventListener("click", () => setLang(root.dataset.lang === "he" ? "en" : "he"));
+</script>
+</body>
+</html>
