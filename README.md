@@ -279,7 +279,8 @@ families ask for. See [ROADMAP.md](ROADMAP.md).
 
 Pull requests are welcome. The rules come from the audience: no failure states, nothing the
 child has to read, big targets, both languages, and nothing about the child leaves the device.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for what gets accepted and what a PR needs to show.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for what gets accepted and what a PR needs to show. Porting the brain to another platform (iOS, say)? [PORTING.md](PORTING.md) describes the models
+and how to check a port against the trainer's fixtures.
 Questions, or something Puki said that wasn't right: [hello@pukiparrot.com](mailto:hello@pukiparrot.com).
 
 ## License
